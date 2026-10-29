@@ -1,4 +1,5 @@
-// Edge Function: resgata um código de convite e envia o link mágico de criação de conta.
+// Edge Function: resgata um código de convite e cria a conta do convidado.
+// Corpo: { codigo, email, nome, metodo: "google" | "email", redirecionarPara }
 // Publicar com: npx supabase functions deploy resgatar-convite --no-verify-jwt
 // (quem chama ainda não tem conta, então não há JWT de usuário para verificar).
 import { createClient } from 'jsr:@supabase/supabase-js@2';
@@ -30,6 +31,7 @@ Deno.serve(async (req) => {
   const email = String(dados.email ?? '').trim().toLowerCase();
   const nome = String(dados.nome ?? '').trim();
   const redirecionarPara = typeof dados.redirecionarPara === 'string' ? dados.redirecionarPara : undefined;
+  const metodo = dados.metodo === 'google' ? 'google' : 'email';
 
   if (!codigo) return resposta(400, { erro: 'Informe o código do convite.' });
   if (!EMAIL_VALIDO.test(email)) return resposta(400, { erro: 'E-mail inválido.' });
@@ -51,19 +53,21 @@ Deno.serve(async (req) => {
     return resposta(400, { erro: 'Convite inválido, já usado ou destinado a outro e-mail.' });
   }
 
-  // O redirectTo precisa estar na lista de URLs permitidas do Supabase Auth.
-  const { data: convidado, error: erroConvite } = await admin.auth.admin.inviteUserByEmail(email, {
-    data: { nome },
-    redirectTo: redirecionarPara,
-  });
+  // 'google': cria a conta já confirmada, sem e-mail; no primeiro "Entrar com Google" com o mesmo
+  // endereço, o Supabase liga a conta Google a ela (o cadastro público continua desligado).
+  // 'email': manda o e-mail de convite com link e código. O redirectTo precisa estar na lista de URLs permitidas.
+  const { data: convidado, error: erroConvite } =
+    metodo === 'google'
+      ? await admin.auth.admin.createUser({ email, email_confirm: true, user_metadata: { nome } })
+      : await admin.auth.admin.inviteUserByEmail(email, { data: { nome }, redirectTo: redirecionarPara });
 
   if (erroConvite) {
     await admin.rpc('liberar_convite', { p_codigo: codigo });
     if (erroConvite.code === 'email_exists' || /already been registered/i.test(erroConvite.message)) {
       return resposta(409, { erro: 'Esse e-mail já tem conta. Use a aba "Entrar".' });
     }
-    console.error('inviteUserByEmail', erroConvite);
-    return resposta(500, { erro: 'Não foi possível enviar o e-mail de convite. Tente de novo.' });
+    console.error(metodo === 'google' ? 'createUser' : 'inviteUserByEmail', erroConvite);
+    return resposta(500, { erro: 'Não foi possível criar sua conta. Tente de novo.' });
   }
 
   await admin.from('convites').update({ usado_por: convidado.user.id }).eq('codigo', codigo);

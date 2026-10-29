@@ -68,7 +68,9 @@ npx supabase db advisors --linked                              # checagem de seg
 
 `supabase/config.toml` é a fonte da verdade das configurações do projeto (cadastro público desligado, URLs de redirecionamento). Mude ali e rode `config push`, não no painel; confira o diff antes de confirmar.
 
-Exceção: o SMTP (Gmail pessoal com senha de app) é configurado **só no painel** (Authentication → Emails → SMTP Settings), porque tem senha. Mantenha `[auth.email.smtp]` comentado no `config.toml` para o `config push` não mexer nele. Os modelos de e-mail ficam em `supabase/templates/` e só podem ser alterados com SMTP próprio ativo.
+**Login:** "Entrar com Google" é o principal; código de 8 dígitos por e-mail (`{{ .Token }}` nos modelos, `verifyOtp`) é a alternativa para quem não usa Google, e funciona mesmo lendo o e-mail em outro aparelho. Cadastro público continua desligado: o convite (`resgatar-convite`, `metodo: 'google'`) cria a conta já confirmada sem e-mail, e o primeiro login Google com o mesmo endereço é ligado a ela automaticamente (testado). Cliente OAuth no Google Cloud (projeto "Terra de Ninguem", app publicado) com redirect `https://wbhcmkortcklhcojphlx.supabase.co/auth/v1/callback`.
+
+Exceção: o SMTP (Gmail pessoal com senha de app) e o provedor Google (Client ID/Secret) são configurados **só no painel** (Authentication → Emails → SMTP Settings), porque tem senha. Mantenha `[auth.email.smtp]` comentado e não crie `[auth.external.google]` no `config.toml`, para o `config push` não mexer neles. Os modelos de e-mail ficam em `supabase/templates/` e só podem ser alterados com SMTP próprio ativo.
 
 ## Como um comando funciona (padrão do Épico 3)
 
