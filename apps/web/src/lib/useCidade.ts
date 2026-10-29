@@ -1,10 +1,14 @@
 import {
   TIPOS_PREDIO,
   avancarCidade,
+  bonusDeTerritorios,
   exercito,
   type EstadoCidade,
   type NiveisPredios,
   type Obra,
+  type Recurso,
+  type Recursos,
+  type Terreno,
   type TipoPredio,
 } from '@terra/regras';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -12,6 +16,8 @@ import { chamarFuncao } from './funcoes';
 import { supabase } from './supabase';
 
 type LinhaCidade = {
+  temporada_id: string;
+  territorio_id: string | null;
   comida: number;
   madeira: number;
   ouro: number;
@@ -23,9 +29,18 @@ type LinhaCidade = {
   predios: { tipo: TipoPredio; nivel: number; pronto_em: string | null }[];
 };
 
-type CidadeSalva = { cidade: EstadoCidade; obra: Obra | null };
+type TerritorioDoJogador = { id: string; nome: string; terreno: Terreno; bonus_recurso: Recurso };
 
-function converter(linha: LinhaCidade): CidadeSalva {
+type CidadeSalva = {
+  cidade: EstadoCidade;
+  obra: Obra | null;
+  bonus: Recursos;
+  /** Território onde fica a cidade (null na temporada de testes, sem mapa). */
+  territorio: TerritorioDoJogador | null;
+  territorios: number;
+};
+
+function converter(linha: LinhaCidade, territorios: TerritorioDoJogador[]): CidadeSalva {
   const predios = Object.fromEntries(TIPOS_PREDIO.map((tipo) => [tipo, 0])) as NiveisPredios;
   let obra: Obra | null = null;
   for (const p of linha.predios) {
@@ -34,6 +49,9 @@ function converter(linha: LinhaCidade): CidadeSalva {
   }
   return {
     obra,
+    bonus: bonusDeTerritorios(territorios.map((t) => t.bonus_recurso)),
+    territorio: territorios.find((t) => t.id === linha.territorio_id) ?? null,
+    territorios: territorios.length,
     cidade: {
       recursos: { comida: linha.comida, madeira: linha.madeira, ouro: linha.ouro },
       populacao: linha.populacao,
@@ -53,13 +71,22 @@ async function buscarCidade(jogadorId: string): Promise<CidadeSalva | null> {
   const { data, error } = await supabase
     .from('cidades')
     .select(
-      'comida, madeira, ouro, populacao, trabalhadores_comida, trabalhadores_madeira, trabalhadores_ouro, atualizado_em, predios(tipo, nivel, pronto_em), temporadas!inner(status)',
+      'temporada_id, territorio_id, comida, madeira, ouro, populacao, trabalhadores_comida, trabalhadores_madeira, trabalhadores_ouro, atualizado_em, predios(tipo, nivel, pronto_em), temporadas!inner(status)',
     )
     .eq('jogador_id', jogadorId)
     .eq('temporadas.status', 'ativa')
     .maybeSingle<LinhaCidade>();
   if (error) throw new Error('Não foi possível carregar sua cidade.');
-  return data ? converter(data) : null;
+  if (!data) return null;
+
+  const { data: territorios, error: erroTerritorios } = await supabase
+    .from('territorios')
+    .select('id, nome, terreno, bonus_recurso')
+    .eq('temporada_id', data.temporada_id)
+    .eq('dono_id', jogadorId)
+    .returns<TerritorioDoJogador[]>();
+  if (erroTerritorios) throw new Error('Não foi possível carregar seus territórios.');
+  return converter(data, territorios);
 }
 
 /**
@@ -97,7 +124,10 @@ export function useCidade(jogadorId: string) {
 
   const atual = useMemo(
     // Tropas entram no Épico 5.
-    () => (salva ? avancarCidade({ cidade: salva.cidade, tropas: exercito(), obra: salva.obra, agora }) : null),
+    () =>
+      salva
+        ? avancarCidade({ cidade: salva.cidade, tropas: exercito(), obra: salva.obra, agora, bonusTerritorios: salva.bonus })
+        : null,
     [salva, agora],
   );
 
@@ -109,5 +139,14 @@ export function useCidade(jogadorId: string) {
     [carregar],
   );
 
-  return { cidade: atual?.cidade ?? null, obra: atual?.obra ?? null, agora, erro, comandar };
+  return {
+    cidade: atual?.cidade ?? null,
+    obra: atual?.obra ?? null,
+    bonus: salva?.bonus ?? null,
+    territorio: salva?.territorio ?? null,
+    territorios: salva?.territorios ?? 0,
+    agora,
+    erro,
+    comandar,
+  };
 }

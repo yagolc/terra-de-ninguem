@@ -11,7 +11,8 @@
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "simular": "npm run simular -w @terra/regras --"
+    "simular": "npm run simular -w @terra/regras --",
+    "temporada:nova": "npm run temporada:nova -w @terra/regras --"
   },
   "engines": {
     "node": ">=20"

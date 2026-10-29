@@ -1,0 +1,104 @@
+import { BALANCEAMENTO } from '@terra/regras';
+import { COR_NEUTRA, type DadosMapa } from '../lib/useMapa';
+import { RECURSOS_INFO, TERRENOS_INFO } from '../lib/textos';
+
+type Props = {
+  dados: DadosMapa;
+  id: string;
+  meuId: string;
+  onSelecionar: (id: string | null) => void;
+};
+
+/** Detalhes do território tocado no mapa. */
+export default function PainelTerritorio({ dados, id, meuId, onSelecionar }: Props) {
+  const t = dados.territorios.find((x) => x.id === id);
+  if (!t) return null;
+
+  const dono = t.dono_id ? dados.jogadores.get(t.dono_id) : null;
+  const reservadoPara = !dono && t.reservado_para ? dados.jogadores.get(t.reservado_para) : null;
+  const vizinhos = (dados.vizinhos.get(t.id) ?? []).map((v) => dados.territorios.find((x) => x.id === v)!).filter(Boolean);
+  const meu = t.dono_id === meuId;
+  const vizinhoDoMeu = !meu && vizinhos.some((v) => v.dono_id === meuId);
+  const terreno = TERRENOS_INFO[t.terreno];
+  const bonus = Math.round(BALANCEAMENTO.mapa.bonusTerritorio * 100);
+
+  return (
+    <div className="space-y-4">
+      <header className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="font-titulo text-xl text-ouro">{t.nome}</h2>
+          <p className="text-sm text-pergaminho-escuro">{dados.regioes.get(t.regiao_id)?.nome}</p>
+        </div>
+        <button
+          onClick={() => onSelecionar(null)}
+          aria-label="Fechar"
+          className="rounded-md px-2 text-xl leading-none text-pergaminho-escuro hover:text-pergaminho"
+        >
+          ×
+        </button>
+      </header>
+
+      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
+        <dt className="text-pergaminho-escuro">Dono</dt>
+        <dd className="flex items-center gap-2">
+          <span className="size-3 rounded-full" style={{ background: dono?.cor ?? COR_NEUTRA }} />
+          {dono ? `${dono.nome}${meu ? ' (você)' : ''}` : 'Neutro, guardado por bárbaros'}
+        </dd>
+        {(t.cidade_principal || reservadoPara) && (
+          <>
+            <dt className="text-pergaminho-escuro">Cidade</dt>
+            <dd>
+              {t.cidade_principal
+                ? '🏰 Cidade principal: pode ser saqueada, nunca conquistada'
+                : `Reservado para ${reservadoPara!.nome}, que ainda não entrou`}
+            </dd>
+          </>
+        )}
+        <dt className="text-pergaminho-escuro">Terreno</dt>
+        <dd>
+          {terreno.icone} {terreno.nome}: {terreno.efeito}
+        </dd>
+        <dt className="text-pergaminho-escuro">Bônus</dt>
+        <dd>
+          +{bonus}% de {RECURSOS_INFO[t.bonus_recurso].nome.toLowerCase()} para o dono
+        </dd>
+      </dl>
+
+      <div>
+        <h3 className="mb-1.5 text-sm text-pergaminho-escuro">Vizinhos ({vizinhos.length})</h3>
+        <ul className="flex flex-wrap gap-1.5">
+          {vizinhos.map((v) => {
+            const corVizinho = v.dono_id ? dados.jogadores.get(v.dono_id)?.cor : null;
+            return (
+              <li key={v.id}>
+                <button
+                  onClick={() => onSelecionar(v.id)}
+                  className="flex items-center gap-1.5 rounded-md border border-couro px-2 py-1 text-xs hover:border-ouro/60"
+                >
+                  <span className="size-2 rounded-full" style={{ background: corVizinho ?? COR_NEUTRA }} />
+                  {v.nome}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
+      {!meu && (
+        <div>
+          <button
+            disabled
+            className="w-full cursor-not-allowed rounded-lg bg-couro px-3 py-2 text-sm font-semibold text-pergaminho-escuro"
+          >
+            ⚔️ Atacar
+          </button>
+          <p className="mt-1.5 text-xs text-pergaminho-escuro">
+            {vizinhoDoMeu
+              ? 'Faz fronteira com você. Ataques chegam em breve.'
+              : 'Só dá para atacar territórios vizinhos aos seus.'}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}

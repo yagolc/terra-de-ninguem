@@ -113,4 +113,28 @@ export const BALANCEAMENTO = {
   marcha: {
     duracaoMinimaMin: 10,
   },
+
+  mapa: {
+    /** Tamanho do mapa em léguas (mesma unidade da velocidade das tropas). */
+    largura: 60,
+    altura: 40,
+    territoriosBase: 6,
+    territoriosPorJogador: 4,
+    /** Com pelo menos esse número de territórios, o mapa tem 6 regiões; abaixo, 5. */
+    territoriosPara6Regioes: 24,
+    /** Bônus de produção de cada território no recurso ligado ao terreno (0,1 = +10%). */
+    bonusTerritorio: 0.1,
+    /** Chance de um território seguir o terreno predominante da região. */
+    chanceTerrenoDaRegiao: 0.6,
+    pesosTerreno: { planicie: 0.5, floresta: 0.3, montanha: 0.2 },
+    /** Mapas candidatos gerados para escolher o mais equilibrado. */
+    tentativas: 25,
+  },
+
+  /** Guarnição bárbara dos territórios neutros: mais forte quanto mais longe das cidades. */
+  barbaros: {
+    unidadesBase: 8,
+    unidadesPorDistancia: 6,
+    variacao: 0.3,
+  },
 } as const;

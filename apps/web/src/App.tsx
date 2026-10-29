@@ -1,5 +1,5 @@
 import { useSessao } from './lib/useSessao';
-import Cidade from './telas/Cidade';
+import Jogo from './telas/Jogo';
 import Entrada from './telas/Entrada';
 
 export default function App() {
@@ -9,5 +9,5 @@ export default function App() {
     return <div className="grid min-h-dvh place-items-center text-pergaminho-escuro">Carregando…</div>;
   }
 
-  return sessao ? <Cidade sessao={sessao} /> : <Entrada />;
+  return sessao ? <Jogo sessao={sessao} /> : <Entrada />;
 }

@@ -12,12 +12,13 @@ import {
   verificarEvolucao,
   type EstadoCidade,
   type Obra,
+  type Recursos,
   type TipoPredio,
 } from '@terra/regras';
 import { PREDIOS, RECURSOS_INFO, formatarDuracao, formatarNumero, formatarTaxa } from '../lib/textos';
 
 /** Uma linha curta com o efeito atual do prédio. */
-function efeito(tipo: TipoPredio, cidade: EstadoCidade): string | null {
+function efeito(tipo: TipoPredio, cidade: EstadoCidade, bonus: Recursos): string | null {
   const nivel = cidade.predios[tipo];
   if (nivel === 0) return null;
   switch (tipo) {
@@ -30,7 +31,7 @@ function efeito(tipo: TipoPredio, cidade: EstadoCidade): string | null {
     case 'mercado': {
       const recurso = tipo === 'fazenda' ? 'comida' : tipo === 'serraria' ? 'madeira' : 'ouro';
       const vagas = vagasTrabalho(cidade.predios)[recurso];
-      return `${cidade.trabalhadores[recurso]}/${vagas} trabalhadores · ${formatarTaxa(producaoHora(cidade)[recurso])} ${RECURSOS_INFO[recurso].nome.toLowerCase()}/h`;
+      return `${cidade.trabalhadores[recurso]}/${vagas} trabalhadores · ${formatarTaxa(producaoHora(cidade, bonus)[recurso])} ${RECURSOS_INFO[recurso].nome.toLowerCase()}/h`;
     }
     case 'armazem':
       return `Guarda ${formatarNumero(capacidadeArmazem(nivel))} · protege ${formatarNumero(protecaoArmazem(nivel))} de cada`;
@@ -44,20 +45,21 @@ function efeito(tipo: TipoPredio, cidade: EstadoCidade): string | null {
 type Props = {
   tipo: TipoPredio;
   cidade: EstadoCidade;
+  bonus: Recursos;
   obra: Obra | null;
   agora: number;
   ocupado: boolean;
   onEvoluir: (tipo: TipoPredio) => void;
 };
 
-export default function CartaoPredio({ tipo, cidade, obra, agora, ocupado, onEvoluir }: Props) {
+export default function CartaoPredio({ tipo, cidade, bonus, obra, agora, ocupado, onEvoluir }: Props) {
   const info = PREDIOS[tipo];
   const nivel = cidade.predios[tipo];
   const emObra = obra?.tipo === tipo;
   const maximo = nivel >= BALANCEAMENTO.predios[tipo].nivelMaximo;
   const verificacao = verificarEvolucao({ predios: cidade.predios, tipo, recursos: cidade.recursos, construcaoEmAndamento: obra !== null });
   const custo = custoEvolucao(tipo, nivel + 1);
-  const textoEfeito = efeito(tipo, cidade);
+  const textoEfeito = efeito(tipo, cidade, bonus);
 
   return (
     <article

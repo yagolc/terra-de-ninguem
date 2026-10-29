@@ -1,10 +1,10 @@
-import { RECURSOS, capacidadeArmazem, habitantesLivres, limitePopulacao, producaoHora, type EstadoCidade } from '@terra/regras';
+import { RECURSOS, capacidadeArmazem, habitantesLivres, limitePopulacao, producaoHora, type EstadoCidade, type Recursos } from '@terra/regras';
 import { RECURSOS_INFO, formatarNumero, formatarTaxa } from '../lib/textos';
 
 /** Estoque de cada recurso (subindo em tempo real), produção por hora e população. */
-export default function BarraRecursos({ cidade }: { cidade: EstadoCidade }) {
+export default function BarraRecursos({ cidade, bonus }: { cidade: EstadoCidade; bonus: Recursos }) {
   const teto = capacidadeArmazem(cidade.predios.armazem);
-  const producao = producaoHora(cidade);
+  const producao = producaoHora(cidade, bonus);
   const limite = limitePopulacao(cidade.predios.casa);
   const livres = habitantesLivres(cidade, 0);
 

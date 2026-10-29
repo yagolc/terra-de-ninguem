@@ -1,4 +1,10 @@
-import type { Recurso, TipoPredio } from '@terra/regras';
+import type { Recurso, Terreno, TipoPredio } from '@terra/regras';
+
+export const TERRENOS_INFO: Record<Terreno, { nome: string; icone: string; efeito: string }> = {
+  planicie: { nome: 'Planície', icone: '🌾', efeito: 'sem bônus de defesa' },
+  floresta: { nome: 'Floresta', icone: '🌲', efeito: 'arqueiros defendem melhor' },
+  montanha: { nome: 'Montanha', icone: '⛰️', efeito: 'bônus de defesa geral' },
+};
 
 export const PREDIOS: Record<TipoPredio, { nome: string; icone: string; descricao: string }> = {
   centro: { nome: 'Centro da Cidade', icone: '🏛️', descricao: 'Define o nível máximo de todos os outros prédios.' },

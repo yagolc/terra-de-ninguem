@@ -6,13 +6,17 @@ import {
   MENSAGENS_EVOLUCAO,
   TIPOS_PREDIO,
   avancarCidade,
+  bonusDeTerritorios,
   cidadeInicial,
+  escolherTerritorioLivre,
   exercito,
+  grafoDeFronteiras,
   subtrairRecursos,
   verificarAlocacao,
   verificarEvolucao,
   type EstadoCidade,
   type Obra,
+  type Recurso,
   type Recursos,
   type TipoPredio,
 } from '../../../packages/regras/src/index.ts';
@@ -40,24 +44,64 @@ async function temporadaAtiva(tx: Transacao): Promise<string> {
   return temporada.id;
 }
 
-/** Cria a cidade inicial do jogador na temporada ativa, se ele ainda não tiver uma. */
+/**
+ * Território onde nasce a cidade: o reservado para o jogador na criação da temporada ou, para quem
+ * chegou depois, o livre mais distante de todos. `null` se a temporada não tem mapa.
+ */
+async function territorioInicial(tx: Transacao, temporadaId: string, jogadorId: string): Promise<string | null> {
+  const [reservado] = await tx<{ id: string }[]>`
+    select id from territorios
+     where temporada_id = ${temporadaId} and reservado_para = ${jogadorId} and dono_id is null`;
+  if (reservado) return reservado.id;
+
+  const territorios = await tx<{ id: string; ocupado: boolean; vaga_inicial: boolean }[]>`
+    select id, (dono_id is not null or reservado_para is not null) as ocupado, vaga_inicial
+      from territorios where temporada_id = ${temporadaId}`;
+  if (territorios.length === 0) return null;
+
+  const fronteiras = await tx<{ territorio_a: string; territorio_b: string }[]>`
+    select territorio_a, territorio_b from fronteiras where temporada_id = ${temporadaId}`;
+  const grafo = grafoDeFronteiras(fronteiras.map((f) => [f.territorio_a, f.territorio_b] as const));
+  const ocupadosOuReservados = new Set(territorios.filter((t) => t.ocupado).map((t) => t.id));
+  // Primeiro as vagas iniciais que o gerador equilibrou; depois qualquer território livre.
+  const vagas = territorios.filter((t) => t.vaga_inicial && !t.ocupado).map((t) => t.id);
+  const livre =
+    escolherTerritorioLivre({ todos: vagas, grafo, ocupadosOuReservados }) ??
+    escolherTerritorioLivre({ todos: territorios.map((t) => t.id), grafo, ocupadosOuReservados });
+  if (!livre) throw new ErroDoJogo('O mapa desta temporada está cheio. Aguarde a próxima temporada.', 409);
+  return livre;
+}
+
+/** Funda a cidade do jogador na temporada ativa, se ele ainda não tiver uma. */
 async function criarCidade(tx: Transacao, jogadorId: string): Promise<void> {
   const temporadaId = await temporadaAtiva(tx);
+  // Dois jogadores chegando juntos não podem pegar o mesmo território livre.
+  await tx`select pg_advisory_xact_lock(hashtext(${temporadaId}))`;
+  const [existente] = await tx`select 1 from cidades where temporada_id = ${temporadaId} and jogador_id = ${jogadorId}`;
+  if (existente) return;
+
+  const territorioId = await territorioInicial(tx, temporadaId, jogadorId);
   const inicial = cidadeInicial(Date.now());
   const [criada] = await tx<{ id: string }[]>`
-    insert into cidades (temporada_id, jogador_id, comida, madeira, ouro, populacao, atualizado_em)
-    values (${temporadaId}, ${jogadorId}, ${inicial.recursos.comida}, ${inicial.recursos.madeira},
+    insert into cidades (temporada_id, jogador_id, territorio_id, comida, madeira, ouro, populacao, atualizado_em)
+    values (${temporadaId}, ${jogadorId}, ${territorioId}, ${inicial.recursos.comida}, ${inicial.recursos.madeira},
             ${inicial.recursos.ouro}, ${inicial.populacao}, ${new Date(inicial.atualizadoEm)})
-    on conflict (temporada_id, jogador_id) do nothing
     returning id`;
-  if (!criada) return;
 
-  const predios = TIPOS_PREDIO.map((tipo) => ({ cidade_id: criada.id, tipo, nivel: inicial.predios[tipo] }));
+  const predios = TIPOS_PREDIO.map((tipo) => ({ cidade_id: criada!.id, tipo, nivel: inicial.predios[tipo] }));
   await tx`insert into predios ${tx(predios)}`;
+  if (territorioId) {
+    await tx`
+      update territorios set dono_id = ${jogadorId}, cidade_principal = true, reservado_para = ${jogadorId}
+       where id = ${territorioId}`;
+  }
 }
 
 /** Lê e trava a cidade do jogador até o fim da transação. */
-async function carregarCidade(tx: Transacao, jogadorId: string): Promise<{ id: string; cidade: EstadoCidade; obra: Obra | null }> {
+async function carregarCidade(
+  tx: Transacao,
+  jogadorId: string,
+): Promise<{ id: string; cidade: EstadoCidade; obra: Obra | null; bonus: Recursos }> {
   const temporadaId = await temporadaAtiva(tx);
   const [linha] = await tx<LinhaCidade[]>`
     select id, comida, madeira, ouro, populacao, trabalhadores_comida, trabalhadores_madeira, trabalhadores_ouro, atualizado_em
@@ -65,6 +109,11 @@ async function carregarCidade(tx: Transacao, jogadorId: string): Promise<{ id: s
      where temporada_id = ${temporadaId} and jogador_id = ${jogadorId}
        for update`;
   if (!linha) throw new ErroDoJogo('Você ainda não tem cidade nesta temporada.', 404);
+
+  // Bônus de produção de todos os territórios do jogador nesta temporada.
+  const territorios = await tx<{ bonus_recurso: Recurso }[]>`
+    select bonus_recurso from territorios where temporada_id = ${temporadaId} and dono_id = ${jogadorId}`;
+  const bonus = bonusDeTerritorios(territorios.map((t) => t.bonus_recurso));
 
   const linhasPredios = await tx<LinhaPredio[]>`select tipo, nivel, pronto_em from predios where cidade_id = ${linha.id}`;
   const predios = Object.fromEntries(TIPOS_PREDIO.map((tipo) => [tipo, 0])) as EstadoCidade['predios'];
@@ -77,6 +126,7 @@ async function carregarCidade(tx: Transacao, jogadorId: string): Promise<{ id: s
   return {
     id: linha.id,
     obra,
+    bonus,
     cidade: {
       recursos: { comida: linha.comida, madeira: linha.madeira, ouro: linha.ouro },
       populacao: linha.populacao,
@@ -124,9 +174,9 @@ async function executar(jogadorId: string, corpo: Record<string, unknown>): Prom
 
   return await sql.begin(async (tx) => {
     const agora = Date.now();
-    const { id, cidade, obra } = await carregarCidade(tx, jogadorId);
+    const { id, cidade, obra, bonus } = await carregarCidade(tx, jogadorId);
     // Tropas entram no Épico 5; até lá ninguém consome comida.
-    const avancada = avancarCidade({ cidade, tropas: exercito(), obra, agora });
+    const avancada = avancarCidade({ cidade, tropas: exercito(), obra, agora, bonusTerritorios: bonus });
     let estado = avancada.cidade;
     let novaObra = avancada.obra;
 
