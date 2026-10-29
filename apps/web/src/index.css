@@ -1,0 +1,28 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-titulo: 'Cinzel', Georgia, serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+
+  --color-noite: #1c1410;
+  --color-carvao: #2a1f19;
+  --color-couro: #3b2c22;
+  --color-pergaminho: #f1e6cf;
+  --color-pergaminho-escuro: #c9b892;
+  --color-ouro: #d4a64a;
+  --color-ouro-claro: #e8c475;
+  --color-sangue: #7a2e1f;
+  --color-musgo: #4f6b3a;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  @apply bg-noite font-sans text-pergaminho antialiased;
+  background-image: radial-gradient(ellipse at top, #3b2c22 0%, #1c1410 60%);
+  background-attachment: fixed;
+}
