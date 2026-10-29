@@ -5,7 +5,7 @@ import {
   limitePopulacao,
   prediosIniciais,
 } from './predios.ts';
-import { RECURSOS, TIPOS_UNIDADE, type EstadoCidade, type Exercito, type NiveisPredios, type Recurso, type Recursos, type TipoPredio, type Verificacao } from './tipos.ts';
+import { RECURSOS, TIPOS_UNIDADE, type EstadoCidade, type Exercito, type LoteTreino, type NiveisPredios, type Obra, type Recurso, type Recursos, type TipoPredio, type Verificacao } from './tipos.ts';
 import { HORA_MS, mapearExercito, mapearRecursos, recursos, totalUnidades } from './util.ts';
 
 export const PREDIO_PRODUTOR: Record<Recurso, TipoPredio> = {
@@ -127,39 +127,61 @@ export function atualizarCidade(entrada: {
   };
 }
 
-/** Obra em andamento: o prédio `tipo` sobe um nível em `prontoEm` (ms). */
-export type Obra = { tipo: TipoPredio; prontoEm: number };
-
 /**
- * Como `atualizarCidade`, mas conclui a obra se ela terminar até `agora`: atualiza até o fim da obra,
- * aplica o novo nível (que pode mudar produção, armazém e população) e segue até `agora`.
+ * Avança a cidade até `agora` aplicando, em ordem, as obras e os lotes de treino que terminam no
+ * caminho: atualiza até cada evento, aplica (novo nível ou tropas novas, que passam a comer) e segue.
  * É a função que servidor e navegador usam para saber o estado atual da cidade.
  */
-export function avancarCidade(entrada: {
+export function avancarCidade<O extends Obra, L extends LoteTreino>(entrada: {
   cidade: EstadoCidade;
   tropas: Exercito;
-  obra: Obra | null;
+  obras?: readonly O[];
+  treinos?: readonly L[];
   agora: number;
   bonusTerritorios?: Recursos;
-}): ResultadoAtualizacao & { obra: Obra | null; obraConcluida: boolean } {
-  const { obra, agora, bonusTerritorios } = entrada;
+}): ResultadoAtualizacao & {
+  /** Obras ainda na fila (os mesmos objetos recebidos, para o servidor saber os ids). */
+  obras: O[];
+  obrasConcluidas: O[];
+  treinos: L[];
+  lotesConcluidos: L[];
+} {
+  const { obras = [], treinos = [], agora, bonusTerritorios } = entrada;
+  const obrasConcluidas = obras.filter((o) => o.prontoEm <= agora);
+  const lotesConcluidos = treinos.filter((l) => l.prontoEm <= agora);
+  const eventos = [
+    ...obrasConcluidas.map((obra) => ({ em: obra.prontoEm, obra })),
+    ...lotesConcluidos.map((lote) => ({ em: lote.prontoEm, lote })),
+  ].sort((a, b) => a.em - b.em);
 
-  if (!obra || obra.prontoEm > agora) {
-    return { ...atualizarCidade(entrada), obra, obraConcluida: false };
-  }
-
-  const ateObra = atualizarCidade({ ...entrada, agora: obra.prontoEm });
-  const comNovoNivel: EstadoCidade = {
-    ...ateObra.cidade,
-    predios: { ...ateObra.cidade.predios, [obra.tipo]: ateObra.cidade.predios[obra.tipo] + 1 },
+  let cidade = entrada.cidade;
+  let tropas = entrada.tropas;
+  let desertores = mapearExercito(() => 0);
+  const avancarAte = (instante: number) => {
+    const r = atualizarCidade({ cidade, tropas, agora: instante, bonusTerritorios });
+    cidade = r.cidade;
+    tropas = r.tropas;
+    desertores = mapearExercito((tipo) => desertores[tipo] + r.desertores[tipo]);
   };
-  const depois = atualizarCidade({ cidade: comNovoNivel, tropas: ateObra.tropas, agora, bonusTerritorios });
+
+  for (const evento of eventos) {
+    avancarAte(evento.em);
+    if ('obra' in evento) {
+      cidade = { ...cidade, predios: { ...cidade.predios, [evento.obra.tipo]: cidade.predios[evento.obra.tipo] + 1 } };
+    } else {
+      tropas = { ...tropas, [evento.lote.tipo]: tropas[evento.lote.tipo] + evento.lote.quantidade };
+    }
+  }
+  avancarAte(agora);
 
   return {
-    ...depois,
-    desertores: mapearExercito((tipo) => ateObra.desertores[tipo] + depois.desertores[tipo]),
-    obra: null,
-    obraConcluida: true,
+    cidade,
+    tropas,
+    desertores,
+    obras: obras.filter((o) => o.prontoEm > agora),
+    obrasConcluidas,
+    treinos: treinos.filter((l) => l.prontoEm > agora),
+    lotesConcluidos,
   };
 }
 

@@ -1,4 +1,4 @@
-import type { Recurso, Terreno, TipoPredio } from '@terra/regras';
+import type { Recurso, Terreno, TipoPredio, TipoUnidade } from '@terra/regras';
 
 export const TERRENOS_INFO: Record<Terreno, { nome: string; icone: string; efeito: string }> = {
   planicie: { nome: 'Planície', icone: '🌾', efeito: 'sem bônus de defesa' },
@@ -15,6 +15,12 @@ export const PREDIOS: Record<TipoPredio, { nome: string; icone: string; descrica
   armazem: { nome: 'Armazém', icone: '📦', descricao: 'Guarda mais recursos e protege uma parte contra saques.' },
   quartel: { nome: 'Quartel', icone: '⚔️', descricao: 'Treina lanceiros, arqueiros e cavalaria.' },
   muralha: { nome: 'Muralha', icone: '🧱', descricao: 'Bônus de defesa para a cidade.' },
+};
+
+export const UNIDADES_INFO: Record<TipoUnidade, { nome: string; plural: string; icone: string; descricao: string }> = {
+  lanceiro: { nome: 'Lanceiro', plural: 'Lanceiros', icone: '🔱', descricao: 'Barato e bom na defesa. Vence a cavalaria.' },
+  arqueiro: { nome: 'Arqueiro', plural: 'Arqueiros', icone: '🏹', descricao: 'Dano alto, pouca resistência. Vence lanceiros.' },
+  cavalaria: { nome: 'Cavalaria', plural: 'Cavalaria', icone: '🐎', descricao: 'Rápida, cara, ótima no saque. Vence arqueiros.' },
 };
 
 export const RECURSOS_INFO: Record<Recurso, { nome: string; icone: string }> = {

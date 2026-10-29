@@ -1,0 +1,2 @@
+# Mantém LF em todos os arquivos de texto, também no Windows.
+* text=auto eol=lf

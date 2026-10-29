@@ -6,7 +6,7 @@ import type { MotivoRecusaTreino } from './treino.ts';
 export const MENSAGENS_EVOLUCAO: Record<MotivoRecusaEvolucao, string> = {
   nivel_maximo: 'Este prédio já está no nível máximo.',
   acima_do_centro: 'Evolua o Centro da Cidade primeiro.',
-  construcao_em_andamento: 'Já há uma obra em andamento. Só uma por vez.',
+  fila_cheia: 'A fila de obras está cheia (até 3). Espere uma terminar.',
   recursos_insuficientes: 'Recursos insuficientes.',
 };
 
@@ -18,6 +18,7 @@ export const MENSAGENS_ALOCACAO: Record<MotivoRecusaAlocacao, string> = {
 
 export const MENSAGENS_TREINO: Record<MotivoRecusaTreino, string> = {
   quantidade_invalida: 'Quantidade de tropas inválida.',
+  fila_cheia: 'A fila do quartel está cheia. Espere um lote terminar.',
   sem_quartel: 'Construa um Quartel primeiro.',
   recursos_insuficientes: 'Recursos insuficientes.',
   populacao_insuficiente: 'Não há habitantes livres suficientes.',

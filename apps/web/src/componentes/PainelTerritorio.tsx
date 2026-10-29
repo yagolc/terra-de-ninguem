@@ -1,6 +1,6 @@
-import { BALANCEAMENTO } from '@terra/regras';
+import { BALANCEAMENTO, TIPOS_UNIDADE, totalUnidades } from '@terra/regras';
 import { COR_NEUTRA, type DadosMapa } from '../lib/useMapa';
-import { RECURSOS_INFO, TERRENOS_INFO } from '../lib/textos';
+import { RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO } from '../lib/textos';
 
 type Props = {
   dados: DadosMapa;
@@ -21,6 +21,7 @@ export default function PainelTerritorio({ dados, id, meuId, onSelecionar }: Pro
   const vizinhoDoMeu = !meu && vizinhos.some((v) => v.dono_id === meuId);
   const terreno = TERRENOS_INFO[t.terreno];
   const bonus = Math.round(BALANCEAMENTO.mapa.bonusTerritorio * 100);
+  const minhas = dados.minhasTropas.get(t.id);
 
   return (
     <div className="space-y-4">
@@ -63,6 +64,15 @@ export default function PainelTerritorio({ dados, id, meuId, onSelecionar }: Pro
           +{bonus}% de {RECURSOS_INFO[t.bonus_recurso].nome.toLowerCase()} para o dono
         </dd>
       </dl>
+
+      {minhas && totalUnidades(minhas) > 0 && (
+        <div className="rounded-lg bg-noite/60 px-3 py-2 text-sm">
+          <span className="text-pergaminho-escuro">Suas tropas aqui: </span>
+          {TIPOS_UNIDADE.filter((tipo) => minhas[tipo] > 0)
+            .map((tipo) => `${UNIDADES_INFO[tipo].icone} ${minhas[tipo]} ${UNIDADES_INFO[tipo].plural.toLowerCase()}`)
+            .join(' · ')}
+        </div>
+      )}
 
       <div>
         <h3 className="mb-1.5 text-sm text-pergaminho-escuro">Vizinhos ({vizinhos.length})</h3>

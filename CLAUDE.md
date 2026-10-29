@@ -6,7 +6,7 @@ Documentos de referência (leia antes de decisões de design):
 - `docs/GDD.md`: design do jogo (recursos, prédios, unidades, combate, mapa, proteções, temporadas).
 - `docs/plano-tecnico.md`: stack, modelo de dados, lógica do servidor, telas e ordem dos 8 épicos.
 
-**Status:** Épicos 1 a 4 prontos (Fundação, Regras, Cidade, Mapa e temporada); próximo é o 5 (Exército). Temporada 2 ativa (semente 2026, mapa para 6 jogadores). Épico 1: Projeto Supabase `wbhcmkortcklhcojphlx` (região São Paulo, plano Free) ligado à CLI; migration 0001 e a função `resgatar-convite` publicadas; e-mails em português saindo por SMTP do Gmail. Frontend publicado na Vercel em https://terra-de-ninguem.vercel.app (Root Directory `apps/web`, republica a cada push na `main` de github.com/yagolc/terra-de-ninguem; variáveis `VITE_*` configuradas no painel da Vercel).
+**Status:** Épicos 1 a 5 prontos (Fundação, Regras, Cidade, Mapa e temporada, Exército); próximo é o 6 (Ataques). Fila de até 3 obras e até 5 lotes de treino, independentes. Temporada 2 ativa (semente 2026, mapa para 6 jogadores). Épico 1: Projeto Supabase `wbhcmkortcklhcojphlx` (região São Paulo, plano Free) ligado à CLI; migration 0001 e a função `resgatar-convite` publicadas; e-mails em português saindo por SMTP do Gmail. Frontend publicado na Vercel em https://terra-de-ninguem.vercel.app (Root Directory `apps/web`, republica a cada push na `main` de github.com/yagolc/terra-de-ninguem; variáveis `VITE_*` configuradas no painel da Vercel).
 
 ## Pilares que guiam decisões
 
@@ -74,7 +74,9 @@ Exceção: o SMTP (Gmail pessoal com senha de app) é configurado **só no paine
 
 - **Edge Function** (`supabase/functions/<nome>/index.ts`) importa as regras direto de `../../../packages/regras/src/index.ts`; o deploy leva os arquivos junto. Código comum fica em `supabase/functions/_compartilhado/` (`auth.ts` valida o token com `getUser`, `db.ts` conecta direto ao Postgres via `SUPABASE_DB_URL`, `http.ts` tem CORS e `ErroDoJogo`).
 - Funções publicadas com `--no-verify-jwt` e `verify_jwt = false` no `config.toml`: o token é validado no código.
-- Cada comando: `sql.begin` → `select ... for update` na cidade → `avancarCidade` até agora → valida com `verificar*` das regras → grava. Recusas lançam `ErroDoJogo(MENSAGENS_*[motivo])`.
+- Cada comando: `sql.begin` → `select ... for update` na cidade e nas tropas do jogador → `avancarCidade` até agora (conclui obras e lotes de treino em ordem, consumo de comida e deserção) → valida com `verificar*` das regras → grava cidade, tropas (`distribuirPerdas` entre territórios), `obras` e `filas_treino`. Recusas lançam `ErroDoJogo(MENSAGENS_*[motivo])`.
+- Obras e lotes concluídos só são gravados no próximo comando; o navegador já os mostra porque calcula com `avancarCidade`.
+- Sem Deno local: para checar tipos das Edge Functions, rode `tsc` com `paths` apontando `npm:postgres@3.4.5` e `jsr:@supabase/supabase-js@2` para os pacotes do npm.
 - O gerador de mapa (`@terra/regras/mapa`, usa `d3-delaunay`) fica **fora** do `index.ts` das regras: só o script de temporada e testes o importam; Edge Functions e site leem o mapa pronto do banco.
 - `territorios.guarnicao_inicial` (força dos bárbaros) não tem `grant select`: liste as colunas no `select` do cliente, nunca `*`.
 - **Frontend** lê pelo PostgREST (RLS só leitura), recalcula a cada segundo com `avancarCidade` e manda comandos com `chamarFuncao` (`apps/web/src/lib/funcoes.ts`), relendo a cidade depois.

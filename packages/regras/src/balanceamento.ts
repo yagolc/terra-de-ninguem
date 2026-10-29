@@ -39,6 +39,8 @@ export const BALANCEAMENTO = {
     muralha: { custoBase: { comida: 0, madeira: 100, ouro: 30 }, tempoBaseMin: 5, nivelMaximo: 10 },
   } satisfies Record<TipoPredio, ConfigPredio>,
   crescimentoCusto: 1.5,
+  /** Obras que podem esperar na fila da cidade (feitas uma depois da outra). */
+  maxObrasNaFila: 3,
   crescimentoTempo: 1.6,
 
   producao: {
@@ -87,6 +89,8 @@ export const BALANCEAMENTO = {
     /** Redução do tempo de treino por nível do quartel acima do 1. */
     reducaoPorNivelQuartel: 0.05,
     reducaoMaxima: 0.5,
+    /** Lotes que podem esperar na fila do quartel (treinados um depois do outro). */
+    maxLotesNaFila: 5,
   },
 
   batalha: {

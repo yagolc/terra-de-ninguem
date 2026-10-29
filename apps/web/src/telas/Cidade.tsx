@@ -1,16 +1,17 @@
-import { RECURSOS, TIPOS_PREDIO, type Recursos, type TipoPredio } from '@terra/regras';
+import { BALANCEAMENTO, RECURSOS, TIPOS_PREDIO, type Recursos, type TipoPredio, type TipoUnidade } from '@terra/regras';
 import type { Session } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 import BarraRecursos from '../componentes/BarraRecursos';
 import CartaoPredio from '../componentes/CartaoPredio';
+import PainelQuartel from '../componentes/PainelQuartel';
 import PainelTrabalhadores from '../componentes/PainelTrabalhadores';
 import { useCidade } from '../lib/useCidade';
-import { PREDIOS, RECURSOS_INFO, TERRENOS_INFO } from '../lib/textos';
+import { PREDIOS, RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarDuracao } from '../lib/textos';
 
 type Aviso = { tipo: 'erro' | 'ok'; texto: string };
 
 export default function Cidade({ sessao }: { sessao: Session }) {
-  const { cidade, obra, bonus, territorio, territorios, agora, erro, comandar } = useCidade(sessao.user.id);
+  const { cidade, obras, tropas, fila, soldados, bonus, territorio, territorios, agora, erro, comandar } = useCidade(sessao.user.id);
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState<Aviso | null>(null);
 
@@ -33,7 +34,9 @@ export default function Cidade({ sessao }: { sessao: Session }) {
   }
 
   const evoluir = (tipo: TipoPredio) =>
-    executar({ acao: 'evoluir_predio', tipo }, `Obra iniciada: ${PREDIOS[tipo].nome}.`);
+    executar({ acao: 'evoluir_predio', tipo }, `${PREDIOS[tipo].nome} na fila de obras.`);
+  const treinar = (tipo: TipoUnidade, quantidade: number) =>
+    executar({ acao: 'treinar_tropas', tipo, quantidade }, `Treino iniciado: ${quantidade} ${UNIDADES_INFO[tipo].plural.toLowerCase()}.`);
   const alocar = (alocacao: Recursos) =>
     executar({ acao: 'alocar_trabalhadores', alocacao }, 'Trabalhadores redistribuídos.');
 
@@ -81,13 +84,20 @@ export default function Cidade({ sessao }: { sessao: Session }) {
           </p>
         )}
         <div className="md:hidden">
-          <BarraRecursos cidade={cidade} bonus={bonus} />
+          <BarraRecursos cidade={cidade} bonus={bonus} tropas={tropas} soldados={soldados} />
         </div>
       </div>
 
       <div className="mx-auto grid max-w-6xl gap-6 px-4 py-4 md:grid-cols-[1fr_320px]">
         <section>
-          <h2 className="mb-3 font-titulo text-lg text-ouro">Prédios</h2>
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3">
+            <h2 className="font-titulo text-lg text-ouro">Prédios</h2>
+            <p className="text-xs text-pergaminho-escuro">
+              Fila de obras: {obras.length}/{BALANCEAMENTO.maxObrasNaFila}
+              {obras.length > 0 &&
+                ` · ${obras.map((o) => PREDIOS[o.tipo].nome).join(' → ')} · tudo pronto em ${formatarDuracao(obras.at(-1)!.prontoEm - agora)}`}
+            </p>
+          </div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {TIPOS_PREDIO.map((tipo) => (
               <CartaoPredio
@@ -95,7 +105,7 @@ export default function Cidade({ sessao }: { sessao: Session }) {
                 tipo={tipo}
                 cidade={cidade}
                 bonus={bonus}
-                obra={obra}
+                obras={obras}
                 agora={agora}
                 ocupado={ocupado}
                 onEvoluir={evoluir}
@@ -106,9 +116,18 @@ export default function Cidade({ sessao }: { sessao: Session }) {
 
         <aside className="space-y-4 md:sticky md:top-4 md:self-start">
           <div className="hidden md:block">
-            <BarraRecursos cidade={cidade} bonus={bonus} />
+            <BarraRecursos cidade={cidade} bonus={bonus} tropas={tropas} soldados={soldados} />
           </div>
-          <PainelTrabalhadores cidade={cidade} bonus={bonus} ocupado={ocupado} onSalvar={alocar} />
+          <PainelTrabalhadores cidade={cidade} bonus={bonus} soldados={soldados} ocupado={ocupado} onSalvar={alocar} />
+          <PainelQuartel
+            cidade={cidade}
+            tropas={tropas}
+            fila={fila}
+            soldados={soldados}
+            agora={agora}
+            ocupado={ocupado}
+            onTreinar={treinar}
+          />
         </aside>
       </div>
     </div>

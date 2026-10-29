@@ -4,12 +4,14 @@ import {
   capacidadeArmazem,
   custoEvolucao,
   limitePopulacao,
+  niveisProjetados,
   prediosIniciais,
   protecaoArmazem,
+  recursosQueFaltam,
   tempoEvolucaoMs,
   verificarEvolucao,
 } from './predios.ts';
-import { TIPOS_PREDIO } from './tipos.ts';
+import { TIPOS_PREDIO, type Obra } from './tipos.ts';
 import { MINUTO_MS, recursos } from './util.ts';
 
 const RICO = recursos({ comida: 1e9, madeira: 1e9, ouro: 1e9 });
@@ -37,11 +39,16 @@ describe('custos e tempos', () => {
 });
 
 describe('verificarEvolucao', () => {
-  const base = { predios: prediosIniciais(), recursos: RICO, construcaoEmAndamento: false };
+  const base = { predios: prediosIniciais(), recursos: RICO, obras: [] as Obra[], agora: 0 };
 
   it('permite construir um prédio novo com a cidade inicial', () => {
     const r = verificarEvolucao({ ...base, tipo: 'fazenda' });
-    expect(r).toMatchObject({ ok: true, nivelAlvo: 1, custo: custoEvolucao('fazenda', 1) });
+    expect(r).toMatchObject({
+      ok: true,
+      nivelAlvo: 1,
+      custo: custoEvolucao('fazenda', 1),
+      prontoEm: tempoEvolucaoMs('fazenda', 1),
+    });
   });
 
   it('não deixa um prédio passar do nível do Centro da Cidade', () => {
@@ -55,18 +62,48 @@ describe('verificarEvolucao', () => {
     expect(verificarEvolucao({ ...base, predios, tipo: 'centro' })).toEqual({ ok: false, motivo: 'nivel_maximo' });
   });
 
-  it('só permite uma obra por vez', () => {
-    expect(verificarEvolucao({ ...base, tipo: 'casa', construcaoEmAndamento: true })).toEqual({
-      ok: false,
-      motivo: 'construcao_em_andamento',
-    });
+  it('a obra nova entra no fim da fila', () => {
+    const obras: Obra[] = [{ tipo: 'fazenda', prontoEm: 500_000 }];
+    const r = verificarEvolucao({ ...base, obras, tipo: 'casa', agora: 100_000 });
+    expect(r).toMatchObject({ ok: true, nivelAlvo: 1, prontoEm: 500_000 + tempoEvolucaoMs('casa', 1) });
   });
 
-  it('exige recursos suficientes', () => {
-    expect(verificarEvolucao({ ...base, tipo: 'quartel', recursos: recursos({ madeira: 10 }) })).toEqual({
+  it('o mesmo prédio na fila conta para o próximo nível', () => {
+    const predios = { ...prediosIniciais(), centro: 3, fazenda: 1 };
+    const obras: Obra[] = [{ tipo: 'fazenda', prontoEm: 60_000 }];
+    expect(verificarEvolucao({ ...base, predios, obras, tipo: 'fazenda' })).toMatchObject({ ok: true, nivelAlvo: 3 });
+  });
+
+  it('o Centro na fila libera o nível seguinte dos outros prédios', () => {
+    const predios = { ...prediosIniciais(), fazenda: 1 };
+    const obras: Obra[] = [{ tipo: 'centro', prontoEm: 60_000 }];
+    expect(verificarEvolucao({ ...base, predios, obras, tipo: 'fazenda' })).toMatchObject({ ok: true, nivelAlvo: 2 });
+  });
+
+  it(`a fila aceita até ${BALANCEAMENTO.maxObrasNaFila} obras`, () => {
+    const obras: Obra[] = Array.from({ length: BALANCEAMENTO.maxObrasNaFila }, (_, i) => ({
+      tipo: 'centro',
+      prontoEm: (i + 1) * 60_000,
+    }));
+    expect(verificarEvolucao({ ...base, obras: obras.slice(1), tipo: 'casa' }).ok).toBe(true);
+    expect(verificarEvolucao({ ...base, obras, tipo: 'casa' })).toEqual({ ok: false, motivo: 'fila_cheia' });
+  });
+
+  it('exige recursos suficientes e diz quanto falta', () => {
+    const estoque = recursos({ madeira: 10, ouro: 50 });
+    expect(verificarEvolucao({ ...base, tipo: 'quartel', recursos: estoque })).toEqual({
       ok: false,
       motivo: 'recursos_insuficientes',
     });
+    expect(recursosQueFaltam(estoque, custoEvolucao('quartel', 1))).toEqual({ comida: 0, madeira: 110, ouro: 0 });
+  });
+
+  it('projeta os níveis com as obras da fila', () => {
+    const obras: Obra[] = [
+      { tipo: 'casa', prontoEm: 1 },
+      { tipo: 'casa', prontoEm: 2 },
+    ];
+    expect(niveisProjetados(prediosIniciais(), obras)).toMatchObject({ centro: 1, casa: 2 });
   });
 });
 

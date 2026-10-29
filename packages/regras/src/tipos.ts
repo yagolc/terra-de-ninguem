@@ -29,5 +29,11 @@ export type EstadoCidade = {
   atualizadoEm: number;
 };
 
+/** Obra na fila: o prédio `tipo` sobe um nível em `prontoEm` (ms). As obras são feitas uma depois da outra. */
+export type Obra = { tipo: TipoPredio; prontoEm: number };
+
+/** Lote de tropas em treino: entra no exército em `prontoEm` (ms). */
+export type LoteTreino = { tipo: TipoUnidade; quantidade: number; prontoEm: number };
+
 /** Resultado de uma validação: ok com dados extras, ou o motivo da recusa. */
 export type Verificacao<Dados, Motivo extends string> = ({ ok: true } & Dados) | { ok: false; motivo: Motivo };

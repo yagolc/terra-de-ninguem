@@ -15,12 +15,14 @@ import { PREDIOS, RECURSOS_INFO, formatarTaxa } from '../lib/textos';
 type Props = {
   cidade: EstadoCidade;
   bonus: Recursos;
+  /** Tropas e tropas em treino: cada habitante é trabalhador ou soldado. */
+  soldados: number;
   ocupado: boolean;
   onSalvar: (alocacao: Recursos) => void;
 };
 
 /** Distribui habitantes entre fazenda, serraria e mercado. Cada um é trabalhador ou soldado. */
-export default function PainelTrabalhadores({ cidade, bonus, ocupado, onSalvar }: Props) {
+export default function PainelTrabalhadores({ cidade, bonus, soldados, ocupado, onSalvar }: Props) {
   const salvo = cidade.trabalhadores;
   const [rascunho, setRascunho] = useState<Recursos>(salvo);
 
@@ -30,8 +32,8 @@ export default function PainelTrabalhadores({ cidade, bonus, ocupado, onSalvar }
   const vagas = vagasTrabalho(cidade.predios);
   const comRascunho = { ...cidade, trabalhadores: rascunho };
   const producao = producaoHora(comRascunho, bonus);
-  const livres = habitantesLivres(comRascunho, 0);
-  const verificacao = verificarAlocacao({ cidade, alocacao: rascunho, soldados: 0 });
+  const livres = habitantesLivres(comRascunho, soldados);
+  const verificacao = verificarAlocacao({ cidade, alocacao: rascunho, soldados });
   const mudou = RECURSOS.some((r) => rascunho[r] !== salvo[r]);
 
   function ajustar(recurso: keyof Recursos, delta: number) {

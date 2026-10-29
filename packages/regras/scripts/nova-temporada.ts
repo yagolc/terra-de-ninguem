@@ -130,10 +130,6 @@ console.log(`\n  Prévia: supabase/.temp/previa-temporada.svg`);
 // ---------------------------------------------------------------------------
 // Gravação
 // ---------------------------------------------------------------------------
-if (!opcoes.aplicar) {
-  console.log(`\n  Nada foi gravado. Para criar a temporada: npm run temporada:nova -- --semente ${sementeBase} --aplicar\n`);
-  process.exit(0);
-}
 
 const texto = (s: string) => `'${s.replace(/'/g, "''")}'`;
 const idTemporada = randomUUID();
@@ -159,6 +155,14 @@ const valoresFronteiras = mapa.fronteiras
   .map(([a, b]) => [idsTerritorios[a]!, idsTerritorios[b]!].sort())
   .map(([a, b]) => `(t, ${texto(a!)}, ${texto(b!)})`)
   .join(',\n    ');
+// Bárbaros: uma linha de tropas sem dono em cada território neutro com guarnição.
+const valoresBarbaros = mapa.territorios
+  .filter((t) => totalUnidades(t.guarnicao) > 0)
+  .map((t) => {
+    const g = t.guarnicao;
+    return `(t, ${texto(idsTerritorios[t.indice]!)}, null, ${g.lanceiro}, ${g.arqueiro}, ${g.cavalaria})`;
+  })
+  .join(',\n    ');
 const coresJogadores = participantes
   .map((j, i) => `  update public.jogadores set cor = ${texto(CORES_JOGADORES[i]!)} where id = ${texto(j.id)};`)
   .join('\n');
@@ -177,11 +181,21 @@ begin
     ${valoresTerritorios};
   insert into public.fronteiras (temporada_id, territorio_a, territorio_b) values
     ${valoresFronteiras};
+  insert into public.tropas (temporada_id, territorio_id, dono_id, lanceiro, arqueiro, cavalaria) values
+    ${valoresBarbaros};
 ${coresJogadores}
 end $$;
 `;
 
 writeFileSync(`${PASTA_SAIDA}/nova-temporada.sql`, sql);
+if (!opcoes.aplicar) {
+  const jogadoresOpcao = opcoes.jogadores ? ` --jogadores ${quantos}` : '';
+  console.log(
+    `  SQL: supabase/.temp/nova-temporada.sql\n\n  Nada foi gravado. Para criar a temporada:` +
+      ` npm run temporada:nova -- --semente ${sementeBase}${jogadoresOpcao} --aplicar\n`,
+  );
+  process.exit(0);
+}
 execSync('npx supabase db query --linked --file supabase/.temp/nova-temporada.sql', { cwd: RAIZ, stdio: ['ignore', 'ignore', 'inherit'] });
 const [criada] = consultar<{ numero: number }>(`select numero from public.temporadas where id = '${idTemporada}'`);
 console.log(`\n  Temporada ${criada?.numero} criada e ativa. A anterior foi encerrada.\n`);

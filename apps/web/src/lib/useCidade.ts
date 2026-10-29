@@ -3,13 +3,19 @@ import {
   avancarCidade,
   bonusDeTerritorios,
   exercito,
+  soldadosNaConta,
+  somarExercitos,
+  totalUnidades,
   type EstadoCidade,
+  type Exercito,
+  type LoteTreino,
   type NiveisPredios,
   type Obra,
   type Recurso,
   type Recursos,
   type Terreno,
   type TipoPredio,
+  type TipoUnidade,
 } from '@terra/regras';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { chamarFuncao } from './funcoes';
@@ -26,30 +32,38 @@ type LinhaCidade = {
   trabalhadores_madeira: number;
   trabalhadores_ouro: number;
   atualizado_em: string;
-  predios: { tipo: TipoPredio; nivel: number; pronto_em: string | null }[];
+  predios: { tipo: TipoPredio; nivel: number }[];
+  obras: { tipo: TipoPredio; pronto_em: string }[];
+  filas_treino: { tipo_unidade: TipoUnidade; quantidade: number; pronto_em: string }[];
 };
 
 type TerritorioDoJogador = { id: string; nome: string; terreno: Terreno; bonus_recurso: Recurso };
+type LinhaTropas = { lanceiro: number; arqueiro: number; cavalaria: number };
 
 type CidadeSalva = {
   cidade: EstadoCidade;
-  obra: Obra | null;
+  obras: Obra[];
   bonus: Recursos;
+  /** Todas as tropas do jogador (todas comem). */
+  tropas: Exercito;
+  fila: LoteTreino[];
   /** Território onde fica a cidade (null na temporada de testes, sem mapa). */
   territorio: TerritorioDoJogador | null;
   territorios: number;
 };
 
-function converter(linha: LinhaCidade, territorios: TerritorioDoJogador[]): CidadeSalva {
+function converter(linha: LinhaCidade, territorios: TerritorioDoJogador[], tropas: LinhaTropas[]): CidadeSalva {
   const predios = Object.fromEntries(TIPOS_PREDIO.map((tipo) => [tipo, 0])) as NiveisPredios;
-  let obra: Obra | null = null;
-  for (const p of linha.predios) {
-    predios[p.tipo] = p.nivel;
-    if (p.pronto_em) obra = { tipo: p.tipo, prontoEm: Date.parse(p.pronto_em) };
-  }
+  for (const p of linha.predios) predios[p.tipo] = p.nivel;
   return {
-    obra,
+    obras: linha.obras
+      .map((o) => ({ tipo: o.tipo, prontoEm: Date.parse(o.pronto_em) }))
+      .sort((a, b) => a.prontoEm - b.prontoEm),
     bonus: bonusDeTerritorios(territorios.map((t) => t.bonus_recurso)),
+    tropas: somarExercitos(exercito(), ...tropas.map((t) => exercito(t))),
+    fila: linha.filas_treino
+      .map((l) => ({ tipo: l.tipo_unidade, quantidade: l.quantidade, prontoEm: Date.parse(l.pronto_em) }))
+      .sort((a, b) => a.prontoEm - b.prontoEm),
     territorio: territorios.find((t) => t.id === linha.territorio_id) ?? null,
     territorios: territorios.length,
     cidade: {
@@ -71,7 +85,7 @@ async function buscarCidade(jogadorId: string): Promise<CidadeSalva | null> {
   const { data, error } = await supabase
     .from('cidades')
     .select(
-      'temporada_id, territorio_id, comida, madeira, ouro, populacao, trabalhadores_comida, trabalhadores_madeira, trabalhadores_ouro, atualizado_em, predios(tipo, nivel, pronto_em), temporadas!inner(status)',
+      'temporada_id, territorio_id, comida, madeira, ouro, populacao, trabalhadores_comida, trabalhadores_madeira, trabalhadores_ouro, atualizado_em, predios(tipo, nivel), obras(tipo, pronto_em), filas_treino(tipo_unidade, quantidade, pronto_em), temporadas!inner(status)',
     )
     .eq('jogador_id', jogadorId)
     .eq('temporadas.status', 'ativa')
@@ -79,14 +93,22 @@ async function buscarCidade(jogadorId: string): Promise<CidadeSalva | null> {
   if (error) throw new Error('Não foi possível carregar sua cidade.');
   if (!data) return null;
 
-  const { data: territorios, error: erroTerritorios } = await supabase
-    .from('territorios')
-    .select('id, nome, terreno, bonus_recurso')
-    .eq('temporada_id', data.temporada_id)
-    .eq('dono_id', jogadorId)
-    .returns<TerritorioDoJogador[]>();
-  if (erroTerritorios) throw new Error('Não foi possível carregar seus territórios.');
-  return converter(data, territorios);
+  const [territorios, tropas] = await Promise.all([
+    supabase
+      .from('territorios')
+      .select('id, nome, terreno, bonus_recurso')
+      .eq('temporada_id', data.temporada_id)
+      .eq('dono_id', jogadorId)
+      .returns<TerritorioDoJogador[]>(),
+    supabase
+      .from('tropas')
+      .select('lanceiro, arqueiro, cavalaria')
+      .eq('temporada_id', data.temporada_id)
+      .eq('dono_id', jogadorId)
+      .returns<LinhaTropas[]>(),
+  ]);
+  if (!territorios.data || !tropas.data) throw new Error('Não foi possível carregar seus territórios e tropas.');
+  return converter(data, territorios.data, tropas.data);
 }
 
 /**
@@ -123,10 +145,16 @@ export function useCidade(jogadorId: string) {
   }, []);
 
   const atual = useMemo(
-    // Tropas entram no Épico 5.
     () =>
       salva
-        ? avancarCidade({ cidade: salva.cidade, tropas: exercito(), obra: salva.obra, agora, bonusTerritorios: salva.bonus })
+        ? avancarCidade({
+            cidade: salva.cidade,
+            tropas: salva.tropas,
+            obras: salva.obras,
+            treinos: salva.fila,
+            agora,
+            bonusTerritorios: salva.bonus,
+          })
         : null,
     [salva, agora],
   );
@@ -141,7 +169,10 @@ export function useCidade(jogadorId: string) {
 
   return {
     cidade: atual?.cidade ?? null,
-    obra: atual?.obra ?? null,
+    obras: atual?.obras ?? [],
+    tropas: atual?.tropas ?? exercito(),
+    fila: atual?.treinos ?? [],
+    soldados: atual ? soldadosNaConta(totalUnidades(atual.tropas), atual.treinos) : 0,
     bonus: salva?.bonus ?? null,
     territorio: salva?.territorio ?? null,
     territorios: salva?.territorios ?? 0,

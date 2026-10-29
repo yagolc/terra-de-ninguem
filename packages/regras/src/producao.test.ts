@@ -149,24 +149,24 @@ describe('avancarCidade', () => {
   it('sem obra, é igual a atualizarCidade', () => {
     const cidade = cidadeProdutora();
     const agora = INICIO + 3 * HORA_MS;
-    const r = avancarCidade({ cidade, tropas: exercito(), obra: null, agora });
+    const r = avancarCidade({ cidade, tropas: exercito(), agora });
     expect(r.cidade).toEqual(atualizarCidade({ cidade, tropas: exercito(), agora }).cidade);
-    expect(r.obraConcluida).toBe(false);
+    expect(r.obrasConcluidas).toEqual([]);
   });
 
   it('mantém a obra que ainda não terminou', () => {
     const obra = { tipo: 'fazenda' as const, prontoEm: INICIO + 5 * HORA_MS };
-    const r = avancarCidade({ cidade: semFazenda(), tropas: exercito(), obra, agora: INICIO + HORA_MS });
-    expect(r.obra).toEqual(obra);
+    const r = avancarCidade({ cidade: semFazenda(), tropas: exercito(), obras: [obra], agora: INICIO + HORA_MS });
+    expect(r.obras).toEqual([obra]);
     expect(r.cidade.predios.fazenda).toBe(0);
   });
 
   it('conclui a obra no meio do intervalo e só produz a partir dali', () => {
     // A fazenda fica pronta 1 h depois do início; 3 h depois, produziu por 2 h.
     const obra = { tipo: 'fazenda' as const, prontoEm: INICIO + HORA_MS };
-    const r = avancarCidade({ cidade: semFazenda(), tropas: exercito(), obra, agora: INICIO + 3 * HORA_MS });
-    expect(r.obraConcluida).toBe(true);
-    expect(r.obra).toBeNull();
+    const r = avancarCidade({ cidade: semFazenda(), tropas: exercito(), obras: [obra], agora: INICIO + 3 * HORA_MS });
+    expect(r.obrasConcluidas).toEqual([obra]);
+    expect(r.obras).toEqual([]);
     expect(r.cidade.predios.fazenda).toBe(1);
     expect(r.cidade.recursos.comida).toBeCloseTo(2 * 5 * BALANCEAMENTO.producao.porTrabalhadorHora.comida);
     expect(r.cidade.atualizadoEm).toBe(INICIO + 3 * HORA_MS);
@@ -174,11 +174,77 @@ describe('avancarCidade', () => {
 
   it('dá o mesmo resultado se o servidor atualizar no meio da obra', () => {
     const obra = { tipo: 'fazenda' as const, prontoEm: INICIO + 2 * HORA_MS };
-    const deUmaVez = avancarCidade({ cidade: semFazenda(), tropas: exercito(), obra, agora: INICIO + 5 * HORA_MS });
-    const meio = avancarCidade({ cidade: semFazenda(), tropas: exercito(), obra, agora: INICIO + HORA_MS });
-    const fim = avancarCidade({ cidade: meio.cidade, tropas: meio.tropas, obra: meio.obra, agora: INICIO + 5 * HORA_MS });
+    const deUmaVez = avancarCidade({ cidade: semFazenda(), tropas: exercito(), obras: [obra], agora: INICIO + 5 * HORA_MS });
+    const meio = avancarCidade({ cidade: semFazenda(), tropas: exercito(), obras: [obra], agora: INICIO + HORA_MS });
+    const fim = avancarCidade({ cidade: meio.cidade, tropas: meio.tropas, obras: meio.obras, agora: INICIO + 5 * HORA_MS });
     expect(fim.cidade.recursos.comida).toBeCloseTo(deUmaVez.cidade.recursos.comida, 6);
     expect(fim.cidade.predios).toEqual(deUmaVez.cidade.predios);
+  });
+});
+
+describe('avancarCidade com treino', () => {
+  // Cidade sem produção de comida, com estoque para 10 h de 10 lanceiros.
+  const semComida = (): EstadoCidade =>
+    cidadeProdutora({ populacao: 100, trabalhadores: { comida: 0, madeira: 0, ouro: 0 }, recursos: recursos({ comida: 100 }) });
+
+  it('tropas de um lote concluído entram no exército e passam a comer a partir dali', () => {
+    const lote = { tipo: 'lanceiro' as const, quantidade: 10, prontoEm: INICIO + 2 * HORA_MS };
+    const r = avancarCidade({ cidade: semComida(), tropas: exercito(), treinos: [lote], agora: INICIO + 5 * HORA_MS });
+    expect(r.tropas.lanceiro).toBe(10);
+    expect(r.lotesConcluidos).toEqual([lote]);
+    expect(r.treinos).toEqual([]);
+    // Comeram só nas 3 horas depois de prontos: 10 × 1 × 3.
+    expect(r.cidade.recursos.comida).toBeCloseTo(70);
+  });
+
+  it('lotes ainda em treino ficam na fila e não comem', () => {
+    const lote = { tipo: 'cavalaria' as const, quantidade: 4, prontoEm: INICIO + 9 * HORA_MS };
+    const r = avancarCidade({ cidade: semComida(), tropas: exercito(), treinos: [lote], agora: INICIO + 5 * HORA_MS });
+    expect(r.tropas.cavalaria).toBe(0);
+    expect(r.treinos).toEqual([lote]);
+    expect(r.cidade.recursos.comida).toBe(100);
+  });
+
+  it('aplica obra e lotes na ordem em que terminam', () => {
+    const cidade = cidadeProdutora({
+      predios: { centro: 2, casa: 1, fazenda: 0, serraria: 0, mercado: 0, armazem: 0, quartel: 1, muralha: 0 },
+      trabalhadores: { comida: 5, madeira: 0, ouro: 0 },
+      recursos: recursos({ comida: 0 }),
+      populacao: 100,
+    });
+    const r = avancarCidade({
+      cidade,
+      tropas: exercito(),
+      obras: [{ tipo: 'fazenda', prontoEm: INICIO + HORA_MS }],
+      treinos: [{ tipo: 'lanceiro', quantidade: 20, prontoEm: INICIO + 2 * HORA_MS }],
+      agora: INICIO + 3 * HORA_MS,
+    });
+    // Fazenda produz 60/h desde 1 h; lanceiros comem 20/h desde 2 h: 2 × 60 − 1 × 20.
+    expect(r.cidade.recursos.comida).toBeCloseTo(100);
+    expect(r.obrasConcluidas).toHaveLength(1);
+    expect(r.tropas.lanceiro).toBe(20);
+  });
+
+  it('conclui várias obras da fila em sequência, cada uma no seu tempo', () => {
+    // Fazenda pronta em 1 h e evoluída de novo em 2 h: produz 60/h por 1 h e 66/h por 1 h.
+    const cidade = cidadeProdutora({
+      predios: { centro: 3, casa: 1, fazenda: 0, serraria: 0, mercado: 0, armazem: 0, quartel: 0, muralha: 0 },
+      trabalhadores: { comida: 5, madeira: 0, ouro: 0 },
+      recursos: recursos({ comida: 0 }),
+    });
+    const r = avancarCidade({
+      cidade,
+      tropas: exercito(),
+      obras: [
+        { tipo: 'fazenda', prontoEm: INICIO + HORA_MS },
+        { tipo: 'fazenda', prontoEm: INICIO + 2 * HORA_MS },
+        { tipo: 'casa', prontoEm: INICIO + 9 * HORA_MS },
+      ],
+      agora: INICIO + 3 * HORA_MS,
+    });
+    expect(r.cidade.predios.fazenda).toBe(2);
+    expect(r.obras).toEqual([{ tipo: 'casa', prontoEm: INICIO + 9 * HORA_MS }]);
+    expect(r.cidade.recursos.comida).toBeCloseTo(60 + 66);
   });
 });
 

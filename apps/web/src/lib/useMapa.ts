@@ -1,4 +1,4 @@
-import type { Recurso, Terreno } from '@terra/regras';
+import { exercito, type Exercito, type Recurso, type Terreno } from '@terra/regras';
 import { useEffect, useState } from 'react';
 import { supabase } from './supabase';
 
@@ -25,6 +25,8 @@ export type DadosMapa = {
   territorios: TerritorioMapa[];
   vizinhos: Map<string, string[]>;
   jogadores: Map<string, JogadorMapa>;
+  /** Tropas do próprio jogador por território (o RLS esconde as dos outros e as dos bárbaros). */
+  minhasTropas: Map<string, Exercito>;
 };
 
 export const COR_NEUTRA = '#6b5a48';
@@ -38,7 +40,7 @@ async function buscarMapa(): Promise<DadosMapa | null> {
     .maybeSingle<{ id: string; numero: number }>();
   if (!temporada) return null;
 
-  const [regioes, territorios, fronteiras, jogadores] = await Promise.all([
+  const [regioes, territorios, fronteiras, jogadores, tropas] = await Promise.all([
     supabase.from('regioes').select('id, indice, nome, terreno').eq('temporada_id', temporada.id).returns<RegiaoMapa[]>(),
     supabase
       .from('territorios')
@@ -52,8 +54,13 @@ async function buscarMapa(): Promise<DadosMapa | null> {
       .eq('temporada_id', temporada.id)
       .returns<{ territorio_a: string; territorio_b: string }[]>(),
     supabase.from('jogadores').select('id, nome, cor').returns<JogadorMapa[]>(),
+    supabase
+      .from('tropas')
+      .select('territorio_id, lanceiro, arqueiro, cavalaria')
+      .eq('temporada_id', temporada.id)
+      .returns<{ territorio_id: string; lanceiro: number; arqueiro: number; cavalaria: number }[]>(),
   ]);
-  if (!regioes.data || !territorios.data || !fronteiras.data || !jogadores.data) {
+  if (!regioes.data || !territorios.data || !fronteiras.data || !jogadores.data || !tropas.data) {
     throw new Error('Não foi possível carregar o mapa.');
   }
   if (territorios.data.length === 0) return null;
@@ -69,6 +76,7 @@ async function buscarMapa(): Promise<DadosMapa | null> {
     territorios: territorios.data,
     vizinhos,
     jogadores: new Map(jogadores.data.map((j) => [j.id, j])),
+    minhasTropas: new Map(tropas.data.map(({ territorio_id, ...t }) => [territorio_id, exercito(t)])),
   };
 }
 
