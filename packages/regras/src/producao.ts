@@ -127,6 +127,42 @@ export function atualizarCidade(entrada: {
   };
 }
 
+/** Obra em andamento: o prédio `tipo` sobe um nível em `prontoEm` (ms). */
+export type Obra = { tipo: TipoPredio; prontoEm: number };
+
+/**
+ * Como `atualizarCidade`, mas conclui a obra se ela terminar até `agora`: atualiza até o fim da obra,
+ * aplica o novo nível (que pode mudar produção, armazém e população) e segue até `agora`.
+ * É a função que servidor e navegador usam para saber o estado atual da cidade.
+ */
+export function avancarCidade(entrada: {
+  cidade: EstadoCidade;
+  tropas: Exercito;
+  obra: Obra | null;
+  agora: number;
+  bonusTerritorios?: Recursos;
+}): ResultadoAtualizacao & { obra: Obra | null; obraConcluida: boolean } {
+  const { obra, agora, bonusTerritorios } = entrada;
+
+  if (!obra || obra.prontoEm > agora) {
+    return { ...atualizarCidade(entrada), obra, obraConcluida: false };
+  }
+
+  const ateObra = atualizarCidade({ ...entrada, agora: obra.prontoEm });
+  const comNovoNivel: EstadoCidade = {
+    ...ateObra.cidade,
+    predios: { ...ateObra.cidade.predios, [obra.tipo]: ateObra.cidade.predios[obra.tipo] + 1 },
+  };
+  const depois = atualizarCidade({ cidade: comNovoNivel, tropas: ateObra.tropas, agora, bonusTerritorios });
+
+  return {
+    ...depois,
+    desertores: mapearExercito((tipo) => ateObra.desertores[tipo] + depois.desertores[tipo]),
+    obra: null,
+    obraConcluida: true,
+  };
+}
+
 /** Habitantes que não são trabalhadores nem soldados (inclui soldados em treino em `soldados`). */
 export function habitantesLivres(cidade: EstadoCidade, soldados: number): number {
   const trabalhadores = RECURSOS.reduce((soma, r) => soma + cidade.trabalhadores[r], 0);

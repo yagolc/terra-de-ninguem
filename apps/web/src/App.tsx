@@ -1,6 +1,6 @@
 import { useSessao } from './lib/useSessao';
+import Cidade from './telas/Cidade';
 import Entrada from './telas/Entrada';
-import Inicio from './telas/Inicio';
 
 export default function App() {
   const sessao = useSessao();
@@ -9,5 +9,5 @@ export default function App() {
     return <div className="grid min-h-dvh place-items-center text-pergaminho-escuro">Carregando…</div>;
   }
 
-  return sessao ? <Inicio sessao={sessao} /> : <Entrada />;
+  return sessao ? <Cidade sessao={sessao} /> : <Entrada />;
 }

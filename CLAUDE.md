@@ -6,7 +6,7 @@ Documentos de referência (leia antes de decisões de design):
 - `docs/GDD.md`: design do jogo (recursos, prédios, unidades, combate, mapa, proteções, temporadas).
 - `docs/plano-tecnico.md`: stack, modelo de dados, lógica do servidor, telas e ordem dos 8 épicos.
 
-**Status:** Épico 1 (Fundação). Projeto Supabase `wbhcmkortcklhcojphlx` (região São Paulo, plano Free) ligado à CLI; migration 0001 e a função `resgatar-convite` publicadas; e-mails em português saindo por SMTP do Gmail. Frontend publicado na Vercel em https://terra-de-ninguem.vercel.app (Root Directory `apps/web`, republica a cada push na `main` de github.com/yagolc/terra-de-ninguem; variáveis `VITE_*` configuradas no painel da Vercel).
+**Status:** Épicos 1 (Fundação), 2 (Regras) e 3 (Cidade) prontos; próximo é o 4 (Mapa e temporada). Épico 1: Projeto Supabase `wbhcmkortcklhcojphlx` (região São Paulo, plano Free) ligado à CLI; migration 0001 e a função `resgatar-convite` publicadas; e-mails em português saindo por SMTP do Gmail. Frontend publicado na Vercel em https://terra-de-ninguem.vercel.app (Root Directory `apps/web`, republica a cada push na `main` de github.com/yagolc/terra-de-ninguem; variáveis `VITE_*` configuradas no painel da Vercel).
 
 ## Pilares que guiam decisões
 
@@ -66,6 +66,13 @@ npx supabase db advisors --linked                              # checagem de seg
 `supabase/config.toml` é a fonte da verdade das configurações do projeto (cadastro público desligado, URLs de redirecionamento). Mude ali e rode `config push`, não no painel; confira o diff antes de confirmar.
 
 Exceção: o SMTP (Gmail pessoal com senha de app) é configurado **só no painel** (Authentication → Emails → SMTP Settings), porque tem senha. Mantenha `[auth.email.smtp]` comentado no `config.toml` para o `config push` não mexer nele. Os modelos de e-mail ficam em `supabase/templates/` e só podem ser alterados com SMTP próprio ativo.
+
+## Como um comando funciona (padrão do Épico 3)
+
+- **Edge Function** (`supabase/functions/<nome>/index.ts`) importa as regras direto de `../../../packages/regras/src/index.ts`; o deploy leva os arquivos junto. Código comum fica em `supabase/functions/_compartilhado/` (`auth.ts` valida o token com `getUser`, `db.ts` conecta direto ao Postgres via `SUPABASE_DB_URL`, `http.ts` tem CORS e `ErroDoJogo`).
+- Funções publicadas com `--no-verify-jwt` e `verify_jwt = false` no `config.toml`: o token é validado no código.
+- Cada comando: `sql.begin` → `select ... for update` na cidade → `avancarCidade` até agora → valida com `verificar*` das regras → grava. Recusas lançam `ErroDoJogo(MENSAGENS_*[motivo])`.
+- **Frontend** lê pelo PostgREST (RLS só leitura), recalcula a cada segundo com `avancarCidade` e manda comandos com `chamarFuncao` (`apps/web/src/lib/funcoes.ts`), relendo a cidade depois.
 
 ## Regras de arquitetura (não quebrar)
 

@@ -1,8 +1,8 @@
-import { FunctionsHttpError } from '@supabase/supabase-js';
 import { useState, type FormEvent } from 'react';
 import Botao from '../componentes/Botao';
 import Campo from '../componentes/Campo';
 import Moldura from '../componentes/Moldura';
+import { chamarFuncao } from '../lib/funcoes';
 import { supabase } from '../lib/supabase';
 
 type Aba = 'entrar' | 'convite';
@@ -49,17 +49,15 @@ export default function Entrada() {
     if (!supabase) return;
     setEstado({ tipo: 'enviando' });
 
-    const { error } = await supabase.functions.invoke('resgatar-convite', {
-      body: { codigo: codigo.trim(), email: email.trim(), nome: nome.trim(), redirecionarPara: window.location.origin },
-    });
-
-    if (error) {
-      let mensagem = 'Não foi possível resgatar o convite. Tente de novo em instantes.';
-      if (error instanceof FunctionsHttpError) {
-        const corpo = (await error.context.json().catch(() => null)) as { erro?: string } | null;
-        if (corpo?.erro) mensagem = corpo.erro;
-      }
-      setEstado({ tipo: 'erro', mensagem });
+    try {
+      await chamarFuncao('resgatar-convite', {
+        codigo: codigo.trim(),
+        email: email.trim(),
+        nome: nome.trim(),
+        redirecionarPara: window.location.origin,
+      });
+    } catch (e) {
+      setEstado({ tipo: 'erro', mensagem: e instanceof Error ? e.message : 'Não foi possível resgatar o convite.' });
       return;
     }
     setEstado({ tipo: 'enviado', email: email.trim() });

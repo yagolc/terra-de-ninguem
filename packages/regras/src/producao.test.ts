@@ -3,6 +3,7 @@ import { BALANCEAMENTO } from './balanceamento.ts';
 import { capacidadeArmazem } from './predios.ts';
 import {
   atualizarCidade,
+  avancarCidade,
   cidadeInicial,
   consumoComidaHora,
   habitantesLivres,
@@ -134,6 +135,50 @@ describe('atualizarCidade', () => {
     const cidade = cidadeProdutora();
     const { cidade: depois } = atualizarCidade({ cidade, tropas: exercito(), agora: INICIO - HORA_MS });
     expect(depois).toEqual(cidade);
+  });
+});
+
+describe('avancarCidade', () => {
+  const semFazenda = (): EstadoCidade =>
+    cidadeProdutora({
+      predios: { centro: 2, casa: 1, fazenda: 0, serraria: 0, mercado: 0, armazem: 0, quartel: 0, muralha: 0 },
+      trabalhadores: { comida: 5, madeira: 0, ouro: 0 },
+      recursos: recursos({ comida: 0 }),
+    });
+
+  it('sem obra, é igual a atualizarCidade', () => {
+    const cidade = cidadeProdutora();
+    const agora = INICIO + 3 * HORA_MS;
+    const r = avancarCidade({ cidade, tropas: exercito(), obra: null, agora });
+    expect(r.cidade).toEqual(atualizarCidade({ cidade, tropas: exercito(), agora }).cidade);
+    expect(r.obraConcluida).toBe(false);
+  });
+
+  it('mantém a obra que ainda não terminou', () => {
+    const obra = { tipo: 'fazenda' as const, prontoEm: INICIO + 5 * HORA_MS };
+    const r = avancarCidade({ cidade: semFazenda(), tropas: exercito(), obra, agora: INICIO + HORA_MS });
+    expect(r.obra).toEqual(obra);
+    expect(r.cidade.predios.fazenda).toBe(0);
+  });
+
+  it('conclui a obra no meio do intervalo e só produz a partir dali', () => {
+    // A fazenda fica pronta 1 h depois do início; 3 h depois, produziu por 2 h.
+    const obra = { tipo: 'fazenda' as const, prontoEm: INICIO + HORA_MS };
+    const r = avancarCidade({ cidade: semFazenda(), tropas: exercito(), obra, agora: INICIO + 3 * HORA_MS });
+    expect(r.obraConcluida).toBe(true);
+    expect(r.obra).toBeNull();
+    expect(r.cidade.predios.fazenda).toBe(1);
+    expect(r.cidade.recursos.comida).toBeCloseTo(2 * 5 * BALANCEAMENTO.producao.porTrabalhadorHora.comida);
+    expect(r.cidade.atualizadoEm).toBe(INICIO + 3 * HORA_MS);
+  });
+
+  it('dá o mesmo resultado se o servidor atualizar no meio da obra', () => {
+    const obra = { tipo: 'fazenda' as const, prontoEm: INICIO + 2 * HORA_MS };
+    const deUmaVez = avancarCidade({ cidade: semFazenda(), tropas: exercito(), obra, agora: INICIO + 5 * HORA_MS });
+    const meio = avancarCidade({ cidade: semFazenda(), tropas: exercito(), obra, agora: INICIO + HORA_MS });
+    const fim = avancarCidade({ cidade: meio.cidade, tropas: meio.tropas, obra: meio.obra, agora: INICIO + 5 * HORA_MS });
+    expect(fim.cidade.recursos.comida).toBeCloseTo(deUmaVez.cidade.recursos.comida, 6);
+    expect(fim.cidade.predios).toEqual(deUmaVez.cidade.predios);
   });
 });
 

@@ -423,3 +423,7 @@ enabled = true
 # Quem resgata convite ainda não tem conta, então não há JWT de usuário a verificar.
 [functions.resgatar-convite]
 verify_jwt = false
+
+# O token do jogador é validado no código (supabase.auth.getUser), compatível com as chaves novas.
+[functions.cidade]
+verify_jwt = false
