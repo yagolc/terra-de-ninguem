@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { multiplicadorVantagem } from './unidades';
+import { multiplicadorVantagem } from './unidades.ts';
 
 describe('multiplicadorVantagem', () => {
   it('dobra o dano contra o tipo que a unidade vence', () => {

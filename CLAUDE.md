@@ -52,6 +52,8 @@ npm run dev          # frontend em http://localhost:5173
 npm test             # Vitest em todos os pacotes
 npm run typecheck    # tsc em todos os pacotes
 npm run build        # build de produção
+npm run simular -- --atacante 50l,20a,10c --defensor 40l,30a --terreno floresta --muralha 3
+                     # simula 1000 batalhas (l/a/c = lanceiro/arqueiro/cavalaria; --cidade, --estoque, --armazem)
 
 # Supabase (CLI já logada e ligada ao projeto; rode na raiz)
 npx supabase db push --linked                                  # aplica migrations novas
@@ -83,6 +85,8 @@ Exceção: o SMTP (Gmail pessoal com senha de app) é configurado **só no paine
 - TypeScript `strict` com `noUncheckedIndexedAccess`. Sem `any`.
 - Componentes React em função, um por arquivo; telas em `src/telas/`.
 - UI responsiva, mobile first: no celular, barra inferior (Cidade, Mapa, Relatórios); no desktop, mapa no centro e painéis ao lado.
-- Toda fórmula nova em `packages/regras` vem com teste Vitest.
+- Toda fórmula nova em `packages/regras` vem com teste Vitest; para limites do GDD (sorte ±10%, saque ≤ 30%, perdas válidas), teste também com centenas de casos gerados por `geradorComSemente`.
+- Em `packages/regras`, imports relativos levam a extensão `.ts` (`from './batalha.ts'`) e só sintaxe apagável (sem `enum`/`namespace`): o mesmo código roda no Vite, no Deno (Edge Functions) e no Node 24 (simulador) sem build.
+- Tempos nas regras são timestamps em ms; taxas no balanceamento são "por hora". Validações devolvem `{ ok: true, ... } | { ok: false, motivo }` com motivos em `snake_case`, que o servidor traduz para a mensagem do jogador.
 - Textos da interface em português do Brasil.
 - Variáveis de ambiente do frontend com prefixo `VITE_`; chaves secretas (service role) só nas Edge Functions, nunca no frontend nem no git.

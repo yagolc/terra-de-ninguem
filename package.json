@@ -10,7 +10,8 @@
     "dev": "npm run dev -w @terra/web",
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "simular": "npm run simular -w @terra/regras --"
   },
   "engines": {
     "node": ">=20"
