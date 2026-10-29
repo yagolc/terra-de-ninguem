@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="pt-BR">
+  <body style="margin:0;padding:0;background:#1c1410;font-family:Georgia,'Times New Roman',serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#1c1410;padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#2a1f19;border:1px solid #6b5530;border-radius:12px;">
+            <tr>
+              <td style="padding:32px 28px;text-align:center;color:#f1e6cf;">
+                <h1 style="margin:0 0 8px;font-size:24px;letter-spacing:1px;color:#d4a64a;">Terra de Ninguém</h1>
+                <p style="margin:0 0 24px;font-size:14px;color:#c9b892;">Construa, conquiste e traia seus amigos.</p>
+                <p style="margin:0 0 24px;font-size:16px;line-height:1.5;">
+                  Salve, <strong>{{ .Data.nome }}</strong>! Seu convite foi aceito.<br />
+                  Clique abaixo para criar sua conta e entrar no reino.
+                </p>
+                <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#d4a64a;color:#1c1410;text-decoration:none;font-family:Arial,sans-serif;font-weight:bold;font-size:16px;padding:12px 28px;border-radius:8px;">Entrar no jogo</a>
+                <p style="margin:24px 0 0;font-size:12px;line-height:1.5;color:#c9b892;">
+                  Abra o link no mesmo aparelho em que vai jogar. Ele vale por 24 horas.<br />
+                  Se você não pediu este convite, ignore este e-mail.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

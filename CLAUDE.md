@@ -6,7 +6,7 @@ Documentos de referência (leia antes de decisões de design):
 - `docs/GDD.md`: design do jogo (recursos, prédios, unidades, combate, mapa, proteções, temporadas).
 - `docs/plano-tecnico.md`: stack, modelo de dados, lógica do servidor, telas e ordem dos 8 épicos.
 
-**Status:** Épico 1 (Fundação). Projeto Supabase `wbhcmkortcklhcojphlx` (região São Paulo, plano Free) ligado à CLI; migration 0001 e a função `resgatar-convite` publicadas. Falta: SMTP próprio para e-mails aos amigos e publicar o frontend.
+**Status:** Épico 1 (Fundação). Projeto Supabase `wbhcmkortcklhcojphlx` (região São Paulo, plano Free) ligado à CLI; migration 0001 e a função `resgatar-convite` publicadas; e-mails em português saindo por SMTP do Gmail. Falta: publicar o frontend.
 
 ## Pilares que guiam decisões
 
@@ -62,6 +62,8 @@ npx supabase db advisors --linked                              # checagem de seg
 ```
 
 `supabase/config.toml` é a fonte da verdade das configurações do projeto (cadastro público desligado, URLs de redirecionamento). Mude ali e rode `config push`, não no painel; confira o diff antes de confirmar.
+
+Exceção: o SMTP (Gmail pessoal com senha de app) é configurado **só no painel** (Authentication → Emails → SMTP Settings), porque tem senha. Mantenha `[auth.email.smtp]` comentado no `config.toml` para o `config push` não mexer nele. Os modelos de e-mail ficam em `supabase/templates/` e só podem ser alterados com SMTP próprio ativo.
 
 ## Regras de arquitetura (não quebrar)
 

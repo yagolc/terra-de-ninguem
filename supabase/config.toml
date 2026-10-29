@@ -245,10 +245,14 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
-# Uncomment to customize email template
-# [auth.email.template.invite]
-# subject = "You have been invited"
-# content_path = "./supabase/templates/invite.html"
+# E-mails do jogo em português. Variáveis: {{ .ConfirmationURL }}, {{ .Data.nome }} (user_metadata).
+[auth.email.template.invite]
+subject = "Seu convite para Terra de Ninguém"
+content_path = "./supabase/templates/convite.html"
+
+[auth.email.template.magic_link]
+subject = "Seu link de entrada em Terra de Ninguém"
+content_path = "./supabase/templates/link-magico.html"
 
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
