@@ -33,7 +33,7 @@ type Marcha = {
   jogador_id: string;
   origem_id: string;
   destino_id: string;
-  tipo: 'saque' | 'conquista' | 'retorno';
+  tipo: 'saque' | 'conquista' | 'retorno' | 'movimento';
   lanceiro: number;
   arqueiro: number;
   cavalaria: number;
@@ -197,7 +197,8 @@ async function resolverMarcha(id: string): Promise<boolean> {
          for update skip locked`;
     if (!m) return false;
     const agora = Date.now();
-    if (m.tipo === 'retorno') await resolverRetorno(tx, m, agora);
+    // Retorno e movimento: as tropas chegam a um território próprio (ou à cidade, se ele foi perdido).
+    if (m.tipo === 'retorno' || m.tipo === 'movimento') await resolverRetorno(tx, m, agora);
     else await resolverAtaque(tx, m, agora);
     return true;
   });

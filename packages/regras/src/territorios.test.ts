@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCEAMENTO } from './balanceamento.ts';
-import { bonusDeTerritorios, distanciasNoGrafo, escolherTerritorioLivre, grafoDeFronteiras } from './territorios.ts';
+import {
+  bonusDeTerritorios,
+  distanciasNoGrafo,
+  escolherTerritorioLivre,
+  grafoDeFronteiras,
+  ligadosPorTerritoriosProprios,
+} from './territorios.ts';
 
 // Uma linha de territórios: a - b - c - d - e
 const LINHA = grafoDeFronteiras([
@@ -33,5 +39,19 @@ describe('grafo de territórios', () => {
   it('soma o bônus de cada território do jogador', () => {
     const b = BALANCEAMENTO.mapa.bonusTerritorio;
     expect(bonusDeTerritorios(['comida', 'comida', 'ouro'])).toEqual({ comida: 2 * b, madeira: 0, ouro: b });
+  });
+});
+
+describe('ligadosPorTerritoriosProprios', () => {
+  it('liga dois territórios próprios por um caminho só de territórios próprios', () => {
+    expect(ligadosPorTerritoriosProprios({ grafo: LINHA, origem: 'a', destino: 'c', proprios: new Set(['a', 'b', 'c']) })).toBe(true);
+  });
+
+  it('não atravessa território alheio', () => {
+    expect(ligadosPorTerritoriosProprios({ grafo: LINHA, origem: 'a', destino: 'c', proprios: new Set(['a', 'c']) })).toBe(false);
+  });
+
+  it('origem ou destino alheio não está ligado', () => {
+    expect(ligadosPorTerritoriosProprios({ grafo: LINHA, origem: 'a', destino: 'b', proprios: new Set(['a']) })).toBe(false);
   });
 });

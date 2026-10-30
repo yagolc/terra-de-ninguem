@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { escudoAte, fimProtecaoIniciante, receberSaque, verificarAtaque } from './ataques.ts';
+import { escudoAte, fimProtecaoIniciante, receberSaque, verificarAtaque, verificarMovimento } from './ataques.ts';
 import { BALANCEAMENTO } from './balanceamento.ts';
 import { capacidadeArmazem } from './predios.ts';
 import { HORA_MS, exercito, recursos } from './util.ts';
@@ -74,5 +74,34 @@ describe('receberSaque', () => {
   it('não destrói estoque que já estava acima do armazém', () => {
     const teto = capacidadeArmazem(0);
     expect(receberSaque(recursos({ ouro: teto + 100 }), recursos({ ouro: 10 }), 0).ouro).toBe(teto + 100);
+  });
+});
+
+describe('verificarMovimento', () => {
+  const mover = (mudancas: Partial<Parameters<typeof verificarMovimento>[0]> = {}) =>
+    verificarMovimento({
+      enviar: exercito({ arqueiro: 4 }),
+      disponiveis: exercito({ arqueiro: 6 }),
+      origemDoJogador: true,
+      destinoDoJogador: true,
+      mesmoTerritorio: false,
+      ligados: true,
+      ...mudancas,
+    });
+
+  it('aceita mover tropas entre territórios próprios ligados', () => {
+    expect(mover()).toEqual({ ok: true });
+  });
+
+  it('recusa destino alheio, o mesmo território e caminho por terra alheia', () => {
+    expect(mover({ origemDoJogador: false })).toEqual({ ok: false, motivo: 'origem_invalida' });
+    expect(mover({ destinoDoJogador: false })).toEqual({ ok: false, motivo: 'destino_invalido' });
+    expect(mover({ mesmoTerritorio: true })).toEqual({ ok: false, motivo: 'mesmo_territorio' });
+    expect(mover({ ligados: false })).toEqual({ ok: false, motivo: 'sem_caminho' });
+  });
+
+  it('exige tropas válidas e disponíveis', () => {
+    expect(mover({ enviar: exercito() })).toEqual({ ok: false, motivo: 'sem_tropas' });
+    expect(mover({ enviar: exercito({ arqueiro: 7 }) })).toEqual({ ok: false, motivo: 'tropas_insuficientes' });
   });
 });

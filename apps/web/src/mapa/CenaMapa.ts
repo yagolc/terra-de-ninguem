@@ -94,7 +94,7 @@ export class CenaMapa extends Phaser.Scene {
     this.desenharMarchas();
   }
 
-  /** Setas das marchas do jogador: dourada para ataque, verde para tropas voltando. */
+  /** Setas das marchas do jogador: dourada para ataque, verde para tropas voltando, azul para movimento. */
   private desenharMarchas() {
     const g = this.camadaMarchas!;
     g.clear();
@@ -103,7 +103,7 @@ export class CenaMapa extends Phaser.Scene {
       const de = dados.territorios.find((t) => t.id === m.origemId);
       const para = dados.territorios.find((t) => t.id === m.destinoId);
       if (!de || !para) continue;
-      const cor = m.tipo === 'retorno' ? 0x8fd18a : 0xe8c475;
+      const cor = m.tipo === 'retorno' ? 0x8fd18a : m.tipo === 'movimento' ? 0x7fb3e8 : 0xe8c475;
       const [x1, y1, x2, y2] = [de.x * ESCALA, de.y * ESCALA, para.x * ESCALA, para.y * ESCALA];
       const angulo = Math.atan2(y2 - y1, x2 - x1);
       // Para um pouco antes do centro do alvo, para não cobrir o nome.

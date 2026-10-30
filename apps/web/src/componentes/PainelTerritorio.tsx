@@ -9,11 +9,12 @@ type Props = {
   meuId: string;
   onSelecionar: (id: string | null) => void;
   onAtacar: () => void;
+  onMover: () => void;
   agora: number;
 };
 
 /** Detalhes do território tocado no mapa. */
-export default function PainelTerritorio({ dados, id, meuId, onSelecionar, onAtacar, agora }: Props) {
+export default function PainelTerritorio({ dados, id, meuId, onSelecionar, onAtacar, onMover, agora }: Props) {
   const t = dados.territorios.find((x) => x.id === id);
   if (!t) return null;
 
@@ -77,6 +78,12 @@ export default function PainelTerritorio({ dados, id, meuId, onSelecionar, onAta
           {TIPOS_UNIDADE.filter((tipo) => minhas[tipo] > 0)
             .map((tipo) => `${UNIDADES_INFO[tipo].icone} ${minhas[tipo]} ${UNIDADES_INFO[tipo].plural.toLowerCase()}`)
             .join(' · ')}
+          <button
+            onClick={onMover}
+            className="mt-2 w-full rounded-lg border border-ouro/60 px-3 py-1.5 text-sm font-semibold text-ouro hover:bg-ouro/10"
+          >
+            🚶 Mover tropas daqui
+          </button>
         </div>
       )}
 

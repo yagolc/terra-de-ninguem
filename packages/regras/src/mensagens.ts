@@ -1,5 +1,5 @@
 // Textos para o jogador de cada motivo de recusa. Servidor e interface usam os mesmos.
-import type { MotivoRecusaAtaque } from './ataques.ts';
+import type { MotivoRecusaAtaque, MotivoRecusaMovimento } from './ataques.ts';
 import type { MotivoRecusaEvolucao } from './predios.ts';
 import type { MotivoRecusaAlocacao } from './producao.ts';
 import type { MotivoRecusaTreino } from './treino.ts';
@@ -34,4 +34,13 @@ export const MENSAGENS_ATAQUE: Record<MotivoRecusaAtaque, string> = {
   cidade_nao_conquistavel: 'Cidades principais podem ser saqueadas, mas nunca conquistadas.',
   protecao_iniciante: 'Nas primeiras 48 horas da temporada ninguém ataca jogadores. Os territórios neutros já podem ser atacados.',
   alvo_com_escudo: 'Esse jogador perdeu uma defesa há pouco e está protegido por um escudo.',
+};
+
+export const MENSAGENS_MOVIMENTO: Record<MotivoRecusaMovimento, string> = {
+  origem_invalida: 'As tropas precisam sair de um território seu.',
+  destino_invalido: 'Só dá para mover tropas para um território seu. Para tomar outro, use Atacar.',
+  mesmo_territorio: 'Escolha outro território como destino.',
+  sem_caminho: 'O destino não está ligado à origem por territórios seus: as tropas teriam de atravessar terra alheia.',
+  sem_tropas: 'Escolha quantas tropas vão se mover.',
+  tropas_insuficientes: 'Você não tem tantas tropas nesse território.',
 };

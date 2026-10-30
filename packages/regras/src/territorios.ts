@@ -70,3 +70,30 @@ export function escolherTerritorioLivre<Id>(entrada: {
   }
   return melhor;
 }
+
+/**
+ * A origem chega ao destino andando só por territórios do jogador (sem atravessar terra alheia)?
+ * Usado para mover tropas entre territórios próprios.
+ */
+export function ligadosPorTerritoriosProprios<Id>(entrada: {
+  grafo: Map<Id, Id[]>;
+  origem: Id;
+  destino: Id;
+  proprios: ReadonlySet<Id>;
+}): boolean {
+  const { grafo, origem, destino, proprios } = entrada;
+  if (!proprios.has(origem) || !proprios.has(destino)) return false;
+  const visitados = new Set<Id>([origem]);
+  const fila = [origem];
+  while (fila.length > 0) {
+    const atual = fila.pop()!;
+    if (atual === destino) return true;
+    for (const vizinho of grafo.get(atual) ?? []) {
+      if (proprios.has(vizinho) && !visitados.has(vizinho)) {
+        visitados.add(vizinho);
+        fila.push(vizinho);
+      }
+    }
+  }
+  return false;
+}

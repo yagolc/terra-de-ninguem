@@ -2,6 +2,7 @@ import { TIPOS_UNIDADE, totalUnidades } from '@terra/regras';
 import type { Session } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 import PainelAtaque from '../componentes/PainelAtaque';
+import PainelMovimento from '../componentes/PainelMovimento';
 import PainelTerritorio from '../componentes/PainelTerritorio';
 import CanvasMapa from '../mapa/CanvasMapa';
 import { COR_NEUTRA, useMapa } from '../lib/useMapa';
@@ -11,7 +12,7 @@ import { UNIDADES_INFO, formatarDuracao } from '../lib/textos';
 export default function Mapa({ sessao }: { sessao: Session }) {
   const { dados, erro, recarregar } = useMapa();
   const [selecionado, setSelecionado] = useState<string | null>(null);
-  const [atacando, setAtacando] = useState(false);
+  const [modo, setModo] = useState<'detalhe' | 'ataque' | 'movimento'>('detalhe');
   const [aviso, setAviso] = useState<string | null>(null);
   const [agora, setAgora] = useState(() => Date.now());
   const meuId = sessao.user.id;
@@ -38,7 +39,7 @@ export default function Mapa({ sessao }: { sessao: Session }) {
 
   function selecionar(id: string | null) {
     setSelecionado(id);
-    setAtacando(false);
+    setModo('detalhe');
   }
 
   return (
@@ -71,7 +72,7 @@ export default function Mapa({ sessao }: { sessao: Session }) {
                 const falta = m.chegadaEm - agora;
                 return (
                   <li key={m.id}>
-                    {m.tipo === 'retorno' ? '↩️' : m.tipo === 'saque' ? '💰' : '🚩'}{' '}
+                    {m.tipo === 'retorno' ? '↩️' : m.tipo === 'movimento' ? '🚶' : m.tipo === 'saque' ? '💰' : '🚩'}{' '}
                     {m.tipo === 'retorno' ? `Voltando de ${nomeDe(m.origemId)}` : `${nomeDe(m.origemId)} → ${nomeDe(m.destinoId)}`}
                     {' · '}
                     {TIPOS_UNIDADE.filter((t) => m.tropas[t] > 0)
@@ -98,13 +99,26 @@ export default function Mapa({ sessao }: { sessao: Session }) {
 
       {selecionado && (
         <aside className="absolute inset-x-0 bottom-0 max-h-[60%] overflow-y-auto rounded-t-2xl border-t border-couro bg-carvao/95 p-4 backdrop-blur md:inset-x-auto md:bottom-3 md:right-3 md:top-3 md:max-h-none md:w-80 md:rounded-2xl md:border">
-          {atacando ? (
+          {modo === 'movimento' ? (
+            <PainelMovimento
+              dados={dados}
+              origemId={selecionado}
+              meuId={meuId}
+              agora={agora}
+              onVoltar={() => setModo('detalhe')}
+              onEnviado={(mensagem) => {
+                setAviso(mensagem);
+                selecionar(null);
+                void recarregar();
+              }}
+            />
+          ) : modo === 'ataque' ? (
             <PainelAtaque
               dados={dados}
               alvoId={selecionado}
               meuId={meuId}
               agora={agora}
-              onVoltar={() => setAtacando(false)}
+              onVoltar={() => setModo('detalhe')}
               onEnviado={(mensagem) => {
                 setAviso(mensagem);
                 selecionar(null);
@@ -118,7 +132,8 @@ export default function Mapa({ sessao }: { sessao: Session }) {
               meuId={meuId}
               agora={agora}
               onSelecionar={selecionar}
-              onAtacar={() => setAtacando(true)}
+              onAtacar={() => setModo('ataque')}
+              onMover={() => setModo('movimento')}
             />
           )}
         </aside>

@@ -23,7 +23,7 @@ export type MarchaMapa = {
   id: string;
   origemId: string;
   destinoId: string;
-  tipo: 'saque' | 'conquista' | 'retorno';
+  tipo: 'saque' | 'conquista' | 'retorno' | 'movimento';
   tropas: Exercito;
   saque: Recursos;
   chegadaEm: number;

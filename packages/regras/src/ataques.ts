@@ -78,3 +78,33 @@ export function receberSaque(estoque: Recursos, saque: Recursos, nivelArmazem: n
 export function totalSaque(saque: Recursos): number {
   return RECURSOS.reduce((soma, r) => soma + saque[r], 0);
 }
+
+export type MotivoRecusaMovimento =
+  | 'origem_invalida'
+  | 'destino_invalido'
+  | 'mesmo_territorio'
+  | 'sem_caminho'
+  | 'sem_tropas'
+  | 'tropas_insuficientes';
+
+/** Confere um movimento de tropas entre dois territórios do próprio jogador, ligados por territórios dele. */
+export function verificarMovimento(entrada: {
+  enviar: Exercito;
+  disponiveis: Exercito;
+  origemDoJogador: boolean;
+  destinoDoJogador: boolean;
+  mesmoTerritorio: boolean;
+  /** Origem e destino ligados só por territórios do jogador (`ligadosPorTerritoriosProprios`). */
+  ligados: boolean;
+}): Verificacao<object, MotivoRecusaMovimento> {
+  const { enviar, disponiveis } = entrada;
+  if (!entrada.origemDoJogador) return { ok: false, motivo: 'origem_invalida' };
+  if (!entrada.destinoDoJogador) return { ok: false, motivo: 'destino_invalido' };
+  if (entrada.mesmoTerritorio) return { ok: false, motivo: 'mesmo_territorio' };
+  if (!entrada.ligados) return { ok: false, motivo: 'sem_caminho' };
+  if (TIPOS_UNIDADE.some((t) => !Number.isInteger(enviar[t]) || enviar[t] < 0) || totalUnidades(enviar) === 0) {
+    return { ok: false, motivo: 'sem_tropas' };
+  }
+  if (TIPOS_UNIDADE.some((t) => enviar[t] > disponiveis[t])) return { ok: false, motivo: 'tropas_insuficientes' };
+  return { ok: true };
+}

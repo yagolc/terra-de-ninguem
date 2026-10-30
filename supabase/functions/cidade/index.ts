@@ -1,23 +1,27 @@
 // Edge Function `cidade`: comandos do jogador, validados com o pacote de regras.
 // Corpo: { acao: 'entrar' } (funda a cidade e sorteia o objetivo) | { acao: 'evoluir_predio', tipo } | { acao: 'alocar_trabalhadores', alocacao }
 //      | { acao: 'treinar_tropas', tipo, quantidade }
-//      | { acao: 'enviar_marcha', origem_id, destino_id, tipo: 'saque' | 'conquista', tropas }
+//      | { acao: 'enviar_marcha', origem_id, destino_id, tipo: 'saque' | 'conquista' | 'movimento', tropas }
 //      | { acao: 'marcar_relatorios_lidos' }
 // Publicar com: npx supabase functions deploy cidade --no-verify-jwt (o token é validado no código).
 import {
   MENSAGENS_ALOCACAO,
   MENSAGENS_ATAQUE,
   MENSAGENS_EVOLUCAO,
+  MENSAGENS_MOVIMENTO,
   MENSAGENS_TREINO,
   TIPOS_ATAQUE,
   TIPOS_PREDIO,
   TIPOS_UNIDADE,
   duracaoMarchaMs,
+  grafoDeFronteiras,
+  ligadosPorTerritoriosProprios,
   mapearExercito,
   subtrairRecursos,
   verificarAlocacao,
   verificarAtaque,
   verificarEvolucao,
+  verificarMovimento,
   verificarTreino,
   type Recursos,
   type TipoAtaque,
@@ -49,7 +53,10 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type TerritorioMarcha = { id: string; dono_id: string | null; cidade_principal: boolean; x: number; y: number };
 
-/** Tira as tropas do território de origem e põe a marcha a caminho. Atacar quebra o próprio escudo. */
+/**
+ * Tira as tropas do território de origem e põe a marcha a caminho: ataque (saque ou conquista) contra um
+ * vizinho, ou movimento para outro território próprio. Atacar quebra o próprio escudo; mover, não.
+ */
 async function enviarMarcha(
   tx: Transacao,
   temporada: Temporada,
@@ -57,8 +64,6 @@ async function enviarMarcha(
   corpo: Record<string, unknown>,
   agora: number,
 ): Promise<number> {
-  const tipo = corpo.tipo as TipoAtaque;
-  if (!TIPOS_ATAQUE.includes(tipo)) throw new ErroDoJogo('Tipo de ataque desconhecido.');
   const enviar = lerExercito(corpo.tropas);
   const origemId = String(corpo.origem_id ?? '');
   const destinoId = String(corpo.destino_id ?? '');
@@ -69,7 +74,41 @@ async function enviarMarcha(
      where temporada_id = ${temporada.id} and id in (${origemId}, ${destinoId})`;
   const origem = territorios.find((t) => t.id === origemId);
   const destino = territorios.find((t) => t.id === destinoId);
-  if (!origem || !destino || origemId === destinoId) throw new ErroDoJogo('Território desconhecido.');
+  if (!origem || !destino) throw new ErroDoJogo('Território desconhecido.');
+  const grupo = c.grupos.find((g) => g.territorioId === origemId);
+  const jogadorId = c.carregada.jogadorId;
+
+  // Movimento: entre territórios próprios ligados por territórios próprios, sem batalha.
+  if (corpo.tipo === 'movimento') {
+    const proprios = await tx<{ id: string }[]>`select id from territorios where temporada_id = ${temporada.id} and dono_id = ${jogadorId}`;
+    const fronteiras = await tx<{ territorio_a: string; territorio_b: string }[]>`
+      select territorio_a, territorio_b from fronteiras where temporada_id = ${temporada.id}`;
+    const v = verificarMovimento({
+      enviar,
+      disponiveis: grupo?.tropas ?? mapearExercito(() => 0),
+      origemDoJogador: origem.dono_id === jogadorId,
+      destinoDoJogador: destino.dono_id === jogadorId,
+      mesmoTerritorio: origemId === destinoId,
+      ligados: ligadosPorTerritoriosProprios({
+        grafo: grafoDeFronteiras(fronteiras.map((f) => [f.territorio_a, f.territorio_b] as const)),
+        origem: origemId,
+        destino: destinoId,
+        proprios: new Set(proprios.map((p) => p.id)),
+      }),
+    });
+    if (!v.ok) throw new ErroDoJogo(MENSAGENS_MOVIMENTO[v.motivo]);
+    grupo!.tropas = mapearExercito((t) => grupo!.tropas[t] - enviar[t]);
+    const chegada = agora + duracaoMarchaMs(origem, destino, enviar);
+    await tx`
+      insert into marchas (temporada_id, jogador_id, origem_id, destino_id, tipo, lanceiro, arqueiro, cavalaria, partida_em, chegada_em)
+      values (${temporada.id}, ${jogadorId}, ${origemId}, ${destinoId}, 'movimento',
+              ${enviar.lanceiro}, ${enviar.arqueiro}, ${enviar.cavalaria}, ${new Date(agora)}, ${new Date(chegada)})`;
+    return chegada;
+  }
+
+  const tipo = corpo.tipo as TipoAtaque;
+  if (!TIPOS_ATAQUE.includes(tipo)) throw new ErroDoJogo('Tipo de ataque desconhecido.');
+  if (origemId === destinoId) throw new ErroDoJogo('Território desconhecido.');
 
   const [fronteira] = await tx`
     select 1 from fronteiras
@@ -79,16 +118,15 @@ async function enviarMarcha(
     ? await tx<{ ate: Date }[]>`
         select ate from protecoes where temporada_id = ${temporada.id} and jogador_id = ${destino.dono_id} and tipo = 'escudo'`
     : [];
-  const grupo = c.grupos.find((g) => g.territorioId === origemId);
 
   const v = verificarAtaque({
     tipo,
     enviar,
     disponiveis: grupo?.tropas ?? mapearExercito(() => 0),
-    origemDoJogador: origem.dono_id === c.carregada.jogadorId,
+    origemDoJogador: origem.dono_id === jogadorId,
     vizinhos: !!fronteira,
     alvo: { donoId: destino.dono_id, cidadePrincipal: destino.cidade_principal },
-    jogadorId: c.carregada.jogadorId,
+    jogadorId,
     inicioTemporada: temporada.inicio,
     escudoDoAlvoAte: escudo ? escudo.ate.getTime() : null,
     agora,
@@ -99,9 +137,9 @@ async function enviarMarcha(
   const chegada = agora + duracaoMarchaMs(origem, destino, enviar);
   await tx`
     insert into marchas (temporada_id, jogador_id, origem_id, destino_id, tipo, lanceiro, arqueiro, cavalaria, partida_em, chegada_em)
-    values (${temporada.id}, ${c.carregada.jogadorId}, ${origemId}, ${destinoId}, ${tipo},
+    values (${temporada.id}, ${jogadorId}, ${origemId}, ${destinoId}, ${tipo},
             ${enviar.lanceiro}, ${enviar.arqueiro}, ${enviar.cavalaria}, ${new Date(agora)}, ${new Date(chegada)})`;
-  await tx`delete from protecoes where temporada_id = ${temporada.id} and jogador_id = ${c.carregada.jogadorId} and tipo = 'escudo'`;
+  await tx`delete from protecoes where temporada_id = ${temporada.id} and jogador_id = ${jogadorId} and tipo = 'escudo'`;
   return chegada;
 }
 
