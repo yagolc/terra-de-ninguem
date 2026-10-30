@@ -85,11 +85,13 @@ describe('modificadores do defensor', () => {
 });
 
 describe('perdas', () => {
-  it('o perdedor perde o exército e o vencedor perde menos quanto mais folgada a vitória', () => {
+  it(`o perdedor perde ${BALANCEAMENTO.batalha.perdaPerdedor * 100}% e o vencedor perde menos quanto mais folgada a vitória`, () => {
     const apertada = batalha({ atacante: exercito({ lanceiro: 55 }), defensor: exercito({ lanceiro: 50 }) });
     // Lanceiro: ataque 10 < defesa 15, então 55 atacantes perdem para 50 defensores.
     expect(apertada.vencedor).toBe('defensor');
-    expect(apertada.sobreviventesAtacante.lanceiro).toBe(0);
+    // 70% de 55 = 38,5 → 39 perdidos; 16 sobrevivem e voltam para casa.
+    expect(apertada.perdasAtacante.lanceiro).toBe(Math.round(55 * BALANCEAMENTO.batalha.perdaPerdedor));
+    expect(apertada.sobreviventesAtacante.lanceiro).toBe(55 - Math.round(55 * BALANCEAMENTO.batalha.perdaPerdedor));
 
     const folgada = batalha({ atacante: exercito({ cavalaria: 200 }), defensor: exercito({ arqueiro: 20 }) });
     const justa = batalha({ atacante: exercito({ lanceiro: 80 }), defensor: exercito({ lanceiro: 50 }) }); // 800 × 750
@@ -97,7 +99,7 @@ describe('perdas', () => {
     expect(justa.vencedor).toBe('atacante');
     expect(totalUnidades(folgada.perdasAtacante) / 200).toBeLessThan(0.05);
     expect(totalUnidades(justa.perdasAtacante) / 80).toBeGreaterThan(0.8);
-    expect(totalUnidades(justa.sobreviventesDefensor)).toBe(0);
+    expect(totalUnidades(justa.perdasDefensor)).toBe(Math.round(50 * BALANCEAMENTO.batalha.perdaPerdedor));
   });
 
   it('em empate de força, vence o defensor', () => {

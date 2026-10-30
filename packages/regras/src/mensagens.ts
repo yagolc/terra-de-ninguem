@@ -1,4 +1,5 @@
 // Textos para o jogador de cada motivo de recusa. Servidor e interface usam os mesmos.
+import type { MotivoRecusaAtaque } from './ataques.ts';
 import type { MotivoRecusaEvolucao } from './predios.ts';
 import type { MotivoRecusaAlocacao } from './producao.ts';
 import type { MotivoRecusaTreino } from './treino.ts';
@@ -22,4 +23,15 @@ export const MENSAGENS_TREINO: Record<MotivoRecusaTreino, string> = {
   sem_quartel: 'Construa um Quartel primeiro.',
   recursos_insuficientes: 'Recursos insuficientes.',
   populacao_insuficiente: 'Não há habitantes livres suficientes.',
+};
+
+export const MENSAGENS_ATAQUE: Record<MotivoRecusaAtaque, string> = {
+  origem_invalida: 'As tropas precisam sair de um território seu.',
+  nao_vizinho: 'Só dá para atacar um território vizinho ao de onde as tropas saem.',
+  alvo_proprio: 'Esse território já é seu.',
+  sem_tropas: 'Escolha quantas tropas vão marchar.',
+  tropas_insuficientes: 'Você não tem tantas tropas nesse território.',
+  cidade_nao_conquistavel: 'Cidades principais podem ser saqueadas, mas nunca conquistadas.',
+  protecao_iniciante: 'Nas primeiras 48 horas da temporada ninguém ataca jogadores. Os territórios neutros já podem ser atacados.',
+  alvo_com_escudo: 'Esse jogador perdeu uma defesa há pouco e está protegido por um escudo.',
 };

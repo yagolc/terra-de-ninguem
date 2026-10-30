@@ -3,6 +3,7 @@ import {
   avancarCidade,
   bonusDeTerritorios,
   exercito,
+  mapearExercito,
   soldadosNaConta,
   somarExercitos,
   totalUnidades,
@@ -44,15 +45,22 @@ type CidadeSalva = {
   cidade: EstadoCidade;
   obras: Obra[];
   bonus: Recursos;
-  /** Todas as tropas do jogador (todas comem). */
+  /** Tropas paradas nos territórios. */
   tropas: Exercito;
+  /** Tropas em marcha: também comem e ocupam população. */
+  emMarcha: Exercito;
   fila: LoteTreino[];
   /** Território onde fica a cidade (null na temporada de testes, sem mapa). */
   territorio: TerritorioDoJogador | null;
   territorios: number;
 };
 
-function converter(linha: LinhaCidade, territorios: TerritorioDoJogador[], tropas: LinhaTropas[]): CidadeSalva {
+function converter(
+  linha: LinhaCidade,
+  territorios: TerritorioDoJogador[],
+  tropas: LinhaTropas[],
+  marchas: LinhaTropas[],
+): CidadeSalva {
   const predios = Object.fromEntries(TIPOS_PREDIO.map((tipo) => [tipo, 0])) as NiveisPredios;
   for (const p of linha.predios) predios[p.tipo] = p.nivel;
   return {
@@ -61,6 +69,7 @@ function converter(linha: LinhaCidade, territorios: TerritorioDoJogador[], tropa
       .sort((a, b) => a.prontoEm - b.prontoEm),
     bonus: bonusDeTerritorios(territorios.map((t) => t.bonus_recurso)),
     tropas: somarExercitos(exercito(), ...tropas.map((t) => exercito(t))),
+    emMarcha: somarExercitos(exercito(), ...marchas.map((m) => exercito(m))),
     fila: linha.filas_treino
       .map((l) => ({ tipo: l.tipo_unidade, quantidade: l.quantidade, prontoEm: Date.parse(l.pronto_em) }))
       .sort((a, b) => a.prontoEm - b.prontoEm),
@@ -93,7 +102,7 @@ async function buscarCidade(jogadorId: string): Promise<CidadeSalva | null> {
   if (error) throw new Error('Não foi possível carregar sua cidade.');
   if (!data) return null;
 
-  const [territorios, tropas] = await Promise.all([
+  const [territorios, tropas, marchas] = await Promise.all([
     supabase
       .from('territorios')
       .select('id, nome, terreno, bonus_recurso')
@@ -106,9 +115,16 @@ async function buscarCidade(jogadorId: string): Promise<CidadeSalva | null> {
       .eq('temporada_id', data.temporada_id)
       .eq('dono_id', jogadorId)
       .returns<LinhaTropas[]>(),
+    supabase
+      .from('marchas')
+      .select('lanceiro, arqueiro, cavalaria')
+      .eq('temporada_id', data.temporada_id)
+      .eq('jogador_id', jogadorId)
+      .eq('status', 'a_caminho')
+      .returns<LinhaTropas[]>(),
   ]);
-  if (!territorios.data || !tropas.data) throw new Error('Não foi possível carregar seus territórios e tropas.');
-  return converter(data, territorios.data, tropas.data);
+  if (!territorios.data || !tropas.data || !marchas.data) throw new Error('Não foi possível carregar seus territórios e tropas.');
+  return converter(data, territorios.data, tropas.data, marchas.data);
 }
 
 /**
@@ -149,7 +165,7 @@ export function useCidade(jogadorId: string) {
       salva
         ? avancarCidade({
             cidade: salva.cidade,
-            tropas: salva.tropas,
+            tropas: somarExercitos(salva.tropas, salva.emMarcha),
             obras: salva.obras,
             treinos: salva.fila,
             agora,
@@ -170,7 +186,9 @@ export function useCidade(jogadorId: string) {
   return {
     cidade: atual?.cidade ?? null,
     obras: atual?.obras ?? [],
-    tropas: atual?.tropas ?? exercito(),
+    // Paradas = total (já com deserção e lotes prontos) menos as que estão fora.
+    tropas: atual && salva ? mapearExercito((t) => Math.max(0, atual.tropas[t] - salva.emMarcha[t])) : exercito(),
+    emMarcha: salva?.emMarcha ?? exercito(),
     fila: atual?.treinos ?? [],
     soldados: atual ? soldadosNaConta(totalUnidades(atual.tropas), atual.treinos) : 0,
     bonus: salva?.bonus ?? null,

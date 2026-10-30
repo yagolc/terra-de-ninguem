@@ -1,216 +1,107 @@
-// Edge Function `cidade`: comandos da cidade do jogador, validados com o pacote de regras.
+// Edge Function `cidade`: comandos do jogador, validados com o pacote de regras.
 // Corpo: { acao: 'entrar' } | { acao: 'evoluir_predio', tipo } | { acao: 'alocar_trabalhadores', alocacao }
 //      | { acao: 'treinar_tropas', tipo, quantidade }
+//      | { acao: 'enviar_marcha', origem_id, destino_id, tipo: 'saque' | 'conquista', tropas }
+//      | { acao: 'marcar_relatorios_lidos' }
 // Publicar com: npx supabase functions deploy cidade --no-verify-jwt (o token é validado no código).
 import {
   MENSAGENS_ALOCACAO,
+  MENSAGENS_ATAQUE,
   MENSAGENS_EVOLUCAO,
   MENSAGENS_TREINO,
+  TIPOS_ATAQUE,
   TIPOS_PREDIO,
   TIPOS_UNIDADE,
-  avancarCidade,
-  bonusDeTerritorios,
-  cidadeInicial,
-  distribuirPerdas,
-  escolherTerritorioLivre,
-  exercito,
-  grafoDeFronteiras,
+  duracaoMarchaMs,
   mapearExercito,
-  soldadosNaConta,
-  somarExercitos,
   subtrairRecursos,
-  totalUnidades,
   verificarAlocacao,
+  verificarAtaque,
   verificarEvolucao,
   verificarTreino,
-  type EstadoCidade,
-  type Exercito,
-  type LoteTreino,
-  type Obra,
-  type Recurso,
   type Recursos,
+  type TipoAtaque,
   type TipoPredio,
   type TipoUnidade,
 } from '../../../packages/regras/src/index.ts';
 import { jogadorDaRequisicao } from '../_compartilhado/auth.ts';
+import {
+  avancarAteAgora,
+  carregarCidade,
+  criarCidade,
+  lerExercito,
+  salvarCidade,
+  soldados,
+  temporadaAtiva,
+  type CidadeAvancada,
+  type Temporada,
+} from '../_compartilhado/cidade.ts';
 import { sql, type Transacao } from '../_compartilhado/db.ts';
 import { CORS, ErroDoJogo, resposta } from '../_compartilhado/http.ts';
-
-type LinhaCidade = {
-  id: string;
-  territorio_id: string | null;
-  comida: number;
-  madeira: number;
-  ouro: number;
-  populacao: number;
-  trabalhadores_comida: number;
-  trabalhadores_madeira: number;
-  trabalhadores_ouro: number;
-  atualizado_em: Date;
-};
-
-type LinhaPredio = { tipo: TipoPredio; nivel: number };
-
-async function temporadaAtiva(tx: Transacao): Promise<string> {
-  const [temporada] = await tx<{ id: string }[]>`select id from temporadas where status = 'ativa'`;
-  if (!temporada) throw new ErroDoJogo('Nenhuma temporada em andamento.', 409);
-  return temporada.id;
-}
-
-/**
- * Território onde nasce a cidade: o reservado para o jogador na criação da temporada ou, para quem
- * chegou depois, o livre mais distante de todos. `null` se a temporada não tem mapa.
- */
-async function territorioInicial(tx: Transacao, temporadaId: string, jogadorId: string): Promise<string | null> {
-  const [reservado] = await tx<{ id: string }[]>`
-    select id from territorios
-     where temporada_id = ${temporadaId} and reservado_para = ${jogadorId} and dono_id is null`;
-  if (reservado) return reservado.id;
-
-  const territorios = await tx<{ id: string; ocupado: boolean; vaga_inicial: boolean }[]>`
-    select id, (dono_id is not null or reservado_para is not null) as ocupado, vaga_inicial
-      from territorios where temporada_id = ${temporadaId}`;
-  if (territorios.length === 0) return null;
-
-  const fronteiras = await tx<{ territorio_a: string; territorio_b: string }[]>`
-    select territorio_a, territorio_b from fronteiras where temporada_id = ${temporadaId}`;
-  const grafo = grafoDeFronteiras(fronteiras.map((f) => [f.territorio_a, f.territorio_b] as const));
-  const ocupadosOuReservados = new Set(territorios.filter((t) => t.ocupado).map((t) => t.id));
-  // Primeiro as vagas iniciais que o gerador equilibrou; depois qualquer território livre.
-  const vagas = territorios.filter((t) => t.vaga_inicial && !t.ocupado).map((t) => t.id);
-  const livre =
-    escolherTerritorioLivre({ todos: vagas, grafo, ocupadosOuReservados }) ??
-    escolherTerritorioLivre({ todos: territorios.map((t) => t.id), grafo, ocupadosOuReservados });
-  if (!livre) throw new ErroDoJogo('O mapa desta temporada está cheio. Aguarde a próxima temporada.', 409);
-  return livre;
-}
-
-/** Funda a cidade do jogador na temporada ativa, se ele ainda não tiver uma. */
-async function criarCidade(tx: Transacao, jogadorId: string): Promise<void> {
-  const temporadaId = await temporadaAtiva(tx);
-  // Dois jogadores chegando juntos não podem pegar o mesmo território livre.
-  await tx`select pg_advisory_xact_lock(hashtext(${temporadaId}))`;
-  const [existente] = await tx`select 1 from cidades where temporada_id = ${temporadaId} and jogador_id = ${jogadorId}`;
-  if (existente) return;
-
-  const territorioId = await territorioInicial(tx, temporadaId, jogadorId);
-  const inicial = cidadeInicial(Date.now());
-  const [criada] = await tx<{ id: string }[]>`
-    insert into cidades (temporada_id, jogador_id, territorio_id, comida, madeira, ouro, populacao, atualizado_em)
-    values (${temporadaId}, ${jogadorId}, ${territorioId}, ${inicial.recursos.comida}, ${inicial.recursos.madeira},
-            ${inicial.recursos.ouro}, ${inicial.populacao}, ${new Date(inicial.atualizadoEm)})
-    returning id`;
-
-  const predios = TIPOS_PREDIO.map((tipo) => ({ cidade_id: criada!.id, tipo, nivel: inicial.predios[tipo] }));
-  await tx`insert into predios ${tx(predios)}`;
-  if (territorioId) {
-    await tx`
-      update territorios set dono_id = ${jogadorId}, cidade_principal = true, reservado_para = ${jogadorId}
-       where id = ${territorioId}`;
-  }
-}
-
-type GrupoTropas = { id: string | null; territorioId: string; tropas: Exercito };
-type LoteSalvo = LoteTreino & { id: string };
-type ObraSalva = Obra & { id: string };
-
-type CidadeCarregada = {
-  id: string;
-  territorioId: string | null;
-  cidade: EstadoCidade;
-  obras: ObraSalva[];
-  bonus: Recursos;
-  /** Tropas do jogador, uma entrada por território onde estão. */
-  grupos: GrupoTropas[];
-  fila: LoteSalvo[];
-};
-
-/** Lê e trava a cidade do jogador (e as tropas dele) até o fim da transação. */
-async function carregarCidade(tx: Transacao, jogadorId: string): Promise<CidadeCarregada> {
-  const temporadaId = await temporadaAtiva(tx);
-  const [linha] = await tx<LinhaCidade[]>`
-    select id, territorio_id, comida, madeira, ouro, populacao,
-           trabalhadores_comida, trabalhadores_madeira, trabalhadores_ouro, atualizado_em
-      from cidades
-     where temporada_id = ${temporadaId} and jogador_id = ${jogadorId}
-       for update`;
-  if (!linha) throw new ErroDoJogo('Você ainda não tem cidade nesta temporada.', 404);
-
-  // Bônus de produção de todos os territórios do jogador nesta temporada.
-  const territorios = await tx<{ bonus_recurso: Recurso }[]>`
-    select bonus_recurso from territorios where temporada_id = ${temporadaId} and dono_id = ${jogadorId}`;
-  const bonus = bonusDeTerritorios(territorios.map((t) => t.bonus_recurso));
-
-  const linhasPredios = await tx<LinhaPredio[]>`select tipo, nivel from predios where cidade_id = ${linha.id}`;
-  const predios = Object.fromEntries(TIPOS_PREDIO.map((tipo) => [tipo, 0])) as EstadoCidade['predios'];
-  for (const p of linhasPredios) predios[p.tipo] = p.nivel;
-  const linhasObras = await tx<{ id: string; tipo: TipoPredio; pronto_em: Date }[]>`
-    select id, tipo, pronto_em from obras where cidade_id = ${linha.id} order by pronto_em`;
-
-  const linhasTropas = await tx<{ id: string; territorio_id: string; lanceiro: number; arqueiro: number; cavalaria: number }[]>`
-    select id, territorio_id, lanceiro, arqueiro, cavalaria
-      from tropas where temporada_id = ${temporadaId} and dono_id = ${jogadorId}
-       for update`;
-  const linhasFila = await tx<{ id: string; tipo_unidade: TipoUnidade; quantidade: number; pronto_em: Date }[]>`
-    select id, tipo_unidade, quantidade, pronto_em from filas_treino where cidade_id = ${linha.id} order by pronto_em`;
-
-  return {
-    id: linha.id,
-    territorioId: linha.territorio_id,
-    obras: linhasObras.map((o) => ({ id: o.id, tipo: o.tipo, prontoEm: o.pronto_em.getTime() })),
-    bonus,
-    grupos: linhasTropas.map((t) => ({
-      id: t.id,
-      territorioId: t.territorio_id,
-      tropas: exercito({ lanceiro: t.lanceiro, arqueiro: t.arqueiro, cavalaria: t.cavalaria }),
-    })),
-    fila: linhasFila.map((l) => ({ id: l.id, tipo: l.tipo_unidade, quantidade: l.quantidade, prontoEm: l.pronto_em.getTime() })),
-    cidade: {
-      recursos: { comida: linha.comida, madeira: linha.madeira, ouro: linha.ouro },
-      populacao: linha.populacao,
-      trabalhadores: {
-        comida: linha.trabalhadores_comida,
-        madeira: linha.trabalhadores_madeira,
-        ouro: linha.trabalhadores_ouro,
-      },
-      predios,
-      atualizadoEm: linha.atualizado_em.getTime(),
-    },
-  };
-}
-
-async function salvarCidade(tx: Transacao, id: string, cidade: EstadoCidade): Promise<void> {
-  await tx`
-    update cidades
-       set comida = ${cidade.recursos.comida}, madeira = ${cidade.recursos.madeira}, ouro = ${cidade.recursos.ouro},
-           populacao = ${cidade.populacao},
-           trabalhadores_comida = ${cidade.trabalhadores.comida},
-           trabalhadores_madeira = ${cidade.trabalhadores.madeira},
-           trabalhadores_ouro = ${cidade.trabalhadores.ouro},
-           atualizado_em = ${new Date(cidade.atualizadoEm)}
-     where id = ${id}`;
-  await tx`update predios set nivel = (${tx.json(cidade.predios)}::jsonb ->> tipo)::int where cidade_id = ${id}`;
-}
-
-/** Grava as tropas do jogador: atualiza cada grupo, cria os novos e apaga os que ficaram vazios. */
-async function salvarTropas(tx: Transacao, temporadaId: string, jogadorId: string, grupos: GrupoTropas[]): Promise<void> {
-  for (const g of grupos) {
-    const { lanceiro, arqueiro, cavalaria } = g.tropas;
-    if (totalUnidades(g.tropas) === 0) {
-      if (g.id) await tx`delete from tropas where id = ${g.id}`;
-    } else if (g.id) {
-      await tx`update tropas set lanceiro = ${lanceiro}, arqueiro = ${arqueiro}, cavalaria = ${cavalaria} where id = ${g.id}`;
-    } else {
-      await tx`
-        insert into tropas (temporada_id, territorio_id, dono_id, lanceiro, arqueiro, cavalaria)
-        values (${temporadaId}, ${g.territorioId}, ${jogadorId}, ${lanceiro}, ${arqueiro}, ${cavalaria})`;
-    }
-  }
-}
 
 function lerAlocacao(valor: unknown): Recursos {
   const v = (valor ?? {}) as Record<string, unknown>;
   return { comida: Number(v.comida), madeira: Number(v.madeira), ouro: Number(v.ouro) };
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+type TerritorioMarcha = { id: string; dono_id: string | null; cidade_principal: boolean; x: number; y: number };
+
+/** Tira as tropas do território de origem e põe a marcha a caminho. Atacar quebra o próprio escudo. */
+async function enviarMarcha(
+  tx: Transacao,
+  temporada: Temporada,
+  c: CidadeAvancada,
+  corpo: Record<string, unknown>,
+  agora: number,
+): Promise<number> {
+  const tipo = corpo.tipo as TipoAtaque;
+  if (!TIPOS_ATAQUE.includes(tipo)) throw new ErroDoJogo('Tipo de ataque desconhecido.');
+  const enviar = lerExercito(corpo.tropas);
+  const origemId = String(corpo.origem_id ?? '');
+  const destinoId = String(corpo.destino_id ?? '');
+  if (![origemId, destinoId].every((id) => UUID.test(id))) throw new ErroDoJogo('Território desconhecido.');
+
+  const territorios = await tx<TerritorioMarcha[]>`
+    select id, dono_id, cidade_principal, x, y from territorios
+     where temporada_id = ${temporada.id} and id in (${origemId}, ${destinoId})`;
+  const origem = territorios.find((t) => t.id === origemId);
+  const destino = territorios.find((t) => t.id === destinoId);
+  if (!origem || !destino || origemId === destinoId) throw new ErroDoJogo('Território desconhecido.');
+
+  const [fronteira] = await tx`
+    select 1 from fronteiras
+     where (territorio_a = ${origemId} and territorio_b = ${destinoId})
+        or (territorio_a = ${destinoId} and territorio_b = ${origemId})`;
+  const [escudo] = destino.dono_id
+    ? await tx<{ ate: Date }[]>`
+        select ate from protecoes where temporada_id = ${temporada.id} and jogador_id = ${destino.dono_id} and tipo = 'escudo'`
+    : [];
+  const grupo = c.grupos.find((g) => g.territorioId === origemId);
+
+  const v = verificarAtaque({
+    tipo,
+    enviar,
+    disponiveis: grupo?.tropas ?? mapearExercito(() => 0),
+    origemDoJogador: origem.dono_id === c.carregada.jogadorId,
+    vizinhos: !!fronteira,
+    alvo: { donoId: destino.dono_id, cidadePrincipal: destino.cidade_principal },
+    jogadorId: c.carregada.jogadorId,
+    inicioTemporada: temporada.inicio,
+    escudoDoAlvoAte: escudo ? escudo.ate.getTime() : null,
+    agora,
+  });
+  if (!v.ok) throw new ErroDoJogo(MENSAGENS_ATAQUE[v.motivo]);
+
+  grupo!.tropas = mapearExercito((t) => grupo!.tropas[t] - enviar[t]);
+  const chegada = agora + duracaoMarchaMs(origem, destino, enviar);
+  await tx`
+    insert into marchas (temporada_id, jogador_id, origem_id, destino_id, tipo, lanceiro, arqueiro, cavalaria, partida_em, chegada_em)
+    values (${temporada.id}, ${c.carregada.jogadorId}, ${origemId}, ${destinoId}, ${tipo},
+            ${enviar.lanceiro}, ${enviar.arqueiro}, ${enviar.cavalaria}, ${new Date(agora)}, ${new Date(chegada)})`;
+  await tx`delete from protecoes where temporada_id = ${temporada.id} and jogador_id = ${c.carregada.jogadorId} and tipo = 'escudo'`;
+  return chegada;
 }
 
 async function executar(jogadorId: string, corpo: Record<string, unknown>): Promise<Record<string, unknown>> {
@@ -218,90 +109,56 @@ async function executar(jogadorId: string, corpo: Record<string, unknown>): Prom
     await sql.begin((tx) => criarCidade(tx, jogadorId));
     return { ok: true };
   }
+  if (corpo.acao === 'marcar_relatorios_lidos') {
+    await sql`update relatorios set lido_atacante = true where atacante_id = ${jogadorId} and not lido_atacante`;
+    await sql`update relatorios set lido_defensor = true where defensor_id = ${jogadorId} and not lido_defensor`;
+    return { ok: true };
+  }
 
   return await sql.begin(async (tx) => {
     const agora = Date.now();
-    const temporadaId = await temporadaAtiva(tx);
-    const { id, territorioId, cidade, obras, bonus, grupos, fila } = await carregarCidade(tx, jogadorId);
-
-    // Avança até agora: produção, obra, lotes de treino que terminaram, consumo de comida e deserção.
-    const avancada = avancarCidade({
-      cidade,
-      tropas: somarExercitos(exercito(), ...grupos.map((g) => g.tropas)),
-      obras,
-      treinos: fila,
-      agora,
-      bonusTerritorios: bonus,
-    });
-    let estado = avancada.cidade;
-    let novaObra: Obra | null = null;
-
-    // Lotes prontos entram no território da cidade; a deserção sai de todos os grupos, na proporção.
-    let novosGrupos = grupos.map((g) => ({ ...g }));
-    if (avancada.lotesConcluidos.length > 0 && territorioId) {
-      let daCidade = novosGrupos.find((g) => g.territorioId === territorioId);
-      if (!daCidade) {
-        daCidade = { id: null, territorioId, tropas: exercito() };
-        novosGrupos.push(daCidade);
-      }
-      for (const lote of avancada.lotesConcluidos) {
-        daCidade.tropas = { ...daCidade.tropas, [lote.tipo]: daCidade.tropas[lote.tipo] + lote.quantidade };
-      }
-    }
-    const perdas = distribuirPerdas(novosGrupos.map((g) => g.tropas), avancada.desertores);
-    novosGrupos = novosGrupos.map((g, i) => ({ ...g, tropas: mapearExercito((tipo) => g.tropas[tipo] - perdas[i]![tipo]) }));
-
-    const filaRestante = fila.filter((l) => l.prontoEm > agora);
-    const soldados = soldadosNaConta(totalUnidades(avancada.tropas), filaRestante);
-    let novoLote: LoteTreino | null = null;
+    const temporada = await temporadaAtiva(tx);
+    const c = avancarAteAgora(await carregarCidade(tx, temporada.id, jogadorId), agora);
+    const resultado: Record<string, unknown> = { ok: true };
 
     switch (corpo.acao) {
       case 'evoluir_predio': {
         const tipo = corpo.tipo as TipoPredio;
         if (!TIPOS_PREDIO.includes(tipo)) throw new ErroDoJogo('Prédio desconhecido.');
-        const v = verificarEvolucao({ predios: estado.predios, tipo, recursos: estado.recursos, obras: avancada.obras, agora });
+        const v = verificarEvolucao({ predios: c.estado.predios, tipo, recursos: c.estado.recursos, obras: c.obras, agora });
         if (!v.ok) throw new ErroDoJogo(MENSAGENS_EVOLUCAO[v.motivo]);
-        estado = { ...estado, recursos: subtrairRecursos(estado.recursos, v.custo) };
-        novaObra = { tipo, prontoEm: v.prontoEm };
+        c.estado = { ...c.estado, recursos: subtrairRecursos(c.estado.recursos, v.custo) };
+        c.novaObra = { tipo, prontoEm: v.prontoEm };
         break;
       }
       case 'alocar_trabalhadores': {
         const alocacao = lerAlocacao(corpo.alocacao);
-        const v = verificarAlocacao({ cidade: estado, alocacao, soldados });
+        const v = verificarAlocacao({ cidade: c.estado, alocacao, soldados: soldados(c) });
         if (!v.ok) throw new ErroDoJogo(MENSAGENS_ALOCACAO[v.motivo]);
-        estado = { ...estado, trabalhadores: alocacao };
+        c.estado = { ...c.estado, trabalhadores: alocacao };
         break;
       }
       case 'treinar_tropas': {
         const tipo = corpo.tipo as TipoUnidade;
         const quantidade = Number(corpo.quantidade);
         if (!TIPOS_UNIDADE.includes(tipo)) throw new ErroDoJogo('Unidade desconhecida.');
-        if (!territorioId) throw new ErroDoJogo('Sua cidade não tem território nesta temporada.', 409);
-        const v = verificarTreino({ cidade: estado, tipo, quantidade, soldados, fila: filaRestante, agora });
+        if (!c.carregada.territorioId) throw new ErroDoJogo('Sua cidade não tem território nesta temporada.', 409);
+        const v = verificarTreino({ cidade: c.estado, tipo, quantidade, soldados: soldados(c), fila: c.fila, agora });
         if (!v.ok) throw new ErroDoJogo(MENSAGENS_TREINO[v.motivo]);
-        estado = { ...estado, recursos: subtrairRecursos(estado.recursos, v.custo) };
-        novoLote = { tipo, quantidade, prontoEm: v.prontoEm };
+        c.estado = { ...c.estado, recursos: subtrairRecursos(c.estado.recursos, v.custo) };
+        c.novoLote = { tipo, quantidade, prontoEm: v.prontoEm };
+        break;
+      }
+      case 'enviar_marcha': {
+        resultado.chegada_em = new Date(await enviarMarcha(tx, temporada, c, corpo, agora)).toISOString();
         break;
       }
       default:
         throw new ErroDoJogo('Ação desconhecida.');
     }
 
-    await salvarCidade(tx, id, estado);
-    await salvarTropas(tx, temporadaId, jogadorId, novosGrupos);
-    const obrasProntas = avancada.obrasConcluidas.map((o) => o.id);
-    if (obrasProntas.length > 0) await tx`delete from obras where id = any(${obrasProntas}::uuid[])`;
-    if (novaObra) {
-      await tx`insert into obras (cidade_id, tipo, pronto_em) values (${id}, ${novaObra.tipo}, ${new Date(novaObra.prontoEm)})`;
-    }
-    const concluidos = fila.filter((l) => l.prontoEm <= agora).map((l) => l.id);
-    if (concluidos.length > 0) await tx`delete from filas_treino where id = any(${concluidos}::uuid[])`;
-    if (novoLote) {
-      await tx`
-        insert into filas_treino (cidade_id, tipo_unidade, quantidade, pronto_em)
-        values (${id}, ${novoLote.tipo}, ${novoLote.quantidade}, ${new Date(novoLote.prontoEm)})`;
-    }
-    return { ok: true };
+    await salvarCidade(tx, c);
+    return resultado;
   });
 }
 

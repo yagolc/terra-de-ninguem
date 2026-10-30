@@ -1,16 +1,19 @@
 import { BALANCEAMENTO, TIPOS_UNIDADE, totalUnidades } from '@terra/regras';
 import { COR_NEUTRA, type DadosMapa } from '../lib/useMapa';
-import { RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO } from '../lib/textos';
+import { RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarDuracao } from '../lib/textos';
+import { origensPossiveis } from './PainelAtaque';
 
 type Props = {
   dados: DadosMapa;
   id: string;
   meuId: string;
   onSelecionar: (id: string | null) => void;
+  onAtacar: () => void;
+  agora: number;
 };
 
 /** Detalhes do território tocado no mapa. */
-export default function PainelTerritorio({ dados, id, meuId, onSelecionar }: Props) {
+export default function PainelTerritorio({ dados, id, meuId, onSelecionar, onAtacar, agora }: Props) {
   const t = dados.territorios.find((x) => x.id === id);
   if (!t) return null;
 
@@ -22,6 +25,9 @@ export default function PainelTerritorio({ dados, id, meuId, onSelecionar }: Pro
   const terreno = TERRENOS_INFO[t.terreno];
   const bonus = Math.round(BALANCEAMENTO.mapa.bonusTerritorio * 100);
   const minhas = dados.minhasTropas.get(t.id);
+  const podeAtacar = !meu && origensPossiveis(dados, t.id, meuId).length > 0;
+  const fimEscudo = t.dono_id ? dados.escudos.get(t.dono_id) : undefined;
+  const escudo = fimEscudo && fimEscudo > agora ? fimEscudo : null;
 
   return (
     <div className="space-y-4">
@@ -97,15 +103,20 @@ export default function PainelTerritorio({ dados, id, meuId, onSelecionar }: Pro
       {!meu && (
         <div>
           <button
-            disabled
-            className="w-full cursor-not-allowed rounded-lg bg-couro px-3 py-2 text-sm font-semibold text-pergaminho-escuro"
+            onClick={onAtacar}
+            disabled={!podeAtacar}
+            className="w-full rounded-lg bg-sangue px-3 py-2 text-sm font-semibold text-pergaminho hover:brightness-110 disabled:cursor-not-allowed disabled:bg-couro disabled:text-pergaminho-escuro"
           >
             ⚔️ Atacar
           </button>
           <p className="mt-1.5 text-xs text-pergaminho-escuro">
-            {vizinhoDoMeu
-              ? 'Faz fronteira com você. Ataques chegam em breve.'
-              : 'Só dá para atacar territórios vizinhos aos seus.'}
+            {!vizinhoDoMeu
+              ? 'Só dá para atacar territórios vizinhos aos seus.'
+              : !podeAtacar
+                ? 'Faz fronteira com você, mas não há tropas suas nos territórios vizinhos.'
+                : escudo
+                  ? `${dono?.nome} está com escudo por mais ${formatarDuracao(escudo - agora)}.`
+                  : 'Faz fronteira com você.'}
           </p>
         </div>
       )}

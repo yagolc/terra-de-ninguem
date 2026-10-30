@@ -72,15 +72,15 @@ export const BALANCEAMENTO = {
 
   unidades: {
     lanceiro: {
-      ataque: 10, defesa: 15, velocidade: 5, carga: 20,
+      ataque: 10, defesa: 15, velocidade: 20, carga: 20,
       custo: { comida: 30, madeira: 20, ouro: 0 }, tempoTreinoSeg: 60, consumoComidaHora: 1,
     },
     arqueiro: {
-      ataque: 15, defesa: 10, velocidade: 5, carga: 10,
+      ataque: 15, defesa: 10, velocidade: 20, carga: 10,
       custo: { comida: 30, madeira: 30, ouro: 5 }, tempoTreinoSeg: 90, consumoComidaHora: 1,
     },
     cavalaria: {
-      ataque: 20, defesa: 12, velocidade: 10, carga: 40,
+      ataque: 20, defesa: 12, velocidade: 40, carga: 40,
       custo: { comida: 60, madeira: 20, ouro: 25 }, tempoTreinoSeg: 150, consumoComidaHora: 2,
     },
   } satisfies Record<TipoUnidade, ConfigUnidade>,
@@ -104,7 +104,7 @@ export const BALANCEAMENTO = {
     /** Fração perdida pelo vencedor = (força menor / força maior) ^ expoente. */
     expoentePerdasVencedor: 1.5,
     /** Fração do exército perdida por quem perde a batalha. */
-    perdaPerdedor: 1,
+    perdaPerdedor: 0.7,
     /** Força de ataque mínima, em múltiplos da defesa, para conquistar um território. */
     margemConquista: 1.5,
   },
@@ -112,6 +112,13 @@ export const BALANCEAMENTO = {
   saque: {
     /** Fração máxima do estoque desprotegido que um saque leva. */
     maximoDoDesprotegido: 0.3,
+  },
+
+  protecoes: {
+    /** Começo de temporada sem ataques entre jogadores (neutros podem ser atacados). */
+    inicianteHoras: 48,
+    /** Escudo de quem perde uma defesa. Atacar alguém quebra o próprio escudo. */
+    escudoHoras: 8,
   },
 
   marcha: {

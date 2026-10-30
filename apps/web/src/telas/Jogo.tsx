@@ -2,13 +2,17 @@ import type { Session } from '@supabase/supabase-js';
 import { Suspense, lazy, useEffect, useState } from 'react';
 import NavegacaoInferior, { ABAS, type Aba } from '../componentes/NavegacaoInferior';
 import { supabase } from '../lib/supabase';
+import { contarNaoLidos } from '../lib/useRelatorios';
 import Cidade from './Cidade';
+import Relatorios from './Relatorios';
 
 // O Phaser (cerca de 1 MB) só é baixado quando o jogador abre o mapa.
 const Mapa = lazy(() => import('./Mapa'));
 
 function abaDoEndereco(): Aba {
-  return location.hash === '#mapa' ? 'mapa' : 'cidade';
+  if (location.hash === '#mapa') return 'mapa';
+  if (location.hash === '#relatorios') return 'relatorios';
+  return 'cidade';
 }
 
 /** Moldura do jogo logado: cabeçalho, abas (topo no desktop, barra inferior no celular) e a tela ativa. */
@@ -16,6 +20,19 @@ export default function Jogo({ sessao }: { sessao: Session }) {
   const [aba, setAba] = useState<Aba>(abaDoEndereco);
   const [nome, setNome] = useState<string | null>(null);
   const [temporada, setTemporada] = useState<number | null>(null);
+  const [naoLidos, setNaoLidos] = useState(0);
+
+  // Aviso de relatórios novos: confere ao trocar de aba e a cada minuto (as batalhas são resolvidas de minuto em minuto).
+  useEffect(() => {
+    if (aba === 'relatorios') {
+      setNaoLidos(0);
+      return;
+    }
+    const conferir = () => void contarNaoLidos(sessao.user.id).then(setNaoLidos);
+    conferir();
+    const t = setInterval(conferir, 60_000);
+    return () => clearInterval(t);
+  }, [aba, sessao.user.id]);
 
   useEffect(() => {
     const aoMudarEndereco = () => setAba(abaDoEndereco());
@@ -55,26 +72,18 @@ export default function Jogo({ sessao }: { sessao: Session }) {
             </div>
           </div>
           <nav className="hidden gap-1 md:flex">
-            {ABAS.map((item) => {
-              const pronta = item.id !== 'relatorios';
-              return (
-                <button
-                  key={item.id}
-                  disabled={!pronta}
-                  onClick={() => pronta && irPara(item.id)}
-                  className={`rounded-lg px-3 py-1.5 text-sm ${
-                    item.id === aba
-                      ? 'bg-couro text-ouro'
-                      : pronta
-                        ? 'text-pergaminho-escuro hover:text-pergaminho'
-                        : 'text-pergaminho-escuro/40'
-                  }`}
-                >
-                  {item.icone} {item.rotulo}
-                  {!pronta && ' (em breve)'}
-                </button>
-              );
-            })}
+            {ABAS.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => irPara(item.id)}
+                className={`rounded-lg px-3 py-1.5 text-sm ${item.id === aba ? 'bg-couro text-ouro' : 'text-pergaminho-escuro hover:text-pergaminho'}`}
+              >
+                {item.icone} {item.rotulo}
+                {item.id === 'relatorios' && naoLidos > 0 && (
+                  <span className="ml-1.5 rounded-full bg-sangue px-1.5 text-[11px] font-bold text-pergaminho">{naoLidos}</span>
+                )}
+              </button>
+            ))}
           </nav>
           <button
             onClick={() => supabase?.auth.signOut()}
@@ -88,6 +97,8 @@ export default function Jogo({ sessao }: { sessao: Session }) {
       <main className={`min-h-0 flex-1 ${aba === 'mapa' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
         {aba === 'cidade' ? (
           <Cidade sessao={sessao} />
+        ) : aba === 'relatorios' ? (
+          <Relatorios sessao={sessao} />
         ) : (
           <Suspense fallback={<div className="grid h-full place-items-center text-pergaminho-escuro">Abrindo o mapa…</div>}>
             <Mapa sessao={sessao} />
@@ -95,7 +106,7 @@ export default function Jogo({ sessao }: { sessao: Session }) {
         )}
       </main>
 
-      <NavegacaoInferior aba={aba} onMudar={irPara} />
+      <NavegacaoInferior aba={aba} onMudar={irPara} naoLidos={naoLidos} />
     </div>
   );
 }

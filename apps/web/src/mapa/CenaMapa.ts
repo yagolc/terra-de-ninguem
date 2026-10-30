@@ -25,6 +25,7 @@ export class CenaMapa extends Phaser.Scene {
   private formas = new Map<string, Phaser.Geom.Polygon>();
   private camadaMapa?: Phaser.GameObjects.Graphics;
   private camadaDestaque?: Phaser.GameObjects.Graphics;
+  private camadaMarchas?: Phaser.GameObjects.Graphics;
   private rotulos: Phaser.GameObjects.Text[] = [];
   private arrastou = false;
   private mexeu = false;
@@ -40,6 +41,7 @@ export class CenaMapa extends Phaser.Scene {
     this.input.addPointer(1); // dois dedos para a pinça
     this.camadaMapa = this.add.graphics();
     this.camadaDestaque = this.add.graphics();
+    this.camadaMarchas = this.add.graphics();
     this.desenhar();
     this.enquadrar();
 
@@ -89,6 +91,38 @@ export class CenaMapa extends Phaser.Scene {
 
     for (const t of dados.territorios) this.rotular(t);
     this.desenharDestaques();
+    this.desenharMarchas();
+  }
+
+  /** Setas das marchas do jogador: dourada para ataque, verde para tropas voltando. */
+  private desenharMarchas() {
+    const g = this.camadaMarchas!;
+    g.clear();
+    const { dados } = this.opcoes;
+    for (const m of dados.marchas) {
+      const de = dados.territorios.find((t) => t.id === m.origemId);
+      const para = dados.territorios.find((t) => t.id === m.destinoId);
+      if (!de || !para) continue;
+      const cor = m.tipo === 'retorno' ? 0x8fd18a : 0xe8c475;
+      const [x1, y1, x2, y2] = [de.x * ESCALA, de.y * ESCALA, para.x * ESCALA, para.y * ESCALA];
+      const angulo = Math.atan2(y2 - y1, x2 - x1);
+      // Para um pouco antes do centro do alvo, para não cobrir o nome.
+      const fimX = x2 - Math.cos(angulo) * 26;
+      const fimY = y2 - Math.sin(angulo) * 26;
+      g.lineStyle(6, 0x1c1410, 0.8);
+      g.lineBetween(x1, y1, fimX, fimY);
+      g.lineStyle(3, cor, 1);
+      g.lineBetween(x1, y1, fimX, fimY);
+      g.fillStyle(cor, 1);
+      g.fillTriangle(
+        fimX + Math.cos(angulo) * 12,
+        fimY + Math.sin(angulo) * 12,
+        fimX + Math.cos(angulo + 2.5) * 12,
+        fimY + Math.sin(angulo + 2.5) * 12,
+        fimX + Math.cos(angulo - 2.5) * 12,
+        fimY + Math.sin(angulo - 2.5) * 12,
+      );
+    }
   }
 
   /** Arestas entre regiões diferentes (ou na borda do mapa) em dourado. */

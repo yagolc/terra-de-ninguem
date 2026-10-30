@@ -1,4 +1,4 @@
-import { BALANCEAMENTO, RECURSOS, TIPOS_PREDIO, type Recursos, type TipoPredio, type TipoUnidade } from '@terra/regras';
+import { BALANCEAMENTO, RECURSOS, TIPOS_PREDIO, somarExercitos, type Recursos, type TipoPredio, type TipoUnidade } from '@terra/regras';
 import type { Session } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 import BarraRecursos from '../componentes/BarraRecursos';
@@ -11,7 +11,7 @@ import { PREDIOS, RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarDuracao }
 type Aviso = { tipo: 'erro' | 'ok'; texto: string };
 
 export default function Cidade({ sessao }: { sessao: Session }) {
-  const { cidade, obras, tropas, fila, soldados, bonus, territorio, territorios, agora, erro, comandar } = useCidade(sessao.user.id);
+  const { cidade, obras, tropas, emMarcha, fila, soldados, bonus, territorio, territorios, agora, erro, comandar } = useCidade(sessao.user.id);
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState<Aviso | null>(null);
 
@@ -84,7 +84,7 @@ export default function Cidade({ sessao }: { sessao: Session }) {
           </p>
         )}
         <div className="md:hidden">
-          <BarraRecursos cidade={cidade} bonus={bonus} tropas={tropas} soldados={soldados} />
+          <BarraRecursos cidade={cidade} bonus={bonus} tropas={somarExercitos(tropas, emMarcha)} soldados={soldados} />
         </div>
       </div>
 
@@ -116,12 +116,13 @@ export default function Cidade({ sessao }: { sessao: Session }) {
 
         <aside className="space-y-4 md:sticky md:top-4 md:self-start">
           <div className="hidden md:block">
-            <BarraRecursos cidade={cidade} bonus={bonus} tropas={tropas} soldados={soldados} />
+            <BarraRecursos cidade={cidade} bonus={bonus} tropas={somarExercitos(tropas, emMarcha)} soldados={soldados} />
           </div>
           <PainelTrabalhadores cidade={cidade} bonus={bonus} soldados={soldados} ocupado={ocupado} onSalvar={alocar} />
           <PainelQuartel
             cidade={cidade}
             tropas={tropas}
+            emMarcha={emMarcha}
             fila={fila}
             soldados={soldados}
             agora={agora}

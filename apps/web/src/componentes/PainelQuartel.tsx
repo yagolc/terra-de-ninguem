@@ -6,6 +6,7 @@ import {
   consumoComidaHora,
   custoTreino,
   habitantesLivres,
+  somarExercitos,
   totalUnidades,
   verificarTreino,
   type EstadoCidade,
@@ -19,6 +20,7 @@ import { RECURSOS_INFO, UNIDADES_INFO, formatarDuracao, formatarNumero, formatar
 type Props = {
   cidade: EstadoCidade;
   tropas: Exercito;
+  emMarcha: Exercito;
   fila: LoteTreino[];
   soldados: number;
   agora: number;
@@ -34,7 +36,7 @@ function maximoTreinavel(cidade: EstadoCidade, tipo: TipoUnidade, soldados: numb
 }
 
 /** Exército do jogador e treino de tropas no quartel. */
-export default function PainelQuartel({ cidade, tropas, fila, soldados, agora, ocupado, onTreinar }: Props) {
+export default function PainelQuartel({ cidade, tropas, emMarcha, fila, soldados, agora, ocupado, onTreinar }: Props) {
   const [tipo, setTipo] = useState<TipoUnidade>('lanceiro');
   const [quantidade, setQuantidade] = useState(1);
 
@@ -67,8 +69,9 @@ export default function PainelQuartel({ cidade, tropas, fila, soldados, agora, o
         ))}
       </ul>
       <p className="mt-1.5 text-xs text-pergaminho-escuro">
-        {totalUnidades(tropas) > 0
-          ? `Comem ${formatarTaxa(consumoComidaHora(tropas))} de comida por hora.`
+        {totalUnidades(emMarcha) > 0 && `${totalUnidades(emMarcha)} em marcha, fora de casa. `}
+        {totalUnidades(tropas) + totalUnidades(emMarcha) > 0
+          ? `Todas comem: ${formatarTaxa(consumoComidaHora(somarExercitos(tropas, emMarcha)))} de comida por hora.`
           : 'Nenhuma tropa ainda. Cada soldado ocupa 1 habitante e come comida.'}
       </p>
 

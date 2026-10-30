@@ -6,7 +6,7 @@ Documentos de referência (leia antes de decisões de design):
 - `docs/GDD.md`: design do jogo (recursos, prédios, unidades, combate, mapa, proteções, temporadas).
 - `docs/plano-tecnico.md`: stack, modelo de dados, lógica do servidor, telas e ordem dos 8 épicos.
 
-**Status:** Épicos 1 a 5 prontos (Fundação, Regras, Cidade, Mapa e temporada, Exército); próximo é o 6 (Ataques). Fila de até 3 obras e até 5 lotes de treino, independentes. Temporada 2 ativa (semente 2026, mapa para 6 jogadores). Épico 1: Projeto Supabase `wbhcmkortcklhcojphlx` (região São Paulo, plano Free) ligado à CLI; migration 0001 e a função `resgatar-convite` publicadas; e-mails em português saindo por SMTP do Gmail. Frontend publicado na Vercel em https://terra-de-ninguem.vercel.app (Root Directory `apps/web`, republica a cada push na `main` de github.com/yagolc/terra-de-ninguem; variáveis `VITE_*` configuradas no painel da Vercel).
+**Status:** Épicos 1 a 6 prontos (Fundação, Regras, Cidade, Mapa e temporada, Exército, Ataques); próximo é o 7 (Objetivos e fim de temporada). Fila de até 3 obras e até 5 lotes de treino, independentes. Marchas a 20 léguas/h (cavalaria 40): vizinhos em ~20–30 min. Temporada 2 ativa (semente 2026, mapa para 6 jogadores). Épico 1: Projeto Supabase `wbhcmkortcklhcojphlx` (região São Paulo, plano Free) ligado à CLI; migration 0001 e a função `resgatar-convite` publicadas; e-mails em português saindo por SMTP do Gmail. Frontend publicado na Vercel em https://terra-de-ninguem.vercel.app (Root Directory `apps/web`, republica a cada push na `main` de github.com/yagolc/terra-de-ninguem; variáveis `VITE_*` configuradas no painel da Vercel).
 
 ## Pilares que guiam decisões
 
@@ -81,6 +81,9 @@ Exceção: o SMTP (Gmail pessoal com senha de app) e o provedor Google (Client I
 - Sem Deno local: para checar tipos das Edge Functions, rode `tsc` com `paths` apontando `npm:postgres@3.4.5` e `jsr:@supabase/supabase-js@2` para os pacotes do npm.
 - O gerador de mapa (`@terra/regras/mapa`, usa `d3-delaunay`) fica **fora** do `index.ts` das regras: só o script de temporada e testes o importam; Edge Functions e site leem o mapa pronto do banco.
 - `territorios.guarnicao_inicial` (força dos bárbaros) não tem `grant select`: liste as colunas no `select` do cliente, nunca `*`.
+- **Ataques (Épico 6):** `enviar_marcha` (função `cidade`) tira as tropas do território e cria a marcha. O pg_cron (migration 0007) chama `resolver-marchas` a cada minuto com o cabeçalho `x-segredo-cron`: a senha fica no Vault (`segredo_cron`) e na variável `SEGREDO_CRON` da função (`npx supabase secrets set`), nunca no git. Cada marcha é resolvida numa transação (`for update skip locked`), travando as cidades por ordem de id; sorte = `sementeDeTexto(marcha.id)`. Perdedor perde 70%; conquista exige 1,5×; o defensor derrotado recua para a cidade dele e ganha escudo de 8 h; atacar quebra o próprio escudo.
+- Código de cidade compartilhado em `_compartilhado/cidade.ts` (`carregarCidade` → `avancarAteAgora` → mexe → `salvarCidade`). Tropas em marcha comem e ocupam população, mas não desertam.
+- Para conferir o agendador: `select status_code, content from net._http_response order by created desc limit 5`. Para testar sem esperar: `update marchas set chegada_em = now() where id = ...` (só em teste).
 - **Frontend** lê pelo PostgREST (RLS só leitura), recalcula a cada segundo com `avancarCidade` e manda comandos com `chamarFuncao` (`apps/web/src/lib/funcoes.ts`), relendo a cidade depois.
 
 ## Regras de arquitetura (não quebrar)
