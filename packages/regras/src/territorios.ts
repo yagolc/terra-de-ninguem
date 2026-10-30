@@ -97,3 +97,12 @@ export function ligadosPorTerritoriosProprios<Id>(entrada: {
   }
   return false;
 }
+
+/** Cores dos jogadores no mapa: bem diferentes entre si e do marrom dos territórios neutros. */
+export const CORES_JOGADORES = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e84393', '#f1c40f'] as const;
+
+/** Primeira cor da paleta que nenhum outro jogador da temporada usa (se todas estiverem em uso, repete). */
+export function escolherCor(usadas: readonly (string | null)[]): string {
+  const ocupadas = new Set(usadas.filter((c): c is string => !!c).map((c) => c.toLowerCase()));
+  return CORES_JOGADORES.find((c) => !ocupadas.has(c)) ?? CORES_JOGADORES[ocupadas.size % CORES_JOGADORES.length]!;
+}

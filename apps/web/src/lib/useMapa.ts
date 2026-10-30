@@ -1,4 +1,4 @@
-import { exercito, somarExercitos, type Exercito, type Recurso, type Recursos, type Terreno, type TipoUnidade } from '@terra/regras';
+import { CORES_JOGADORES, exercito, somarExercitos, type Exercito, type Recurso, type Recursos, type Terreno, type TipoUnidade } from '@terra/regras';
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from './supabase';
 
@@ -44,6 +44,13 @@ export type DadosMapa = {
 };
 
 export const COR_NEUTRA = '#6b5a48';
+
+/** Cor do jogador no mapa; se ainda não tiver uma gravada, uma da paleta escolhida pelo id (nunca o marrom neutro). */
+export function corDoJogador(jogador: { id: string; cor: string | null }): string {
+  if (jogador.cor) return jogador.cor;
+  const indice = [...jogador.id].reduce((soma, c) => soma + c.charCodeAt(0), 0) % CORES_JOGADORES.length;
+  return CORES_JOGADORES[indice]!;
+}
 
 type LinhaMarcha = {
   id: string;

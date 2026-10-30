@@ -6,6 +6,7 @@ import {
   bonusDeTerritorios,
   cidadeInicial,
   distribuirPerdas,
+  escolherCor,
   escolherTerritorioLivre,
   exercito,
   grafoDeFronteiras,
@@ -82,6 +83,16 @@ export async function criarCidade(tx: Transacao, jogadorId: string): Promise<voi
     await tx`
       update territorios set dono_id = ${jogadorId}, cidade_principal = true, reservado_para = ${jogadorId}
        where id = ${territorioId}`;
+  }
+
+  // Cor no mapa: mantém a do jogador se ninguém mais nesta temporada a usa; senão, a primeira livre.
+  const [eu] = await tx<{ cor: string | null }[]>`select cor from jogadores where id = ${jogadorId}`;
+  const outras = await tx<{ cor: string | null }[]>`
+    select j.cor from cidades c join jogadores j on j.id = c.jogador_id
+     where c.temporada_id = ${temporadaId} and c.jogador_id <> ${jogadorId}`;
+  const usadas = new Set(outras.map((o) => o.cor?.toLowerCase()));
+  if (!eu?.cor || usadas.has(eu.cor.toLowerCase())) {
+    await tx`update jogadores set cor = ${escolherCor(outras.map((o) => o.cor))} where id = ${jogadorId}`;
   }
 }
 

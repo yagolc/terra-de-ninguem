@@ -1,4 +1,5 @@
 import { BALANCEAMENTO } from '@terra/regras';
+import { corDoJogador } from '../lib/useMapa';
 import type { LinhaPlacar } from '../lib/useTemporada';
 
 /** Ranking da temporada: pontos = territórios, habitantes e batalhas vencidas. */
@@ -24,7 +25,7 @@ export default function TabelaPlacar({ placar, meuId, vencedorId }: { placar: Li
             <tr key={linha.jogadorId} className={`border-t border-couro/60 ${linha.jogadorId === meuId ? 'text-ouro-claro' : ''}`}>
               <td className="py-2 tabular-nums">{i + 1}</td>
               <td className="py-2">
-                <span className="mr-1.5 inline-block size-2.5 rounded-full" style={{ background: linha.cor ?? '#6b5a48' }} />
+                <span className="mr-1.5 inline-block size-2.5 rounded-full" style={{ background: corDoJogador({ id: linha.jogadorId, cor: linha.cor }) }} />
                 {linha.nome}
                 {linha.jogadorId === vencedorId && ' 👑'}
               </td>

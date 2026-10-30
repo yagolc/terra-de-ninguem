@@ -5,7 +5,7 @@ import PainelAtaque from '../componentes/PainelAtaque';
 import PainelMovimento from '../componentes/PainelMovimento';
 import PainelTerritorio from '../componentes/PainelTerritorio';
 import CanvasMapa from '../mapa/CanvasMapa';
-import { COR_NEUTRA, useMapa } from '../lib/useMapa';
+import { COR_NEUTRA, corDoJogador, useMapa } from '../lib/useMapa';
 import { UNIDADES_INFO, formatarDuracao } from '../lib/textos';
 
 /** Tela Mapa: carregada sob demanda (o Phaser só baixa quando o jogador abre a aba). */
@@ -51,7 +51,7 @@ export default function Mapa({ sessao }: { sessao: Session }) {
           <ul className="flex flex-wrap gap-x-3 gap-y-1">
             {legenda.map((j) => (
               <li key={j.id} className="flex items-center gap-1.5">
-                <span className="size-2.5 rounded-full" style={{ background: j.cor ?? COR_NEUTRA }} />
+                <span className="size-2.5 rounded-full" style={{ background: corDoJogador(j) }} />
                 {j.nome}
                 {j.id === meuId && ' (você)'}
               </li>

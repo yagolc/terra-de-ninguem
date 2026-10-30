@@ -85,6 +85,7 @@ Exceção: o SMTP (Gmail pessoal com senha de app) e o provedor Google (Client I
 - **Objetivos (Épico 7):** sorteados em `garantirObjetivo` quando o jogador entra (ação `entrar`), com semente da temporada + jogador; secretos pelo RLS até a temporada encerrar. A cada minuto, depois das marchas, `atualizarPlacar` recalcula o `placar` (público), confere os objetivos e encerra a temporada (objetivo cumprido, ou prazo → mais pontos). Encerrada, os comandos param (`temporadaAtiva` recusa) e o site mostra a tela de fim até você rodar `temporada:nova`.
 - Código de cidade compartilhado em `_compartilhado/cidade.ts` (`carregarCidade` → `avancarAteAgora` → mexe → `salvarCidade`). Tropas em marcha comem e ocupam população, mas não desertam.
 - Para conferir o agendador: `select status_code, content from net._http_response order by created desc limit 5`. Para testar sem esperar: `update marchas set chegada_em = now() where id = ...` (só em teste).
+- **Cores dos jogadores:** `CORES_JOGADORES` (regras) é a paleta; `criarCidade` dá ao jogador a primeira cor livre da temporada e `corDoJogador` (web) cai na paleta se faltar cor. O mapa pinta o território do dono (75%), contorna na cor dele e põe uma bandeira.
 - **Frontend** lê pelo PostgREST (RLS só leitura), recalcula a cada segundo com `avancarCidade` e manda comandos com `chamarFuncao` (`apps/web/src/lib/funcoes.ts`), relendo a cidade depois.
 
 ## Regras de arquitetura (não quebrar)

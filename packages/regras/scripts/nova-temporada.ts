@@ -10,13 +10,12 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { BALANCEAMENTO } from '../src/balanceamento.ts';
 import { escolherMelhorMapa, type MapaGerado, type Ponto2 } from '../src/mapa/gerador.ts';
-import { grafoDeFronteiras } from '../src/territorios.ts';
+import { CORES_JOGADORES, grafoDeFronteiras } from '../src/territorios.ts';
 import { TIPOS_UNIDADE } from '../src/tipos.ts';
 import { totalUnidades } from '../src/util.ts';
 
 const RAIZ = fileURLToPath(new URL('../../../', import.meta.url));
 const PASTA_SAIDA = `${RAIZ}supabase/.temp`;
-const CORES_JOGADORES = ['#c0392b', '#2e86c1', '#27ae60', '#d68910', '#8e44ad', '#16a085'];
 const CORES_TERRENO = { planicie: '#8a9a4b', floresta: '#3f6b3a', montanha: '#7d6f63' } as const;
 const NOMES_TERRENO = { planicie: 'planície', floresta: 'floresta', montanha: 'montanha' } as const;
 

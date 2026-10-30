@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCEAMENTO } from './balanceamento.ts';
 import {
+  CORES_JOGADORES,
   bonusDeTerritorios,
   distanciasNoGrafo,
+  escolherCor,
   escolherTerritorioLivre,
   grafoDeFronteiras,
   ligadosPorTerritoriosProprios,
@@ -53,5 +55,18 @@ describe('ligadosPorTerritoriosProprios', () => {
 
   it('origem ou destino alheio não está ligado', () => {
     expect(ligadosPorTerritoriosProprios({ grafo: LINHA, origem: 'a', destino: 'b', proprios: new Set(['a']) })).toBe(false);
+  });
+});
+
+describe('escolherCor', () => {
+  it('dá a primeira cor livre e nunca repete enquanto houver cor livre', () => {
+    expect(escolherCor([])).toBe(CORES_JOGADORES[0]);
+    const usadas: string[] = [];
+    for (let i = 0; i < CORES_JOGADORES.length; i++) usadas.push(escolherCor(usadas));
+    expect(new Set(usadas).size).toBe(CORES_JOGADORES.length);
+  });
+
+  it('ignora jogadores sem cor e diferença de maiúsculas', () => {
+    expect(escolherCor([null, CORES_JOGADORES[0].toUpperCase()])).toBe(CORES_JOGADORES[1]);
   });
 });

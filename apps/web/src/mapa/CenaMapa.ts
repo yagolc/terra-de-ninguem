@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COR_NEUTRA, type DadosMapa, type TerritorioMapa } from '../lib/useMapa';
+import { COR_NEUTRA, corDoJogador, type DadosMapa, type TerritorioMapa } from '../lib/useMapa';
 
 /** Pixels por légua no "mundo" do Phaser; a câmera aplica o zoom por cima. */
 const ESCALA = 20;
@@ -8,6 +8,7 @@ const ICONE_TERRENO = { planicie: '', floresta: '🌲', montanha: '⛰️' } as 
 const ARRASTO_MINIMO = 6;
 
 const cor = (hex: string) => Phaser.Display.Color.HexStringToColor(hex).color;
+const toPoints = (xy: number[]) => xy.flatMap((v, i) => (i % 2 === 0 ? [new Phaser.Geom.Point(v, xy[i + 1]!)] : []));
 
 export type OpcoesCena = {
   dados: DadosMapa;
@@ -26,6 +27,7 @@ export class CenaMapa extends Phaser.Scene {
   private camadaMapa?: Phaser.GameObjects.Graphics;
   private camadaDestaque?: Phaser.GameObjects.Graphics;
   private camadaMarchas?: Phaser.GameObjects.Graphics;
+  private camadaBandeiras?: Phaser.GameObjects.Graphics;
   private rotulos: Phaser.GameObjects.Text[] = [];
   private arrastou = false;
   private mexeu = false;
@@ -41,6 +43,7 @@ export class CenaMapa extends Phaser.Scene {
     this.input.addPointer(1); // dois dedos para a pinça
     this.camadaMapa = this.add.graphics();
     this.camadaDestaque = this.add.graphics();
+    this.camadaBandeiras = this.add.graphics();
     this.camadaMarchas = this.add.graphics();
     this.desenhar();
     this.enquadrar();
@@ -82,13 +85,15 @@ export class CenaMapa extends Phaser.Scene {
       g.fillStyle(CORES_TERRENO[t.terreno], 1);
       g.fillPoints(forma.points, true);
       const dono = t.dono_id ? dados.jogadores.get(t.dono_id) : null;
-      g.fillStyle(dono?.cor ? cor(dono.cor) : cor(COR_NEUTRA), dono ? 0.55 : 0.35);
+      // Território com dono fica bem pintado com a cor dele; neutro só escurece o terreno.
+      g.fillStyle(dono ? cor(corDoJogador(dono)) : cor(COR_NEUTRA), dono ? 0.75 : 0.35);
       g.fillPoints(forma.points, true);
       g.lineStyle(1.5, 0x1c1410, 0.9);
       g.strokePoints(forma.points, true);
     }
     this.desenharBordasDeRegiao(g, dados.territorios);
 
+    this.camadaBandeiras!.clear();
     for (const t of dados.territorios) this.rotular(t);
     this.desenharDestaques();
     this.desenharMarchas();
@@ -155,18 +160,49 @@ export class CenaMapa extends Phaser.Scene {
     };
     const x = t.x * ESCALA;
     const y = t.y * ESCALA;
-    const topo = t.cidade_principal ? '🏰' : ICONE_TERRENO[t.terreno];
-    if (topo) this.rotulos.push(this.add.text(x, y - 16, topo, { ...estilo, fontSize: '20px' }).setOrigin(0.5));
+    const dono = t.dono_id ? this.opcoes.dados.jogadores.get(t.dono_id) : null;
+    if (t.cidade_principal) {
+      // Cidade: castelo com a bandeira do dono ao lado.
+      this.rotulos.push(this.add.text(x + 9, y - 16, '🏰', { ...estilo, fontSize: '20px' }).setOrigin(0.5));
+      if (dono) this.desenharBandeira(x - 14, y - 14, corDoJogador(dono));
+    } else if (dono) {
+      // Território conquistado: a bandeira do dono no lugar do ícone de terreno.
+      this.desenharBandeira(x - 5, y - 14, corDoJogador(dono));
+    } else if (ICONE_TERRENO[t.terreno]) {
+      this.rotulos.push(this.add.text(x, y - 16, ICONE_TERRENO[t.terreno], { ...estilo, fontSize: '20px' }).setOrigin(0.5));
+    }
     this.rotulos.push(this.add.text(x, y + 6, t.nome, { ...estilo, fontSize: '13px', wordWrap: { width: 110 } }).setOrigin(0.5));
+  }
+
+  /** Bandeirinha: mastro escuro e flâmula com rabo de andorinha na cor do jogador. (x, y) = base do mastro. */
+  private desenharBandeira(x: number, y: number, corHex: string) {
+    const g = this.camadaBandeiras!;
+    // Mastro escuro com borda clara, para destacar sobre a própria cor do território.
+    g.lineStyle(5, 0xf1e6cf, 1);
+    g.lineBetween(x, y + 12, x, y - 18);
+    g.lineStyle(3, 0x1c1410, 1);
+    g.lineBetween(x, y + 12, x, y - 18);
+    const flamula = toPoints([x, y - 18, x + 22, y - 18, x + 16, y - 11, x + 22, y - 4, x, y - 4]);
+    g.fillStyle(cor(corHex), 1);
+    g.fillPoints(flamula, true);
+    g.lineStyle(2.5, 0xf1e6cf, 1);
+    g.strokePoints(flamula, true);
   }
 
   private desenharDestaques() {
     const g = this.camadaDestaque!;
     g.clear();
     const { dados, meuId } = this.opcoes;
+    // Borda grossa na cor do dono em todo território com dono; os do próprio jogador ganham um fio dourado.
+    for (const t of dados.territorios) {
+      const dono = t.dono_id ? dados.jogadores.get(t.dono_id) : null;
+      if (!dono) continue;
+      g.lineStyle(5, cor(corDoJogador(dono)), 1);
+      g.strokePoints(this.formas.get(t.id)!.points, true);
+    }
     for (const t of dados.territorios) {
       if (t.dono_id !== meuId) continue;
-      g.lineStyle(3, 0xe8c475, 1);
+      g.lineStyle(2, 0xffe08a, 1);
       g.strokePoints(this.formas.get(t.id)!.points, true);
     }
     if (this.selecionado && this.formas.has(this.selecionado)) {

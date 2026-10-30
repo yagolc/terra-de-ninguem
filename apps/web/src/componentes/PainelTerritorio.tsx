@@ -1,5 +1,5 @@
 import { BALANCEAMENTO, TIPOS_UNIDADE, totalUnidades } from '@terra/regras';
-import { COR_NEUTRA, type DadosMapa } from '../lib/useMapa';
+import { COR_NEUTRA, corDoJogador, type DadosMapa } from '../lib/useMapa';
 import { RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarDuracao } from '../lib/textos';
 import { origensPossiveis } from './PainelAtaque';
 
@@ -49,7 +49,7 @@ export default function PainelTerritorio({ dados, id, meuId, onSelecionar, onAta
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
         <dt className="text-pergaminho-escuro">Dono</dt>
         <dd className="flex items-center gap-2">
-          <span className="size-3 rounded-full" style={{ background: dono?.cor ?? COR_NEUTRA }} />
+          <span className="size-3 rounded-full" style={{ background: dono ? corDoJogador(dono) : COR_NEUTRA }} />
           {dono ? `${dono.nome}${meu ? ' (você)' : ''}` : 'Neutro, guardado por bárbaros'}
         </dd>
         {(t.cidade_principal || reservadoPara) && (
@@ -91,7 +91,8 @@ export default function PainelTerritorio({ dados, id, meuId, onSelecionar, onAta
         <h3 className="mb-1.5 text-sm text-pergaminho-escuro">Vizinhos ({vizinhos.length})</h3>
         <ul className="flex flex-wrap gap-1.5">
           {vizinhos.map((v) => {
-            const corVizinho = v.dono_id ? dados.jogadores.get(v.dono_id)?.cor : null;
+            const donoVizinho = v.dono_id ? dados.jogadores.get(v.dono_id) : null;
+            const corVizinho = donoVizinho ? corDoJogador(donoVizinho) : null;
             return (
               <li key={v.id}>
                 <button
