@@ -8,7 +8,7 @@ import {
   vencedorPorPontos,
   type Objetivo,
 } from '../../../packages/regras/src/index.ts';
-import { avancarAteAgora, carregarCidade } from './cidade.ts';
+import { avancarAteAgora, carregarCidade, salvarCidade } from './cidade.ts';
 import type { Transacao } from './db.ts';
 
 /** Sorteia o objetivo do jogador na temporada, se ele ainda não tiver um. */
@@ -38,7 +38,7 @@ export async function garantirObjetivo(tx: Transacao, temporadaId: string, jogad
 }
 
 /**
- * Recalcula o placar de todos, confere os objetivos e encerra a temporada se alguém cumpriu o seu
+ * Atualiza a cidade de todos (gravando o que ficou pronto), recalcula o placar, confere os objetivos e encerra a temporada se alguém cumpriu o seu
  * (ou se o prazo acabou: aí vence quem tem mais pontos). Chamado a cada minuto pelo resolver-marchas.
  */
 export async function atualizarPlacar(tx: Transacao): Promise<{ encerrada: boolean }> {
@@ -74,8 +74,10 @@ export async function atualizarPlacar(tx: Transacao): Promise<{ encerrada: boole
   const cumpriram: string[] = [];
 
   for (const { jogador_id: jogadorId } of jogadores) {
-    // População atual (cresce com o tempo): avança a cidade só para ler, sem gravar.
+    // Avança a cidade até agora e grava: produção, obras e lotes de treino prontos chegam ao banco em até
+    // um minuto, mesmo sem o jogador fazer nada (o mapa e os ataques leem as tropas gravadas).
     const cidade = avancarAteAgora(await carregarCidade(tx, temporadaId, jogadorId), agora);
+    await salvarCidade(tx, cidade);
     const meus = territorios.filter((t) => t.dono_id === jogadorId);
     const linha = {
       jogadorId,

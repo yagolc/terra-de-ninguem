@@ -1,4 +1,4 @@
-import { exercito, type Exercito, type Recurso, type Recursos, type Terreno } from '@terra/regras';
+import { exercito, somarExercitos, type Exercito, type Recurso, type Recursos, type Terreno, type TipoUnidade } from '@terra/regras';
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from './supabase';
 
@@ -68,7 +68,7 @@ async function buscarMapa(): Promise<DadosMapa | null> {
     .maybeSingle<{ id: string; numero: number; inicio: string }>();
   if (!temporada) return null;
 
-  const [regioes, territorios, fronteiras, jogadores, tropas, marchas, protecoes] = await Promise.all([
+  const [regioes, territorios, fronteiras, jogadores, tropas, marchas, protecoes, minhaCidade] = await Promise.all([
     supabase.from('regioes').select('id, indice, nome, terreno').eq('temporada_id', temporada.id).returns<RegiaoMapa[]>(),
     supabase
       .from('territorios')
@@ -99,11 +99,35 @@ async function buscarMapa(): Promise<DadosMapa | null> {
       .select('jogador_id, ate')
       .eq('temporada_id', temporada.id)
       .returns<{ jogador_id: string; ate: string }[]>(),
+    // O RLS devolve só a própria cidade.
+    supabase
+      .from('cidades')
+      .select('territorio_id, filas_treino(tipo_unidade, quantidade, pronto_em)')
+      .eq('temporada_id', temporada.id)
+      .maybeSingle<{
+        territorio_id: string | null;
+        filas_treino: { tipo_unidade: TipoUnidade; quantidade: number; pronto_em: string }[];
+      }>(),
   ]);
   if (!regioes.data || !territorios.data || !fronteiras.data || !jogadores.data || !tropas.data || !marchas.data || !protecoes.data) {
     throw new Error('Não foi possível carregar o mapa.');
   }
   if (territorios.data.length === 0) return null;
+
+  // Tropas paradas, mais os lotes de treino que já ficaram prontos e o servidor ainda não gravou
+  // (ele grava em até um minuto): entram no território da cidade, como a tela Cidade já mostra.
+  const minhasTropas = new Map(tropas.data.map(({ territorio_id, ...t }) => [territorio_id, exercito(t)]));
+  const cidade = minhaCidade.data;
+  if (cidade?.territorio_id) {
+    const prontos = cidade.filas_treino.filter((l) => Date.parse(l.pronto_em) <= Date.now());
+    if (prontos.length > 0) {
+      const atual = minhasTropas.get(cidade.territorio_id) ?? exercito();
+      minhasTropas.set(
+        cidade.territorio_id,
+        somarExercitos(atual, ...prontos.map((l) => exercito({ [l.tipo_unidade]: l.quantidade }))),
+      );
+    }
+  }
 
   const vizinhos = new Map<string, string[]>();
   for (const { territorio_a: a, territorio_b: b } of fronteiras.data) {
@@ -116,7 +140,7 @@ async function buscarMapa(): Promise<DadosMapa | null> {
     territorios: territorios.data,
     vizinhos,
     jogadores: new Map(jogadores.data.map((j) => [j.id, j])),
-    minhasTropas: new Map(tropas.data.map(({ territorio_id, ...t }) => [territorio_id, exercito(t)])),
+    minhasTropas,
     marchas: marchas.data.map((m) => ({
       id: m.id,
       origemId: m.origem_id,
