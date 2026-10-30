@@ -4,6 +4,8 @@ import NavegacaoInferior, { ABAS, type Aba } from '../componentes/NavegacaoInfer
 import { supabase } from '../lib/supabase';
 import { contarNaoLidos } from '../lib/useRelatorios';
 import Cidade from './Cidade';
+import FimDeTemporada from './FimDeTemporada';
+import Objetivo from './Objetivo';
 import Relatorios from './Relatorios';
 
 // O Phaser (cerca de 1 MB) só é baixado quando o jogador abre o mapa.
@@ -12,6 +14,7 @@ const Mapa = lazy(() => import('./Mapa'));
 function abaDoEndereco(): Aba {
   if (location.hash === '#mapa') return 'mapa';
   if (location.hash === '#relatorios') return 'relatorios';
+  if (location.hash === '#objetivo') return 'objetivo';
   return 'cidade';
 }
 
@@ -19,7 +22,8 @@ function abaDoEndereco(): Aba {
 export default function Jogo({ sessao }: { sessao: Session }) {
   const [aba, setAba] = useState<Aba>(abaDoEndereco);
   const [nome, setNome] = useState<string | null>(null);
-  const [temporada, setTemporada] = useState<number | null>(null);
+  // undefined = carregando; null = nenhuma temporada ativa (mostra o fim da última).
+  const [temporada, setTemporada] = useState<number | null | undefined>(undefined);
   const [naoLidos, setNaoLidos] = useState(0);
 
   // Aviso de relatórios novos: confere ao trocar de aba e a cada minuto (as batalhas são resolvidas de minuto em minuto).
@@ -71,7 +75,7 @@ export default function Jogo({ sessao }: { sessao: Session }) {
               <p className="text-xs text-pergaminho-escuro">{temporada ? `Temporada ${temporada}` : ' '}</p>
             </div>
           </div>
-          <nav className="hidden gap-1 md:flex">
+          <nav className={`gap-1 ${temporada === null ? 'hidden' : 'hidden md:flex'}`}>
             {ABAS.map((item) => (
               <button
                 key={item.id}
@@ -95,8 +99,12 @@ export default function Jogo({ sessao }: { sessao: Session }) {
       </header>
 
       <main className={`min-h-0 flex-1 ${aba === 'mapa' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
-        {aba === 'cidade' ? (
+        {temporada === undefined ? null : temporada === null ? (
+          <FimDeTemporada sessao={sessao} />
+        ) : aba === 'cidade' ? (
           <Cidade sessao={sessao} />
+        ) : aba === 'objetivo' ? (
+          <Objetivo sessao={sessao} />
         ) : aba === 'relatorios' ? (
           <Relatorios sessao={sessao} />
         ) : (
@@ -106,7 +114,7 @@ export default function Jogo({ sessao }: { sessao: Session }) {
         )}
       </main>
 
-      <NavegacaoInferior aba={aba} onMudar={irPara} naoLidos={naoLidos} />
+      {temporada !== null && <NavegacaoInferior aba={aba} onMudar={irPara} naoLidos={naoLidos} />}
     </div>
   );
 }

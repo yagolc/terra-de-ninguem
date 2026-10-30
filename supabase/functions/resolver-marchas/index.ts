@@ -1,6 +1,7 @@
 // Edge Function `resolver-marchas`: chamada a cada minuto pelo pg_cron (migration 0007).
 // Resolve as marchas que já chegaram: batalha, perdas, saque, conquista, escudo e relatório;
 // e entrega as tropas (e o saque) das marchas de volta. Cada marcha numa transação própria.
+// Depois atualiza o placar e encerra a temporada se alguém cumpriu o objetivo ou o prazo acabou.
 // Publicar com: npx supabase functions deploy resolver-marchas --no-verify-jwt
 // Exige o cabeçalho x-segredo-cron igual à variável SEGREDO_CRON (npx supabase secrets set).
 import {
@@ -23,6 +24,7 @@ import {
 } from '../../../packages/regras/src/index.ts';
 import { avancarAteAgora, carregarCidade, grupoEm, salvarCidade, type CidadeAvancada } from '../_compartilhado/cidade.ts';
 import { sql, type Transacao } from '../_compartilhado/db.ts';
+import { atualizarPlacar } from '../_compartilhado/objetivos.ts';
 import { resposta } from '../_compartilhado/http.ts';
 
 type Marcha = {
@@ -206,7 +208,8 @@ Deno.serve(async (req) => {
   if (!segredo || req.headers.get('x-segredo-cron') !== segredo) return resposta(401, { erro: 'Não autorizado.' });
 
   const pendentes = await sql<{ id: string }[]>`
-    select id from marchas where status = 'a_caminho' and chegada_em <= now() order by chegada_em limit 50`;
+    select m.id from marchas m join temporadas t on t.id = m.temporada_id and t.status = 'ativa'
+     where m.status = 'a_caminho' and m.chegada_em <= now() order by m.chegada_em limit 50`;
   let resolvidas = 0;
   const erros: string[] = [];
   for (const { id } of pendentes) {
@@ -217,5 +220,13 @@ Deno.serve(async (req) => {
       erros.push(id);
     }
   }
-  return resposta(200, { resolvidas, erros });
+  // Depois das batalhas: placar, objetivos e, se for o caso, fim da temporada.
+  let encerrada = false;
+  try {
+    encerrada = (await sql.begin((tx) => atualizarPlacar(tx))).encerrada;
+  } catch (erro) {
+    console.error('placar', erro);
+    erros.push('placar');
+  }
+  return resposta(200, { resolvidas, erros, encerrada });
 });

@@ -114,6 +114,30 @@ export const BALANCEAMENTO = {
     maximoDoDesprotegido: 0.3,
   },
 
+  temporada: {
+    /** Prazo para alguém cumprir o objetivo; depois vence quem tiver mais pontos. */
+    duracaoDias: 21,
+  },
+
+  objetivos: {
+    /** "Dominar mais da metade do mapa": fração dos territórios. */
+    fracaoMetadeDoMapa: 0.55,
+    /** "Territórios bem defendidos": fração dos territórios, cada um com a guarnição mínima. */
+    fracaoDefendidos: 0.4,
+    guarnicaoMinima: 10,
+    /** "Vitória econômica": habitantes (o limite máximo das casas é 110). */
+    populacaoAlvo: 100,
+    /** "Duas regiões": soma dos territórios da dupla entre essas frações do mapa. */
+    duplaDeRegioesMin: 0.25,
+    duplaDeRegioesMax: 0.45,
+  },
+
+  pontos: {
+    porTerritorio: 10,
+    porHabitante: 1,
+    porVitoria: 5,
+  },
+
   protecoes: {
     /** Começo de temporada sem ataques entre jogadores (neutros podem ser atacados). */
     inicianteHoras: 48,

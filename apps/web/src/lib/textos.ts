@@ -1,4 +1,4 @@
-import type { Recurso, Terreno, TipoPredio, TipoUnidade } from '@terra/regras';
+import type { Objetivo, Recurso, Terreno, TipoPredio, TipoUnidade } from '@terra/regras';
 
 export const TERRENOS_INFO: Record<Terreno, { nome: string; icone: string; efeito: string }> = {
   planicie: { nome: 'Planície', icone: '🌾', efeito: 'sem bônus de defesa' },
@@ -49,4 +49,35 @@ export function formatarDuracao(ms: number): string {
   if (h > 0) return `${h} h ${String(min).padStart(2, '0')} min`;
   if (min > 0) return `${min} min${seg > 0 ? ` ${seg} s` : ''}`;
   return `${seg} s`;
+}
+
+/** Texto da carta do objetivo secreto. */
+export function descreverObjetivo(
+  objetivo: Objetivo,
+  nomes: { regiao: (id: string) => string; jogador: (id: string) => string },
+): { icone: string; titulo: string; texto: string } {
+  switch (objetivo.tipo) {
+    case 'duas_regioes':
+      return {
+        icone: '🗺️',
+        titulo: 'Senhor de duas terras',
+        texto: `Conquiste todos os territórios de ${nomes.regiao(objetivo.regioes[0])} e de ${nomes.regiao(objetivo.regioes[1])}.`,
+      };
+    case 'metade_do_mapa':
+      return { icone: '👑', titulo: 'Mais da metade do reino', texto: `Domine ${objetivo.territorios} territórios.` };
+    case 'territorios_defendidos':
+      return {
+        icone: '🛡️',
+        titulo: 'Fronteiras de ferro',
+        texto: `Tenha ${objetivo.territorios} territórios com pelo menos ${objetivo.guarnicaoMinima} soldados seus em cada um.`,
+      };
+    case 'derrubar_rival':
+      return {
+        icone: '🗡️',
+        titulo: 'A queda do rival',
+        texto: `Reduza ${nomes.jogador(objetivo.rivalId)} apenas à cidade principal, conquistando você mesmo territórios dele. Se outro fizer isso antes, seu objetivo vira dominar mais da metade do mapa.`,
+      };
+    case 'populacao':
+      return { icone: '🌾', titulo: 'Prosperidade', texto: `Chegue a ${objetivo.populacao} habitantes na sua cidade.` };
+  }
 }

@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
+import { BALANCEAMENTO } from '../src/balanceamento.ts';
 import { escolherMelhorMapa, type MapaGerado, type Ponto2 } from '../src/mapa/gerador.ts';
 import { grafoDeFronteiras } from '../src/territorios.ts';
 import { TIPOS_UNIDADE } from '../src/tipos.ts';
@@ -174,7 +175,7 @@ declare
 begin
   update public.temporadas set status = 'encerrada' where status = 'ativa';
   insert into public.temporadas (id, numero, status, semente, inicio, fim_previsto)
-    values (t, (select coalesce(max(numero), 0) + 1 from public.temporadas), 'ativa', ${mapa.semente}, now(), now() + interval '28 days');
+    values (t, (select coalesce(max(numero), 0) + 1 from public.temporadas), 'ativa', ${mapa.semente}, now(), now() + interval '${BALANCEAMENTO.temporada.duracaoDias} days');
   insert into public.regioes (id, temporada_id, indice, nome, terreno) values
     ${valoresRegioes};
   insert into public.territorios (id, temporada_id, regiao_id, indice, nome, terreno, bonus_recurso, x, y, poligono, reservado_para, vaga_inicial, guarnicao_inicial) values

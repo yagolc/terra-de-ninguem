@@ -1,5 +1,5 @@
 // Edge Function `cidade`: comandos do jogador, validados com o pacote de regras.
-// Corpo: { acao: 'entrar' } | { acao: 'evoluir_predio', tipo } | { acao: 'alocar_trabalhadores', alocacao }
+// Corpo: { acao: 'entrar' } (funda a cidade e sorteia o objetivo) | { acao: 'evoluir_predio', tipo } | { acao: 'alocar_trabalhadores', alocacao }
 //      | { acao: 'treinar_tropas', tipo, quantidade }
 //      | { acao: 'enviar_marcha', origem_id, destino_id, tipo: 'saque' | 'conquista', tropas }
 //      | { acao: 'marcar_relatorios_lidos' }
@@ -37,6 +37,7 @@ import {
   type Temporada,
 } from '../_compartilhado/cidade.ts';
 import { sql, type Transacao } from '../_compartilhado/db.ts';
+import { garantirObjetivo } from '../_compartilhado/objetivos.ts';
 import { CORS, ErroDoJogo, resposta } from '../_compartilhado/http.ts';
 
 function lerAlocacao(valor: unknown): Recursos {
@@ -106,7 +107,11 @@ async function enviarMarcha(
 
 async function executar(jogadorId: string, corpo: Record<string, unknown>): Promise<Record<string, unknown>> {
   if (corpo.acao === 'entrar') {
-    await sql.begin((tx) => criarCidade(tx, jogadorId));
+    // Funda a cidade (se ainda não houver) e sorteia o objetivo secreto (se ainda não houver).
+    await sql.begin(async (tx) => {
+      await criarCidade(tx, jogadorId);
+      await garantirObjetivo(tx, (await temporadaAtiva(tx)).id, jogadorId);
+    });
     return { ok: true };
   }
   if (corpo.acao === 'marcar_relatorios_lidos') {

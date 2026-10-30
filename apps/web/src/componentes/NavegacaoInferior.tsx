@@ -1,8 +1,9 @@
-export type Aba = 'cidade' | 'mapa' | 'relatorios';
+export type Aba = 'cidade' | 'mapa' | 'objetivo' | 'relatorios';
 
 export const ABAS = [
   { id: 'cidade', rotulo: 'Cidade', icone: '🏰' },
   { id: 'mapa', rotulo: 'Mapa', icone: '🗺️' },
+  { id: 'objetivo', rotulo: 'Objetivo', icone: '🎯' },
   { id: 'relatorios', rotulo: 'Relatórios', icone: '📜' },
 ] as const;
 
@@ -12,7 +13,7 @@ type Props = { aba: Aba; onMudar: (aba: Aba) => void; naoLidos: number };
 export default function NavegacaoInferior({ aba, onMudar, naoLidos }: Props) {
   return (
     <nav className="border-t border-couro bg-noite/95 pb-[env(safe-area-inset-bottom)] md:hidden">
-      <ul className="grid grid-cols-3">
+      <ul className="grid grid-cols-4">
         {ABAS.map((item) => {
           const ativa = item.id === aba;
           return (
