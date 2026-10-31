@@ -149,6 +149,14 @@ export const BALANCEAMENTO = {
     duracaoMinimaMin: 10,
   },
 
+  reconhecimento: {
+    /** Custo de mandar um batedor. */
+    custoOuro: 20,
+    /** Léguas por hora (o batedor vai a cavalo). */
+    velocidade: 40,
+    duracaoMinimaMin: 5,
+  },
+
   mapa: {
     /** Tamanho do mapa em léguas (mesma unidade da velocidade das tropas). */
     largura: 60,

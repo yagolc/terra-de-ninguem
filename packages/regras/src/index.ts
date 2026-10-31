@@ -8,6 +8,7 @@ export * from './mensagens.ts';
 export * from './objetivos.ts';
 export * from './predios.ts';
 export * from './producao.ts';
+export * from './reconhecimento.ts';
 export * from './saque.ts';
 export * from './territorios.ts';
 export * from './tipos.ts';

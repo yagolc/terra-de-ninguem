@@ -23,10 +23,22 @@ export type MarchaMapa = {
   id: string;
   origemId: string;
   destinoId: string;
-  tipo: 'saque' | 'conquista' | 'retorno' | 'movimento';
+  tipo: 'saque' | 'conquista' | 'retorno' | 'movimento' | 'reconhecimento';
   tropas: Exercito;
   saque: Recursos;
   chegadaEm: number;
+};
+
+/** O que um batedor viu num território (só os do próprio jogador, depois que o batedor voltou). */
+export type Reconhecimento = {
+  territorioId: string;
+  donoId: string | null;
+  terreno: Terreno;
+  muralha: number;
+  tropas: Exercito;
+  observadoEm: number;
+  disponivelEm: number;
+  lido: boolean;
 };
 
 export type DadosMapa = {
@@ -41,6 +53,8 @@ export type DadosMapa = {
   marchas: MarchaMapa[];
   /** Fim do escudo de cada jogador protegido. */
   escudos: Map<string, number>;
+  /** Último reconhecimento de cada território. */
+  reconhecimentos: Map<string, Reconhecimento>;
 };
 
 export const COR_NEUTRA = '#6b5a48';
@@ -66,6 +80,41 @@ type LinhaMarcha = {
   chegada_em: string;
 };
 
+type LinhaReconhecimento = {
+  territorio_id: string;
+  dono_id: string | null;
+  terreno: Terreno;
+  muralha: number;
+  lanceiro: number;
+  arqueiro: number;
+  cavalaria: number;
+  observado_em: string;
+  disponivel_em: string;
+  lido: boolean;
+};
+
+/** Reconhecimentos do jogador na temporada, do mais recente para o mais antigo (o RLS só devolve os que já voltaram). */
+export async function buscarReconhecimentos(temporadaId: string): Promise<Reconhecimento[]> {
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from('reconhecimentos')
+    .select('territorio_id, dono_id, terreno, muralha, lanceiro, arqueiro, cavalaria, observado_em, disponivel_em, lido')
+    .eq('temporada_id', temporadaId)
+    .order('observado_em', { ascending: false })
+    .limit(100)
+    .returns<LinhaReconhecimento[]>();
+  return (data ?? []).map((r) => ({
+    territorioId: r.territorio_id,
+    donoId: r.dono_id,
+    terreno: r.terreno,
+    muralha: r.muralha,
+    tropas: exercito({ lanceiro: r.lanceiro, arqueiro: r.arqueiro, cavalaria: r.cavalaria }),
+    observadoEm: Date.parse(r.observado_em),
+    disponivelEm: Date.parse(r.disponivel_em),
+    lido: r.lido,
+  }));
+}
+
 async function buscarMapa(): Promise<DadosMapa | null> {
   if (!supabase) throw new Error('O Supabase não está configurado.');
   const { data: temporada } = await supabase
@@ -75,7 +124,7 @@ async function buscarMapa(): Promise<DadosMapa | null> {
     .maybeSingle<{ id: string; numero: number; inicio: string }>();
   if (!temporada) return null;
 
-  const [regioes, territorios, fronteiras, jogadores, tropas, marchas, protecoes, minhaCidade] = await Promise.all([
+  const [regioes, territorios, fronteiras, jogadores, tropas, marchas, protecoes, minhaCidade, reconhecimentos] = await Promise.all([
     supabase.from('regioes').select('id, indice, nome, terreno').eq('temporada_id', temporada.id).returns<RegiaoMapa[]>(),
     supabase
       .from('territorios')
@@ -115,6 +164,7 @@ async function buscarMapa(): Promise<DadosMapa | null> {
         territorio_id: string | null;
         filas_treino: { tipo_unidade: TipoUnidade; quantidade: number; pronto_em: string }[];
       }>(),
+    buscarReconhecimentos(temporada.id),
   ]);
   if (!regioes.data || !territorios.data || !fronteiras.data || !jogadores.data || !tropas.data || !marchas.data || !protecoes.data) {
     throw new Error('Não foi possível carregar o mapa.');
@@ -158,6 +208,8 @@ async function buscarMapa(): Promise<DadosMapa | null> {
       chegadaEm: Date.parse(m.chegada_em),
     })),
     escudos: new Map(protecoes.data.map((p) => [p.jogador_id, Date.parse(p.ate)])),
+    // Já vêm do mais recente para o mais antigo: o primeiro de cada território fica.
+    reconhecimentos: new Map([...reconhecimentos].reverse().map((r) => [r.territorioId, r])),
   };
 }
 

@@ -7,6 +7,7 @@
 import {
   calcularSaque,
   duracaoMarchaMs,
+  duracaoReconhecimentoMs,
   escudoAte,
   exercito,
   geradorComSemente,
@@ -33,7 +34,7 @@ type Marcha = {
   jogador_id: string;
   origem_id: string;
   destino_id: string;
-  tipo: 'saque' | 'conquista' | 'retorno' | 'movimento';
+  tipo: 'saque' | 'conquista' | 'retorno' | 'movimento' | 'reconhecimento';
   lanceiro: number;
   arqueiro: number;
   cavalaria: number;
@@ -173,6 +174,36 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
             })})`;
 }
 
+/**
+ * Batedor chega: anota as tropas que defendem o território (de qualquer dono), o terreno e a muralha.
+ * O jogador só vê o relatório quando o batedor volta (disponivel_em), e uma marcha vazia de volta
+ * desenha o caminho no mapa.
+ */
+async function resolverReconhecimento(tx: Transacao, m: Marcha, agora: number) {
+  const [destino] = await tx<Territorio[]>`select id, dono_id, cidade_principal, terreno, x, y from territorios where id = ${m.destino_id}`;
+  const [casa] = await tx<{ x: number; y: number }[]>`select x, y from territorios where id = ${m.origem_id}`;
+  const [vistas] = await tx<{ lanceiro: number; arqueiro: number; cavalaria: number }[]>`
+    select coalesce(sum(lanceiro), 0)::int as lanceiro, coalesce(sum(arqueiro), 0)::int as arqueiro,
+           coalesce(sum(cavalaria), 0)::int as cavalaria
+      from tropas where territorio_id = ${m.destino_id}`;
+  const [muralha] = destino!.cidade_principal
+    ? await tx<{ nivel: number }[]>`
+        select p.nivel from predios p join cidades c on c.id = p.cidade_id
+         where c.temporada_id = ${m.temporada_id} and c.territorio_id = ${destino!.id} and p.tipo = 'muralha'`
+    : [];
+  const volta = duracaoReconhecimentoMs(destino!, casa!);
+
+  await tx`
+    insert into reconhecimentos (temporada_id, jogador_id, territorio_id, dono_id, terreno, muralha,
+                                 lanceiro, arqueiro, cavalaria, observado_em, disponivel_em)
+    values (${m.temporada_id}, ${m.jogador_id}, ${destino!.id}, ${destino!.dono_id}, ${destino!.terreno}, ${muralha?.nivel ?? 0},
+            ${vistas!.lanceiro}, ${vistas!.arqueiro}, ${vistas!.cavalaria}, ${new Date(agora)}, ${new Date(agora + volta)})`;
+  await tx`
+    insert into marchas (temporada_id, jogador_id, origem_id, destino_id, tipo, partida_em, chegada_em)
+    values (${m.temporada_id}, ${m.jogador_id}, ${destino!.id}, ${m.origem_id}, 'retorno', ${new Date(agora)}, ${new Date(agora + volta)})`;
+  await concluir(tx, m.id);
+}
+
 /** Tropas chegam em casa: entram no território de origem (se ainda for do jogador) ou na cidade, com o saque. */
 async function resolverRetorno(tx: Transacao, m: Marcha, agora: number) {
   const c = avancarAteAgora(await carregarCidade(tx, m.temporada_id, m.jogador_id), agora);
@@ -199,6 +230,7 @@ async function resolverMarcha(id: string): Promise<boolean> {
     const agora = Date.now();
     // Retorno e movimento: as tropas chegam a um território próprio (ou à cidade, se ele foi perdido).
     if (m.tipo === 'retorno' || m.tipo === 'movimento') await resolverRetorno(tx, m, agora);
+    else if (m.tipo === 'reconhecimento') await resolverReconhecimento(tx, m, agora);
     else await resolverAtaque(tx, m, agora);
     return true;
   });

@@ -1,6 +1,9 @@
 import { BALANCEAMENTO, TIPOS_UNIDADE, totalUnidades } from '@terra/regras';
 import { COR_NEUTRA, corDoJogador, type DadosMapa } from '../lib/useMapa';
 import { RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarDuracao } from '../lib/textos';
+import { useState } from 'react';
+import { chamarFuncao } from '../lib/funcoes';
+import InfoReconhecimento from './InfoReconhecimento';
 import { origensPossiveis } from './PainelAtaque';
 
 type Props = {
@@ -10,11 +13,15 @@ type Props = {
   onSelecionar: (id: string | null) => void;
   onAtacar: () => void;
   onMover: () => void;
+  /** Batedor enviado: mostra o aviso e relê o mapa. */
+  onBatedorEnviado: (mensagem: string) => void;
   agora: number;
 };
 
 /** Detalhes do território tocado no mapa. */
-export default function PainelTerritorio({ dados, id, meuId, onSelecionar, onAtacar, onMover, agora }: Props) {
+export default function PainelTerritorio({ dados, id, meuId, onSelecionar, onAtacar, onMover, onBatedorEnviado, agora }: Props) {
+  const [enviandoBatedor, setEnviandoBatedor] = useState(false);
+  const [erroBatedor, setErroBatedor] = useState<string | null>(null);
   const t = dados.territorios.find((x) => x.id === id);
   if (!t) return null;
 
@@ -29,6 +36,26 @@ export default function PainelTerritorio({ dados, id, meuId, onSelecionar, onAta
   const podeAtacar = !meu && origensPossiveis(dados, t.id, meuId).length > 0;
   const fimEscudo = t.dono_id ? dados.escudos.get(t.dono_id) : undefined;
   const escudo = fimEscudo && fimEscudo > agora ? fimEscudo : null;
+  const reconhecimento = dados.reconhecimentos.get(t.id);
+  const batedorACaminho = dados.marchas.some((m) => m.tipo === 'reconhecimento' && m.destinoId === t.id);
+
+  async function enviarBatedor() {
+    // Sai do território próprio vizinho mais perto do alvo.
+    const origem = vizinhos
+      .filter((v) => v.dono_id === meuId)
+      .sort((a, b) => Math.hypot(a.x - t!.x, a.y - t!.y) - Math.hypot(b.x - t!.x, b.y - t!.y))[0];
+    if (!origem) return;
+    setEnviandoBatedor(true);
+    setErroBatedor(null);
+    try {
+      await chamarFuncao('cidade', { acao: 'enviar_reconhecimento', origem_id: origem.id, destino_id: t!.id });
+      onBatedorEnviado(`Batedor a caminho de ${t!.nome}. As informações chegam quando ele voltar.`);
+    } catch (e) {
+      setErroBatedor(e instanceof Error ? e.message : 'Não foi possível enviar o batedor.');
+    } finally {
+      setEnviandoBatedor(false);
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -107,6 +134,29 @@ export default function PainelTerritorio({ dados, id, meuId, onSelecionar, onAta
           })}
         </ul>
       </div>
+
+      {!meu && reconhecimento && (
+        <InfoReconhecimento
+          reconhecimento={reconhecimento}
+          agora={agora}
+          nomeDono={reconhecimento.donoId ? (dados.jogadores.get(reconhecimento.donoId)?.nome ?? 'Defensor') : 'Bárbaros'}
+        />
+      )}
+
+      {!meu && vizinhoDoMeu && (
+        <div>
+          <button
+            onClick={() => void enviarBatedor()}
+            disabled={enviandoBatedor || batedorACaminho}
+            className="w-full rounded-lg border border-[#c39bd3]/70 px-3 py-2 text-sm font-semibold text-[#d9b8e6] hover:bg-[#c39bd3]/10 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {batedorACaminho
+              ? '🔭 Batedor a caminho…'
+              : `🔭 ${reconhecimento ? 'Mandar outro batedor' : 'Enviar batedor'} (${BALANCEAMENTO.reconhecimento.custoOuro} 🪙)`}
+          </button>
+          {erroBatedor && <p className="mt-1.5 text-xs text-red-300">{erroBatedor}</p>}
+        </div>
+      )}
 
       {!meu && (
         <div>

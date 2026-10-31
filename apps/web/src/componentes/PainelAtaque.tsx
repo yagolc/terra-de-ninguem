@@ -12,6 +12,7 @@ import {
 } from '@terra/regras';
 import { useState } from 'react';
 import { chamarFuncao } from '../lib/funcoes';
+import InfoReconhecimento from './InfoReconhecimento';
 import type { DadosMapa } from '../lib/useMapa';
 import { UNIDADES_INFO, formatarDuracao } from '../lib/textos';
 
@@ -79,13 +80,21 @@ export default function PainelAtaque({ dados, alvoId, meuId, agora, onVoltar, on
           <p className="text-xs text-pergaminho-escuro">Atacar</p>
           <h2 className="font-titulo text-xl text-ouro">{alvo.nome}</h2>
           <p className="text-sm text-pergaminho-escuro">
-            {dono ? `de ${dono.nome}` : 'Neutro, guardado por bárbaros de força desconhecida'}
+            {dono ? `de ${dono.nome}` : dados.reconhecimentos.has(alvoId) ? 'Neutro, guardado por bárbaros' : 'Neutro, guardado por bárbaros de força desconhecida (mande um batedor)'}
           </p>
         </div>
         <button onClick={onVoltar} className="rounded-md px-2 text-sm text-pergaminho-escuro hover:text-pergaminho">
           ← Voltar
         </button>
       </header>
+
+      {dados.reconhecimentos.get(alvoId) && (
+        <InfoReconhecimento
+          reconhecimento={dados.reconhecimentos.get(alvoId)!}
+          agora={agora}
+          nomeDono={dono ? dono.nome : 'Bárbaros'}
+        />
+      )}
 
       {origens.length === 0 ? (
         <p className="text-sm text-pergaminho-escuro">

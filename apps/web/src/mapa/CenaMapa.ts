@@ -108,7 +108,8 @@ export class CenaMapa extends Phaser.Scene {
       const de = dados.territorios.find((t) => t.id === m.origemId);
       const para = dados.territorios.find((t) => t.id === m.destinoId);
       if (!de || !para) continue;
-      const cor = m.tipo === 'retorno' ? 0x8fd18a : m.tipo === 'movimento' ? 0x7fb3e8 : 0xe8c475;
+      const batedor = m.tipo === 'reconhecimento' || (m.tipo === 'retorno' && m.tropas.lanceiro + m.tropas.arqueiro + m.tropas.cavalaria === 0);
+      const cor = batedor ? 0xc39bd3 : m.tipo === 'retorno' ? 0x8fd18a : m.tipo === 'movimento' ? 0x7fb3e8 : 0xe8c475;
       const [x1, y1, x2, y2] = [de.x * ESCALA, de.y * ESCALA, para.x * ESCALA, para.y * ESCALA];
       const angulo = Math.atan2(y2 - y1, x2 - x1);
       // Para um pouco antes do centro do alvo, para não cobrir o nome.

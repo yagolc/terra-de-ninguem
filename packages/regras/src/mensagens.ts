@@ -1,6 +1,7 @@
 // Textos para o jogador de cada motivo de recusa. Servidor e interface usam os mesmos.
 import type { MotivoRecusaAtaque, MotivoRecusaMovimento } from './ataques.ts';
 import type { MotivoRecusaEvolucao } from './predios.ts';
+import type { MotivoRecusaReconhecimento } from './reconhecimento.ts';
 import type { MotivoRecusaAlocacao } from './producao.ts';
 import type { MotivoRecusaTreino } from './treino.ts';
 
@@ -43,4 +44,11 @@ export const MENSAGENS_MOVIMENTO: Record<MotivoRecusaMovimento, string> = {
   sem_caminho: 'O destino não está ligado à origem por territórios seus: as tropas teriam de atravessar terra alheia.',
   sem_tropas: 'Escolha quantas tropas vão se mover.',
   tropas_insuficientes: 'Você não tem tantas tropas nesse território.',
+};
+
+export const MENSAGENS_RECONHECIMENTO: Record<MotivoRecusaReconhecimento, string> = {
+  origem_invalida: 'O batedor precisa sair de um território seu.',
+  nao_vizinho: 'O batedor só alcança territórios vizinhos aos seus.',
+  alvo_proprio: 'Esse território já é seu: você já sabe o que tem lá.',
+  ouro_insuficiente: 'Falta ouro para pagar o batedor.',
 };

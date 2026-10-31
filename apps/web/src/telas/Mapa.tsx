@@ -72,8 +72,22 @@ export default function Mapa({ sessao }: { sessao: Session }) {
                 const falta = m.chegadaEm - agora;
                 return (
                   <li key={m.id}>
-                    {m.tipo === 'retorno' ? '↩️' : m.tipo === 'movimento' ? '🚶' : m.tipo === 'saque' ? '💰' : '🚩'}{' '}
-                    {m.tipo === 'retorno' ? `Voltando de ${nomeDe(m.origemId)}` : `${nomeDe(m.origemId)} → ${nomeDe(m.destinoId)}`}
+                    {m.tipo === 'reconhecimento' || (m.tipo === 'retorno' && totalUnidades(m.tropas) === 0)
+                      ? '🔭'
+                      : m.tipo === 'retorno'
+                        ? '↩️'
+                        : m.tipo === 'movimento'
+                          ? '🚶'
+                          : m.tipo === 'saque'
+                            ? '💰'
+                            : '🚩'}{' '}
+                    {m.tipo === 'reconhecimento'
+                      ? `Batedor indo a ${nomeDe(m.destinoId)}`
+                      : m.tipo === 'retorno' && totalUnidades(m.tropas) === 0
+                        ? `Batedor voltando de ${nomeDe(m.origemId)}`
+                        : m.tipo === 'retorno'
+                          ? `Voltando de ${nomeDe(m.origemId)}`
+                          : `${nomeDe(m.origemId)} → ${nomeDe(m.destinoId)}`}
                     {' · '}
                     {TIPOS_UNIDADE.filter((t) => m.tropas[t] > 0)
                       .map((t) => `${m.tropas[t]}${UNIDADES_INFO[t].icone}`)
@@ -134,6 +148,10 @@ export default function Mapa({ sessao }: { sessao: Session }) {
               onSelecionar={selecionar}
               onAtacar={() => setModo('ataque')}
               onMover={() => setModo('movimento')}
+              onBatedorEnviado={(mensagem) => {
+                setAviso(mensagem);
+                void recarregar();
+              }}
             />
           )}
         </aside>

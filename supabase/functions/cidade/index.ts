@@ -2,6 +2,7 @@
 // Corpo: { acao: 'entrar' } (funda a cidade e sorteia o objetivo) | { acao: 'evoluir_predio', tipo } | { acao: 'alocar_trabalhadores', alocacao }
 //      | { acao: 'treinar_tropas', tipo, quantidade }
 //      | { acao: 'enviar_marcha', origem_id, destino_id, tipo: 'saque' | 'conquista' | 'movimento', tropas }
+//      | { acao: 'enviar_reconhecimento', origem_id, destino_id }
 //      | { acao: 'marcar_relatorios_lidos' }
 // Publicar com: npx supabase functions deploy cidade --no-verify-jwt (o token é validado no código).
 import {
@@ -9,11 +10,13 @@ import {
   MENSAGENS_ATAQUE,
   MENSAGENS_EVOLUCAO,
   MENSAGENS_MOVIMENTO,
+  MENSAGENS_RECONHECIMENTO,
   MENSAGENS_TREINO,
   TIPOS_ATAQUE,
   TIPOS_PREDIO,
   TIPOS_UNIDADE,
   duracaoMarchaMs,
+  duracaoReconhecimentoMs,
   grafoDeFronteiras,
   ligadosPorTerritoriosProprios,
   mapearExercito,
@@ -22,6 +25,7 @@ import {
   verificarAtaque,
   verificarEvolucao,
   verificarMovimento,
+  verificarReconhecimento,
   verificarTreino,
   type Recursos,
   type TipoAtaque,
@@ -143,6 +147,45 @@ async function enviarMarcha(
   return chegada;
 }
 
+/** Manda um batedor (custa ouro) de um território próprio para um vizinho; ele volta com as informações. */
+async function enviarReconhecimento(
+  tx: Transacao,
+  temporada: Temporada,
+  c: CidadeAvancada,
+  corpo: Record<string, unknown>,
+  agora: number,
+): Promise<number> {
+  const origemId = String(corpo.origem_id ?? '');
+  const destinoId = String(corpo.destino_id ?? '');
+  if (![origemId, destinoId].every((id) => UUID.test(id)) || origemId === destinoId) throw new ErroDoJogo('Território desconhecido.');
+  const territorios = await tx<TerritorioMarcha[]>`
+    select id, dono_id, cidade_principal, x, y from territorios
+     where temporada_id = ${temporada.id} and id in (${origemId}, ${destinoId})`;
+  const origem = territorios.find((t) => t.id === origemId);
+  const destino = territorios.find((t) => t.id === destinoId);
+  if (!origem || !destino) throw new ErroDoJogo('Território desconhecido.');
+  const [fronteira] = await tx`
+    select 1 from fronteiras
+     where (territorio_a = ${origemId} and territorio_b = ${destinoId})
+        or (territorio_a = ${destinoId} and territorio_b = ${origemId})`;
+
+  const jogadorId = c.carregada.jogadorId;
+  const v = verificarReconhecimento({
+    origemDoJogador: origem.dono_id === jogadorId,
+    vizinhos: !!fronteira,
+    alvoProprio: destino.dono_id === jogadorId,
+    ouro: c.estado.recursos.ouro,
+  });
+  if (!v.ok) throw new ErroDoJogo(MENSAGENS_RECONHECIMENTO[v.motivo]);
+
+  c.estado = { ...c.estado, recursos: { ...c.estado.recursos, ouro: c.estado.recursos.ouro - v.custoOuro } };
+  const chegada = agora + duracaoReconhecimentoMs(origem, destino);
+  await tx`
+    insert into marchas (temporada_id, jogador_id, origem_id, destino_id, tipo, partida_em, chegada_em)
+    values (${temporada.id}, ${jogadorId}, ${origemId}, ${destinoId}, 'reconhecimento', ${new Date(agora)}, ${new Date(chegada)})`;
+  return chegada;
+}
+
 async function executar(jogadorId: string, corpo: Record<string, unknown>): Promise<Record<string, unknown>> {
   if (corpo.acao === 'entrar') {
     // Funda a cidade (se ainda não houver) e sorteia o objetivo secreto (se ainda não houver).
@@ -155,6 +198,7 @@ async function executar(jogadorId: string, corpo: Record<string, unknown>): Prom
   if (corpo.acao === 'marcar_relatorios_lidos') {
     await sql`update relatorios set lido_atacante = true where atacante_id = ${jogadorId} and not lido_atacante`;
     await sql`update relatorios set lido_defensor = true where defensor_id = ${jogadorId} and not lido_defensor`;
+    await sql`update reconhecimentos set lido = true where jogador_id = ${jogadorId} and not lido and disponivel_em <= now()`;
     return { ok: true };
   }
 
@@ -190,6 +234,10 @@ async function executar(jogadorId: string, corpo: Record<string, unknown>): Prom
         if (!v.ok) throw new ErroDoJogo(MENSAGENS_TREINO[v.motivo]);
         c.estado = { ...c.estado, recursos: subtrairRecursos(c.estado.recursos, v.custo) };
         c.novoLote = { tipo, quantidade, prontoEm: v.prontoEm };
+        break;
+      }
+      case 'enviar_reconhecimento': {
+        resultado.chegada_em = new Date(await enviarReconhecimento(tx, temporada, c, corpo, agora)).toISOString();
         break;
       }
       case 'enviar_marcha': {
