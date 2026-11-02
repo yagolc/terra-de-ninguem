@@ -5,15 +5,24 @@ import { HORA_MS } from './util.ts';
 
 export type Objetivo =
   | { tipo: 'duas_regioes'; regioes: [string, string] }
-  | { tipo: 'metade_do_mapa'; territorios: number }
+  /** A meta é calculada na hora, sobre os territórios conquistáveis (ver `metaMetadeDoMapa`). */
+  | { tipo: 'metade_do_mapa' }
   | { tipo: 'territorios_defendidos'; territorios: number; guarnicaoMinima: number }
   | { tipo: 'derrubar_rival'; rivalId: string }
   | { tipo: 'populacao'; populacao: number };
 
 export type TipoObjetivo = Objetivo['tipo'];
 
-export function objetivoMetadeDoMapa(totalTerritorios: number): Objetivo {
-  return { tipo: 'metade_do_mapa', territorios: Math.ceil(totalTerritorios * BALANCEAMENTO.objetivos.fracaoMetadeDoMapa) };
+export function objetivoMetadeDoMapa(): Objetivo {
+  return { tipo: 'metade_do_mapa' };
+}
+
+/**
+ * Meta de "metade do mapa": a fração dos territórios que o jogador pode conquistar. Cidades principais dos
+ * outros nunca são conquistadas, então ficam fora; assim a meta não fica mais difícil a cada jogador que entra.
+ */
+export function metaMetadeDoMapa(totalTerritorios: number, cidadesAlheias: number): number {
+  return Math.ceil((totalTerritorios - cidadesAlheias) * BALANCEAMENTO.objetivos.fracaoMetadeDoMapa);
 }
 
 /**
@@ -69,7 +78,7 @@ export function sortearObjetivo(entrada: {
     case 'populacao':
       return { tipo: 'populacao', populacao: config.populacaoAlvo };
     case 'metade_do_mapa':
-      return objetivoMetadeDoMapa(totalTerritorios);
+      return objetivoMetadeDoMapa();
   }
 }
 
@@ -121,7 +130,9 @@ export function avaliarObjetivo(objetivo: Objetivo, s: SituacaoJogador): Avaliac
     }
     case 'metade_do_mapa': {
       const atual = s.meusTerritorios.length;
-      return { cumprido: atual >= objetivo.territorios, atual, alvo: objetivo.territorios };
+      const cidadesAlheias = [...s.cidadesAlheiasPorRegiao.values()].reduce((soma, n) => soma + n, 0);
+      const alvo = metaMetadeDoMapa(s.totalTerritorios, cidadesAlheias);
+      return { cumprido: atual >= alvo, atual, alvo };
     }
     case 'territorios_defendidos': {
       const atual = s.meusTerritorios.filter((t) => t.minhasTropas >= objetivo.guarnicaoMinima).length;
@@ -138,7 +149,7 @@ export function avaliarObjetivo(objetivo: Objetivo, s: SituacaoJogador): Avaliac
       const derrubado = rival.territorios <= 1;
       if (derrubado && rival.conquisteiDele) return { cumprido: true, atual, alvo: 0 };
       if (derrubado && rival.outrosConquistaramDele) {
-        return { cumprido: false, atual, alvo: 0, viraObjetivo: objetivoMetadeDoMapa(s.totalTerritorios) };
+        return { cumprido: false, atual, alvo: 0, viraObjetivo: objetivoMetadeDoMapa() };
       }
       return { cumprido: false, atual, alvo: 0 };
     }

@@ -4,6 +4,7 @@ import {
   avaliarObjetivo,
   cidadesAlheiasPorRegiao,
   fimDaTemporada,
+  metaMetadeDoMapa,
   objetivoMetadeDoMapa,
   pontuar,
   sortearObjetivo,
@@ -66,7 +67,7 @@ describe('sortearObjetivo', () => {
 
   it('prefere tipos que ninguém tirou ainda', () => {
     const jaSorteados: Objetivo[] = [
-      objetivoMetadeDoMapa(TOTAL),
+      objetivoMetadeDoMapa(),
       { tipo: 'populacao', populacao: 100 },
       { tipo: 'territorios_defendidos', territorios: 12, guarnicaoMinima: 10 },
       { tipo: 'duas_regioes', regioes: ['r2', 'r3'] },
@@ -111,11 +112,23 @@ describe('avaliarObjetivo', () => {
     expect([...contagem]).toEqual([['r1', 1], ['r3', 1]]);
   });
 
-  it('metade do mapa: 55% dos territórios', () => {
-    const obj = objetivoMetadeDoMapa(TOTAL);
-    expect(obj).toEqual({ tipo: 'metade_do_mapa', territorios: 17 });
+  it('metade do mapa: 55% dos territórios conquistáveis', () => {
+    const obj = objetivoMetadeDoMapa();
     expect(avaliarObjetivo(obj, situacao({ meusTerritorios: meus(Array(16).fill('r1')) })).cumprido).toBe(false);
     expect(avaliarObjetivo(obj, situacao({ meusTerritorios: meus(Array(17).fill('r1')) })).cumprido).toBe(true);
+    // 3 cidades de outros jogadores: sobram 27 conquistáveis, meta de 15.
+    const comCidades = situacao({ cidadesAlheiasPorRegiao: new Map([['r2', 2], ['r5', 1]]) });
+    expect(avaliarObjetivo(obj, { ...comCidades, meusTerritorios: meus(Array(14).fill('r1')) })).toMatchObject({ cumprido: false, alvo: 15 });
+    expect(avaliarObjetivo(obj, { ...comCidades, meusTerritorios: meus(Array(15).fill('r1')) }).cumprido).toBe(true);
+  });
+
+  it('meta de metade do mapa nunca passa do que dá para conquistar', () => {
+    for (let cidades = 0; cidades < TOTAL; cidades++) {
+      const meta = metaMetadeDoMapa(TOTAL, cidades);
+      expect(meta).toBeLessThanOrEqual(TOTAL - cidades);
+    }
+    expect(metaMetadeDoMapa(TOTAL, 0)).toBe(17);
+    expect(metaMetadeDoMapa(TOTAL, 5)).toBe(14);
   });
 
   it('territórios defendidos: só contam os que têm a guarnição mínima', () => {
@@ -149,7 +162,7 @@ describe('avaliarObjetivo', () => {
   it('derrubar rival vira "metade do mapa" se outro jogador derrubar o rival antes', () => {
     const r = avaliarObjetivo({ tipo: 'derrubar_rival', rivalId: 'b' }, situacao({ rival: { territorios: 1, conquisteiDele: false, outrosConquistaramDele: true } }));
     expect(r.cumprido).toBe(false);
-    expect(r.viraObjetivo).toEqual(objetivoMetadeDoMapa(TOTAL));
+    expect(r.viraObjetivo).toEqual(objetivoMetadeDoMapa());
   });
 });
 

@@ -1,4 +1,4 @@
-import type { Objetivo, Recurso, Terreno, TipoPredio, TipoUnidade } from '@terra/regras';
+import { BALANCEAMENTO, type Objetivo, type Recurso, type Terreno, type TipoPredio, type TipoUnidade } from '@terra/regras';
 
 export const TERRENOS_INFO: Record<Terreno, { nome: string; icone: string; efeito: string }> = {
   planicie: { nome: 'Planície', icone: '🌾', efeito: 'sem bônus de defesa' },
@@ -64,7 +64,11 @@ export function descreverObjetivo(
         texto: `Conquiste todos os territórios de ${nomes.regiao(objetivo.regioes[0])} e de ${nomes.regiao(objetivo.regioes[1])}. Cidades principais de outros jogadores não contam, porque não podem ser conquistadas.`,
       };
     case 'metade_do_mapa':
-      return { icone: '👑', titulo: 'Mais da metade do reino', texto: `Domine ${objetivo.territorios} territórios.` };
+      return {
+        icone: '👑',
+        titulo: 'Mais da metade do reino',
+        texto: `Domine ${Math.round(BALANCEAMENTO.objetivos.fracaoMetadeDoMapa * 100)}% dos territórios que podem ser conquistados. Cidades principais de outros jogadores não contam.`,
+      };
     case 'territorios_defendidos':
       return {
         icone: '🛡️',

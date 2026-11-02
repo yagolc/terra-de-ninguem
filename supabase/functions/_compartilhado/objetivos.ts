@@ -96,7 +96,7 @@ export async function atualizarPlacar(tx: Transacao): Promise<{ encerrada: boole
     // Rival que saiu do jogo (conta apagada): o objetivo vira "metade do mapa", como quando outro o derruba antes.
     const alvo = objetivo.tipo === 'derrubar_rival' ? objetivo.rivalId : null;
     if (alvo && !jogadores.some((j) => j.jogador_id === alvo)) {
-      objetivo = objetivoMetadeDoMapa(territorios.length);
+      objetivo = objetivoMetadeDoMapa();
       await tx`update objetivos set objetivo = ${tx.json(objetivo)} where id = ${registro.id}`;
     }
     const rivalId = objetivo.tipo === 'derrubar_rival' ? objetivo.rivalId : null;
