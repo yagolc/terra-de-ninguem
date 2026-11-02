@@ -1,6 +1,7 @@
 // Objetivos secretos, placar e fim de temporada (Épico 7).
 import {
   avaliarObjetivo,
+  cidadesAlheiasPorRegiao,
   objetivoMetadeDoMapa,
   pontuar,
   sementeDeTexto,
@@ -48,8 +49,8 @@ export async function atualizarPlacar(tx: Transacao): Promise<{ encerrada: boole
   const temporadaId = temporada.id;
   const agora = Date.now();
 
-  const territorios = await tx<{ id: string; regiao_id: string; dono_id: string | null }[]>`
-    select id, regiao_id, dono_id from territorios where temporada_id = ${temporadaId}`;
+  const territorios = await tx<{ id: string; regiao_id: string; dono_id: string | null; cidade_principal: boolean }[]>`
+    select id, regiao_id, dono_id, cidade_principal from territorios where temporada_id = ${temporadaId}`;
   if (territorios.length === 0) return { encerrada: false };
   const territoriosPorRegiao = new Map<string, number>();
   for (const t of territorios) territoriosPorRegiao.set(t.regiao_id, (territoriosPorRegiao.get(t.regiao_id) ?? 0) + 1);
@@ -105,6 +106,10 @@ export async function atualizarPlacar(tx: Transacao): Promise<{ encerrada: boole
         minhasTropas: tropas.find((x) => x.territorio_id === t.id && x.dono_id === jogadorId)?.total ?? 0,
       })),
       territoriosPorRegiao,
+      cidadesAlheiasPorRegiao: cidadesAlheiasPorRegiao(
+        territorios.map((t) => ({ regiaoId: t.regiao_id, donoId: t.dono_id, cidadePrincipal: t.cidade_principal })),
+        jogadorId,
+      ),
       totalTerritorios: territorios.length,
       populacao: cidade.estado.populacao,
       rival: rivalId

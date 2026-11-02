@@ -77,11 +77,28 @@ export type SituacaoJogador = {
   /** Territórios do jogador, com a região e quantas tropas dele estão lá. */
   meusTerritorios: { regiaoId: string; minhasTropas: number }[];
   territoriosPorRegiao: ReadonlyMap<string, number>;
+  /**
+   * Cidades principais de outros jogadores em cada região. Nunca podem ser conquistadas, então ficam fora de
+   * "duas regiões" (inclusive a de quem entrar no meio da temporada e cair numa delas).
+   */
+  cidadesAlheiasPorRegiao: ReadonlyMap<string, number>;
   totalTerritorios: number;
   populacao: number;
   /** Só para "derrubar rival". */
   rival?: { territorios: number; conquisteiDele: boolean; outrosConquistaramDele: boolean };
 };
+
+/** Cidades principais de outros jogadores em cada região (para `SituacaoJogador.cidadesAlheiasPorRegiao`). */
+export function cidadesAlheiasPorRegiao(
+  territorios: readonly { regiaoId: string; donoId: string | null; cidadePrincipal: boolean }[],
+  jogadorId: string,
+): Map<string, number> {
+  const contagem = new Map<string, number>();
+  for (const t of territorios) {
+    if (t.cidadePrincipal && t.donoId && t.donoId !== jogadorId) contagem.set(t.regiaoId, (contagem.get(t.regiaoId) ?? 0) + 1);
+  }
+  return contagem;
+}
 
 export type AvaliacaoObjetivo = {
   cumprido: boolean;
@@ -95,7 +112,10 @@ export type AvaliacaoObjetivo = {
 export function avaliarObjetivo(objetivo: Objetivo, s: SituacaoJogador): AvaliacaoObjetivo {
   switch (objetivo.tipo) {
     case 'duas_regioes': {
-      const alvo = objetivo.regioes.reduce((soma, r) => soma + (s.territoriosPorRegiao.get(r) ?? 0), 0);
+      const alvo = objetivo.regioes.reduce(
+        (soma, r) => soma + (s.territoriosPorRegiao.get(r) ?? 0) - (s.cidadesAlheiasPorRegiao.get(r) ?? 0),
+        0,
+      );
       const atual = s.meusTerritorios.filter((t) => objetivo.regioes.includes(t.regiaoId)).length;
       return { cumprido: alvo > 0 && atual >= alvo, atual, alvo };
     }

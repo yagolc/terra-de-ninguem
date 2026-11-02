@@ -61,7 +61,7 @@ export function descreverObjetivo(
       return {
         icone: '🗺️',
         titulo: 'Senhor de duas terras',
-        texto: `Conquiste todos os territórios de ${nomes.regiao(objetivo.regioes[0])} e de ${nomes.regiao(objetivo.regioes[1])}.`,
+        texto: `Conquiste todos os territórios de ${nomes.regiao(objetivo.regioes[0])} e de ${nomes.regiao(objetivo.regioes[1])}. Cidades principais de outros jogadores não contam, porque não podem ser conquistadas.`,
       };
     case 'metade_do_mapa':
       return { icone: '👑', titulo: 'Mais da metade do reino', texto: `Domine ${objetivo.territorios} territórios.` };

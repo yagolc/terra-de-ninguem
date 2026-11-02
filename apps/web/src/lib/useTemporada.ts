@@ -1,4 +1,4 @@
-import { avaliarObjetivo, type AvaliacaoObjetivo, type Objetivo } from '@terra/regras';
+import { avaliarObjetivo, cidadesAlheiasPorRegiao, type AvaliacaoObjetivo, type Objetivo } from '@terra/regras';
 import { useCallback, useEffect, useState } from 'react';
 import { chamarFuncao } from './funcoes';
 import { supabase } from './supabase';
@@ -89,9 +89,9 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
       .returns<{ jogador_id: string; objetivo: Objetivo; cumprido_em: string | null }[]>(),
     supabase
       .from('territorios')
-      .select('id, regiao_id, dono_id')
+      .select('id, regiao_id, dono_id, cidade_principal')
       .eq('temporada_id', temporada.id)
-      .returns<{ id: string; regiao_id: string; dono_id: string | null }[]>(),
+      .returns<{ id: string; regiao_id: string; dono_id: string | null; cidade_principal: boolean }[]>(),
     supabase
       .from('tropas')
       .select('territorio_id, lanceiro, arqueiro, cavalaria')
@@ -128,6 +128,10 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
           return { regiaoId: t.regiao_id, minhasTropas: aqui ? aqui.lanceiro + aqui.arqueiro + aqui.cavalaria : 0 };
         }),
       territoriosPorRegiao,
+      cidadesAlheiasPorRegiao: cidadesAlheiasPorRegiao(
+        territorios.data.map((t) => ({ regiaoId: t.regiao_id, donoId: t.dono_id, cidadePrincipal: t.cidade_principal })),
+        jogadorId,
+      ),
       totalTerritorios: territorios.data.length,
       populacao: placar.data.find((p) => p.jogador_id === jogadorId)?.populacao ?? 0,
       rival: rivalId

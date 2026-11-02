@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BALANCEAMENTO } from './balanceamento.ts';
 import {
   avaliarObjetivo,
+  cidadesAlheiasPorRegiao,
   fimDaTemporada,
   objetivoMetadeDoMapa,
   pontuar,
@@ -26,6 +27,7 @@ function situacao(mudancas: Partial<SituacaoJogador> = {}): SituacaoJogador {
   return {
     meusTerritorios: [],
     territoriosPorRegiao: new Map(REGIOES.map((r) => [r.id, r.territorios])),
+    cidadesAlheiasPorRegiao: new Map(),
     totalTerritorios: TOTAL,
     populacao: 10,
     ...mudancas,
@@ -86,6 +88,27 @@ describe('avaliarObjetivo', () => {
     expect(quase).toMatchObject({ cumprido: false, atual: 8, alvo: 9 });
     const feito = avaliarObjetivo(obj, situacao({ meusTerritorios: meus([...Array(5).fill('r2'), ...Array(4).fill('r4')]) }));
     expect(feito.cumprido).toBe(true);
+  });
+
+  it('duas regiões: cidade principal de outro jogador não conta (não pode ser conquistada)', () => {
+    const obj: Objetivo = { tipo: 'duas_regioes', regioes: ['r2', 'r4'] };
+    const comCidade = situacao({ cidadesAlheiasPorRegiao: new Map([['r4', 1]]) });
+    const feito = avaliarObjetivo(obj, { ...comCidade, meusTerritorios: meus([...Array(5).fill('r2'), ...Array(3).fill('r4')]) });
+    expect(feito).toMatchObject({ cumprido: true, atual: 8, alvo: 8 });
+  });
+
+  it('conta só as cidades principais dos outros, por região', () => {
+    const contagem = cidadesAlheiasPorRegiao(
+      [
+        { regiaoId: 'r1', donoId: 'eu', cidadePrincipal: true },
+        { regiaoId: 'r1', donoId: 'b', cidadePrincipal: true },
+        { regiaoId: 'r2', donoId: 'b', cidadePrincipal: false },
+        { regiaoId: 'r3', donoId: null, cidadePrincipal: false },
+        { regiaoId: 'r3', donoId: 'c', cidadePrincipal: true },
+      ],
+      'eu',
+    );
+    expect([...contagem]).toEqual([['r1', 1], ['r3', 1]]);
   });
 
   it('metade do mapa: 55% dos territórios', () => {
