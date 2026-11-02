@@ -15,6 +15,8 @@ export default function Mapa({ sessao }: { sessao: Session }) {
   const [modo, setModo] = useState<'detalhe' | 'ataque' | 'movimento'>('detalhe');
   const [aviso, setAviso] = useState<string | null>(null);
   const [agora, setAgora] = useState(() => Date.now());
+  // No celular, legenda e marchas ficam recolhidas em etiquetas para não tampar o mapa.
+  const [aberto, setAberto] = useState<'legenda' | 'marchas' | null>(null);
   const meuId = sessao.user.id;
 
   useEffect(() => {
@@ -36,18 +38,48 @@ export default function Mapa({ sessao }: { sessao: Session }) {
   const presentes = new Set(dados.territorios.flatMap((t) => [t.dono_id, t.reservado_para]).filter((id): id is string => !!id));
   const legenda = [...presentes].map((id) => dados.jogadores.get(id)).filter((j) => !!j);
   const nomeDe = (id: string) => dados.territorios.find((t) => t.id === id)?.nome ?? '?';
+  const proximaChegada = Math.min(...dados.marchas.map((m) => m.chegadaEm));
+  const alternar = (qual: 'legenda' | 'marchas') => setAberto((atual) => (atual === qual ? null : qual));
 
   function selecionar(id: string | null) {
     setSelecionado(id);
     setModo('detalhe');
+    setAberto(null);
   }
 
   return (
     <div className="relative h-full overflow-hidden">
       <CanvasMapa dados={dados} meuId={meuId} selecionado={selecionado} onSelecionar={selecionar} />
 
-      <div className="pointer-events-none absolute left-3 top-3 max-w-[60%] space-y-2">
-        <div className="rounded-lg border border-couro bg-noite/85 px-3 py-2 text-xs backdrop-blur">
+      <div className="pointer-events-none absolute left-3 top-3 max-w-[calc(100%-1.5rem)] space-y-2 md:max-w-[60%]">
+        <div className="pointer-events-auto flex gap-2 md:hidden">
+          <button
+            onClick={() => alternar('legenda')}
+            aria-expanded={aberto === 'legenda'}
+            className={`flex items-center gap-1.5 rounded-full border bg-noite/85 px-3 py-1.5 text-xs backdrop-blur ${aberto === 'legenda' ? 'border-ouro text-ouro' : 'border-couro'}`}
+          >
+            <span className="flex -space-x-1">
+              {legenda.map((j) => (
+                <span key={j.id} className="size-2.5 rounded-full ring-1 ring-noite" style={{ background: corDoJogador(j) }} />
+              ))}
+            </span>
+            Jogadores
+          </button>
+          {dados.marchas.length > 0 && (
+            <button
+              onClick={() => alternar('marchas')}
+              aria-expanded={aberto === 'marchas'}
+              className={`rounded-full border bg-noite/85 px-3 py-1.5 text-xs backdrop-blur ${aberto === 'marchas' ? 'border-ouro text-ouro' : 'border-couro'}`}
+            >
+              🚩 {dados.marchas.length} {dados.marchas.length === 1 ? 'marcha' : 'marchas'} ·{' '}
+              <span className="tabular-nums">{proximaChegada > agora ? formatarDuracao(proximaChegada - agora) : 'chegando…'}</span>
+            </button>
+          )}
+        </div>
+
+        <div
+          className={`rounded-lg border border-couro bg-noite/85 px-3 py-2 text-xs backdrop-blur md:block ${aberto === 'legenda' ? 'block' : 'hidden'}`}
+        >
           <ul className="flex flex-wrap gap-x-3 gap-y-1">
             {legenda.map((j) => (
               <li key={j.id} className="flex items-center gap-1.5">
@@ -65,7 +97,9 @@ export default function Mapa({ sessao }: { sessao: Session }) {
         </div>
 
         {dados.marchas.length > 0 && (
-          <div className="rounded-lg border border-couro bg-noite/85 px-3 py-2 text-xs backdrop-blur">
+          <div
+            className={`rounded-lg border border-couro bg-noite/85 px-3 py-2 text-xs backdrop-blur md:block ${aberto === 'marchas' ? 'block' : 'hidden'}`}
+          >
             <p className="mb-1 font-semibold text-ouro">Suas marchas</p>
             <ul className="space-y-1">
               {dados.marchas.map((m) => {

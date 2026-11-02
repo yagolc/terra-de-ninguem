@@ -230,11 +230,25 @@ export class CenaMapa extends Phaser.Scene {
     cam.setZoom(Phaser.Math.Clamp(cam.zoom, this.zoomMinimo * 0.8, 4));
   }
 
-  /** Ajusta o zoom para o mapa inteiro caber na tela. */
+  /**
+   * Enquadramento inicial. Na tela deitada, o mapa inteiro. Na tela em pé (celular), o mapa largo ficaria
+   * minúsculo: aproxima até ocupar a altura e mostra a parte da cidade do jogador, sem passar da borda do mapa.
+   */
   private enquadrar() {
     this.limitarZoom();
     const mundo = this.tamanhoDoMundo();
-    this.cameras.main.setZoom(this.zoomMinimo).centerOn(mundo.largura / 2, mundo.altura / 2);
+    const { width, height } = this.scale.gameSize;
+    const cam = this.cameras.main;
+    if (height <= width) {
+      cam.setZoom(this.zoomMinimo).centerOn(mundo.largura / 2, mundo.altura / 2);
+      return;
+    }
+    const zoom = Math.min((height / mundo.altura) * 0.95, 4);
+    cam.setZoom(zoom);
+    const minhaCidade = this.opcoes.dados.territorios.find((t) => t.cidade_principal && t.dono_id === this.opcoes.meuId);
+    const metadeLargura = width / 2 / zoom;
+    const x = minhaCidade ? Phaser.Math.Clamp(minhaCidade.x * ESCALA, metadeLargura, mundo.largura - metadeLargura) : mundo.largura / 2;
+    cam.centerOn(x, mundo.altura / 2);
   }
 
   private aplicarZoom(novo: number, telaX: number, telaY: number) {
