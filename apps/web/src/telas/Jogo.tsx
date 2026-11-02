@@ -6,6 +6,7 @@ import { contarNaoLidos } from '../lib/useRelatorios';
 import Cidade from './Cidade';
 import FimDeTemporada from './FimDeTemporada';
 import Objetivo from './Objetivo';
+import Regras from './Regras';
 import Relatorios from './Relatorios';
 
 // O Phaser (cerca de 1 MB) só é baixado quando o jogador abre o mapa.
@@ -15,6 +16,7 @@ function abaDoEndereco(): Aba {
   if (location.hash === '#mapa') return 'mapa';
   if (location.hash === '#relatorios') return 'relatorios';
   if (location.hash === '#objetivo') return 'objetivo';
+  if (location.hash === '#regras') return 'regras';
   return 'cidade';
 }
 
@@ -89,17 +91,28 @@ export default function Jogo({ sessao }: { sessao: Session }) {
               </button>
             ))}
           </nav>
-          <button
-            onClick={() => supabase?.auth.signOut()}
-            className="rounded-lg border border-couro px-3 py-1.5 text-sm text-pergaminho-escuro hover:text-pergaminho"
-          >
-            Sair
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => irPara('regras')}
+              aria-current={aba === 'regras' ? 'page' : undefined}
+              className={`rounded-lg border px-3 py-1.5 text-sm ${aba === 'regras' ? 'border-ouro text-ouro' : 'border-couro text-pergaminho-escuro hover:text-pergaminho'}`}
+            >
+              📖<span className="hidden sm:inline"> Regras</span>
+            </button>
+            <button
+              onClick={() => supabase?.auth.signOut()}
+              className="rounded-lg border border-couro px-3 py-1.5 text-sm text-pergaminho-escuro hover:text-pergaminho"
+            >
+              Sair
+            </button>
+          </div>
         </div>
       </header>
 
       <main className={`min-h-0 flex-1 ${aba === 'mapa' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
-        {temporada === undefined ? null : temporada === null ? (
+        {aba === 'regras' ? (
+          <Regras />
+        ) : temporada === undefined ? null : temporada === null ? (
           <FimDeTemporada sessao={sessao} />
         ) : aba === 'cidade' ? (
           <Cidade sessao={sessao} />
