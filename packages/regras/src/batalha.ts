@@ -18,10 +18,13 @@ export function forcaAtaque(atacante: Exercito, defensor: Exercito): number {
   );
 }
 
-/** Força de defesa com triângulo de vantagens, terreno e muralha. */
-export function forcaDefesa(defensor: Exercito, atacante: Exercito, terreno: Terreno, nivelMuralha: number): number {
+/** Força de defesa com triângulo de vantagens, terreno, muralha e paliçada. */
+export function forcaDefesa(defensor: Exercito, atacante: Exercito, terreno: Terreno, nivelMuralha: number, palicada = false): number {
   const { bonusFlorestaArqueiro, bonusMontanha, bonusMuralhaPorNivel } = BALANCEAMENTO.batalha;
-  const bonusGeral = (terreno === 'montanha' ? 1 + bonusMontanha : 1) * (1 + bonusMuralhaPorNivel * nivelMuralha);
+  const bonusGeral =
+    (terreno === 'montanha' ? 1 + bonusMontanha : 1) *
+    (1 + bonusMuralhaPorNivel * nivelMuralha) *
+    (palicada ? 1 + BALANCEAMENTO.bonusPalicada : 1);
 
   return TIPOS_UNIDADE.reduce((soma, tipo) => {
     const bonusTipo = terreno === 'floresta' && tipo === 'arqueiro' ? 1 + bonusFlorestaArqueiro : 1;
@@ -35,6 +38,8 @@ export type EntradaBatalha = {
   terreno: Terreno;
   /** Nível da muralha; 0 fora do território da cidade. */
   nivelMuralha: number;
+  /** Paliçada pronta no território atacado. */
+  palicada?: boolean;
   /** Sorte em [-1, 1] (use `sortearSorte`); vira ±`sorteMaxima` na força do atacante. */
   sorte: number;
   /** A cidade principal pode ser saqueada, mas nunca conquistada. */
@@ -62,7 +67,7 @@ function aplicarPerdas(tropas: Exercito, fracao: number): Exercito {
 /**
  * Resolve uma batalha (GDD, "Resolução da batalha"):
  * 1. força de cada lado com o triângulo de vantagens;
- * 2. muralha, terreno e sorte de no máximo ±10%;
+ * 2. muralha, paliçada, terreno e sorte de no máximo ±10%;
  * 3. o perdedor perde `perdaPerdedor` do exército e o vencedor perde (força menor / força maior)^expoente;
  * 4. conquista só com margem mínima. Em empate, vence o defensor.
  */
@@ -72,7 +77,7 @@ export function resolverBatalha(entrada: EntradaBatalha): ResultadoBatalha {
 
   const sorte = Math.max(-1, Math.min(1, entrada.sorte));
   const ataque = forcaAtaque(atacante, defensor) * (1 + sorteMaxima * sorte);
-  const defesa = forcaDefesa(defensor, atacante, terreno, nivelMuralha);
+  const defesa = forcaDefesa(defensor, atacante, terreno, nivelMuralha, entrada.palicada);
 
   const atacanteVence = ataque > defesa;
   const maior = Math.max(ataque, defesa);

@@ -2,14 +2,23 @@ import { BALANCEAMENTO, TIPOS_UNIDADE, analisarDefesa, totalUnidades } from '@te
 import type { Reconhecimento } from '../lib/useMapa';
 import { TERRENOS_INFO, UNIDADES_INFO, formatarDuracao } from '../lib/textos';
 
+type Props = {
+  reconhecimento: Reconhecimento;
+  agora: number;
+  nomeDono: string;
+  /** Paliçada pronta no território agora (as estruturas são públicas, então entra na conta mesmo sem o batedor). */
+  palicada?: boolean;
+};
+
 /** O que o batedor viu: tropas, terreno, muralha e quanto mandar para conquistar com folga. */
-export default function InfoReconhecimento({ reconhecimento, agora, nomeDono }: { reconhecimento: Reconhecimento; agora: number; nomeDono: string }) {
+export default function InfoReconhecimento({ reconhecimento, agora, nomeDono, palicada = false }: Props) {
   const { tropas, terreno, muralha } = reconhecimento;
-  const analise = analisarDefesa({ defensor: tropas, terreno, nivelMuralha: muralha });
+  const analise = analisarDefesa({ defensor: tropas, terreno, nivelMuralha: muralha, palicada });
   const efeitos: string[] = [];
   if (terreno === 'floresta') efeitos.push(`🌲 floresta: arqueiros defendem +${Math.round(BALANCEAMENTO.batalha.bonusFlorestaArqueiro * 100)}%`);
   if (terreno === 'montanha') efeitos.push(`⛰️ montanha: defesa +${Math.round(BALANCEAMENTO.batalha.bonusMontanha * 100)}%`);
   if (muralha > 0) efeitos.push(`🧱 muralha nível ${muralha}: defesa +${Math.round(BALANCEAMENTO.batalha.bonusMuralhaPorNivel * muralha * 100)}%`);
+  if (palicada) efeitos.push(`🪵 paliçada: defesa +${Math.round(BALANCEAMENTO.bonusPalicada * 100)}%`);
   const idade = agora - reconhecimento.observadoEm;
 
   return (

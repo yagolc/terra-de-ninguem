@@ -3,16 +3,19 @@
 //      | { acao: 'treinar_tropas', tipo, quantidade }
 //      | { acao: 'enviar_marcha', origem_id, destino_id, tipo: 'saque' | 'conquista' | 'movimento', tropas }
 //      | { acao: 'enviar_reconhecimento', origem_id, destino_id }
+//      | { acao: 'construir_estrutura', territorio_id, tipo: 'torre' | 'palicada' | 'entreposto' }
 //      | { acao: 'marcar_relatorios_lidos' }
 // Publicar com: npx supabase functions deploy cidade --no-verify-jwt (o token é validado no código).
 import {
   MENSAGENS_ALOCACAO,
   MENSAGENS_ATAQUE,
+  MENSAGENS_ESTRUTURA,
   MENSAGENS_EVOLUCAO,
   MENSAGENS_MOVIMENTO,
   MENSAGENS_RECONHECIMENTO,
   MENSAGENS_TREINO,
   TIPOS_ATAQUE,
+  TIPOS_ESTRUTURA,
   TIPOS_PREDIO,
   TIPOS_UNIDADE,
   duracaoMarchaMs,
@@ -23,12 +26,14 @@ import {
   subtrairRecursos,
   verificarAlocacao,
   verificarAtaque,
+  verificarEstrutura,
   verificarEvolucao,
   verificarMovimento,
   verificarReconhecimento,
   verificarTreino,
   type Recursos,
   type TipoAtaque,
+  type TipoEstrutura,
   type TipoPredio,
   type TipoUnidade,
 } from '../../../packages/regras/src/index.ts';
@@ -186,6 +191,39 @@ async function enviarReconhecimento(
   return chegada;
 }
 
+/** Constrói uma estrutura num território do jogador; fica pronta em `pronto_em` e não usa a fila de obras. */
+async function construirEstrutura(
+  tx: Transacao,
+  temporada: Temporada,
+  c: CidadeAvancada,
+  corpo: Record<string, unknown>,
+  agora: number,
+): Promise<number> {
+  const tipo = corpo.tipo as TipoEstrutura;
+  const territorioId = String(corpo.territorio_id ?? '');
+  if (!TIPOS_ESTRUTURA.includes(tipo)) throw new ErroDoJogo('Estrutura desconhecida.');
+  if (!UUID.test(territorioId)) throw new ErroDoJogo('Território desconhecido.');
+  const [territorio] = await tx<{ dono_id: string | null }[]>`
+    select dono_id from territorios where temporada_id = ${temporada.id} and id = ${territorioId}`;
+  if (!territorio) throw new ErroDoJogo('Território desconhecido.');
+  const [existente] = await tx`select 1 from estruturas where territorio_id = ${territorioId}`;
+
+  const v = verificarEstrutura({
+    tipo,
+    territorioDoJogador: territorio.dono_id === c.carregada.jogadorId,
+    jaTemEstrutura: !!existente,
+    recursos: c.estado.recursos,
+    agora,
+  });
+  if (!v.ok) throw new ErroDoJogo(MENSAGENS_ESTRUTURA[v.motivo]);
+
+  c.estado = { ...c.estado, recursos: subtrairRecursos(c.estado.recursos, v.custo) };
+  await tx`
+    insert into estruturas (temporada_id, territorio_id, jogador_id, tipo, pronto_em)
+    values (${temporada.id}, ${territorioId}, ${c.carregada.jogadorId}, ${tipo}, ${new Date(v.prontoEm)})`;
+  return v.prontoEm;
+}
+
 async function executar(jogadorId: string, corpo: Record<string, unknown>): Promise<Record<string, unknown>> {
   if (corpo.acao === 'entrar') {
     // Funda a cidade (se ainda não houver) e sorteia o objetivo secreto (se ainda não houver).
@@ -238,6 +276,10 @@ async function executar(jogadorId: string, corpo: Record<string, unknown>): Prom
       }
       case 'enviar_reconhecimento': {
         resultado.chegada_em = new Date(await enviarReconhecimento(tx, temporada, c, corpo, agora)).toISOString();
+        break;
+      }
+      case 'construir_estrutura': {
+        resultado.pronto_em = new Date(await construirEstrutura(tx, temporada, c, corpo, agora)).toISOString();
         break;
       }
       case 'enviar_marcha': {

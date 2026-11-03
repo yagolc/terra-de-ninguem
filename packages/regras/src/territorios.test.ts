@@ -42,6 +42,14 @@ describe('grafo de territórios', () => {
     const b = BALANCEAMENTO.mapa.bonusTerritorio;
     expect(bonusDeTerritorios(['comida', 'comida', 'ouro'])).toEqual({ comida: 2 * b, madeira: 0, ouro: b });
   });
+
+  it('o entreposto multiplica o bônus do território dele', () => {
+    const b = BALANCEAMENTO.mapa.bonusTerritorio;
+    const m = BALANCEAMENTO.multiplicadorEntreposto;
+    const r = bonusDeTerritorios(['comida', 'comida', 'ouro'], ['ouro']);
+    expect(r.comida).toBeCloseTo(2 * b);
+    expect(r.ouro).toBeCloseTo(b * m);
+  });
 });
 
 describe('ligadosPorTerritoriosProprios', () => {

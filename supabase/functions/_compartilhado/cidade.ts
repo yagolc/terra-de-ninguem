@@ -139,9 +139,12 @@ export async function carregarCidade(tx: Transacao, temporadaId: string, jogador
        for update`;
   if (!linha) throw new ErroDoJogo('Você ainda não tem cidade nesta temporada.', 404);
 
-  // Bônus de produção de todos os territórios do jogador nesta temporada.
-  const territorios = await tx<{ bonus_recurso: Recurso }[]>`
-    select bonus_recurso from territorios where temporada_id = ${temporadaId} and dono_id = ${jogadorId}`;
+  // Bônus de produção de todos os territórios do jogador nesta temporada (dobrado onde há entreposto pronto).
+  const territorios = await tx<{ bonus_recurso: Recurso; entreposto: boolean }[]>`
+    select t.bonus_recurso,
+           exists (select 1 from estruturas e
+                    where e.territorio_id = t.id and e.tipo = 'entreposto' and e.pronto_em <= now()) as entreposto
+      from territorios t where t.temporada_id = ${temporadaId} and t.dono_id = ${jogadorId}`;
 
   const linhasPredios = await tx<{ tipo: TipoPredio; nivel: number }[]>`select tipo, nivel from predios where cidade_id = ${linha.id}`;
   const predios = Object.fromEntries(TIPOS_PREDIO.map((tipo) => [tipo, 0])) as EstadoCidade['predios'];
@@ -167,7 +170,10 @@ export async function carregarCidade(tx: Transacao, temporadaId: string, jogador
     territorioId: linha.territorio_id,
     obras: linhasObras.map((o) => ({ id: o.id, tipo: o.tipo, prontoEm: o.pronto_em.getTime() })),
     fila: linhasFila.map((l) => ({ id: l.id, tipo: l.tipo_unidade, quantidade: l.quantidade, prontoEm: l.pronto_em.getTime() })),
-    bonus: bonusDeTerritorios(territorios.map((t) => t.bonus_recurso)),
+    bonus: bonusDeTerritorios(
+      territorios.map((t) => t.bonus_recurso),
+      territorios.filter((t) => t.entreposto).map((t) => t.bonus_recurso),
+    ),
     grupos: linhasTropas.map((t) => ({
       id: t.id,
       territorioId: t.territorio_id,

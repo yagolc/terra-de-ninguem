@@ -1,4 +1,4 @@
-import { CORES_JOGADORES, exercito, somarExercitos, type Exercito, type Recurso, type Recursos, type Terreno, type TipoUnidade } from '@terra/regras';
+import { CORES_JOGADORES, exercito, somarExercitos, type Exercito, type Recurso, type Recursos, type Terreno, type TipoEstrutura, type TipoUnidade } from '@terra/regras';
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from './supabase';
 
@@ -29,6 +29,20 @@ export type MarchaMapa = {
   chegadaEm: number;
 };
 
+/** Estrutura de um território (todas são públicas no mapa). Antes de `prontoEm` está em construção. */
+export type EstruturaMapa = { territorioId: string; jogadorId: string; tipo: TipoEstrutura; prontoEm: number };
+
+/** Marcha alheia vindo para um território do jogador com torre de vigia pronta (só o total de soldados). */
+export type MarchaVista = {
+  id: string;
+  jogadorId: string;
+  origemId: string;
+  destinoId: string;
+  tipo: 'saque' | 'conquista' | 'reconhecimento';
+  soldados: number;
+  chegadaEm: number;
+};
+
 /** O que um batedor viu num território (só os do próprio jogador, depois que o batedor voltou). */
 export type Reconhecimento = {
   territorioId: string;
@@ -55,6 +69,10 @@ export type DadosMapa = {
   escudos: Map<string, number>;
   /** Último reconhecimento de cada território. */
   reconhecimentos: Map<string, Reconhecimento>;
+  /** Estrutura de cada território que tem uma. */
+  estruturas: Map<string, EstruturaMapa>;
+  /** Marchas alheias vistas pelas torres do jogador, da que chega primeiro para a última. */
+  marchasVistas: MarchaVista[];
 };
 
 export const COR_NEUTRA = '#6b5a48';
@@ -93,6 +111,33 @@ type LinhaReconhecimento = {
   lido: boolean;
 };
 
+type LinhaMarchaVista = {
+  id: string;
+  jogador_id: string;
+  origem_id: string;
+  destino_id: string;
+  tipo: MarchaVista['tipo'];
+  soldados: number;
+  chegada_em: string;
+};
+
+/** Marchas alheias que as torres do jogador enxergam (a função do banco filtra; o RLS esconde o resto). */
+export async function buscarMarchasVistas(): Promise<MarchaVista[]> {
+  if (!supabase) return [];
+  const { data } = await supabase.rpc('marchas_vistas_pela_torre');
+  return ((data ?? []) as LinhaMarchaVista[])
+    .map((m) => ({
+      id: m.id,
+      jogadorId: m.jogador_id,
+      origemId: m.origem_id,
+      destinoId: m.destino_id,
+      tipo: m.tipo,
+      soldados: m.soldados,
+      chegadaEm: Date.parse(m.chegada_em),
+    }))
+    .sort((a, b) => a.chegadaEm - b.chegadaEm);
+}
+
 /** Reconhecimentos do jogador na temporada, do mais recente para o mais antigo (o RLS só devolve os que já voltaram). */
 export async function buscarReconhecimentos(temporadaId: string): Promise<Reconhecimento[]> {
   if (!supabase) return [];
@@ -124,7 +169,8 @@ async function buscarMapa(): Promise<DadosMapa | null> {
     .maybeSingle<{ id: string; numero: number; inicio: string }>();
   if (!temporada) return null;
 
-  const [regioes, territorios, fronteiras, jogadores, tropas, marchas, protecoes, minhaCidade, reconhecimentos] = await Promise.all([
+  const [regioes, territorios, fronteiras, jogadores, tropas, marchas, protecoes, minhaCidade, reconhecimentos, estruturas, marchasVistas] =
+    await Promise.all([
     supabase.from('regioes').select('id, indice, nome, terreno').eq('temporada_id', temporada.id).returns<RegiaoMapa[]>(),
     supabase
       .from('territorios')
@@ -165,8 +211,23 @@ async function buscarMapa(): Promise<DadosMapa | null> {
         filas_treino: { tipo_unidade: TipoUnidade; quantidade: number; pronto_em: string }[];
       }>(),
     buscarReconhecimentos(temporada.id),
+    supabase
+      .from('estruturas')
+      .select('territorio_id, jogador_id, tipo, pronto_em')
+      .eq('temporada_id', temporada.id)
+      .returns<{ territorio_id: string; jogador_id: string; tipo: TipoEstrutura; pronto_em: string }[]>(),
+    buscarMarchasVistas(),
   ]);
-  if (!regioes.data || !territorios.data || !fronteiras.data || !jogadores.data || !tropas.data || !marchas.data || !protecoes.data) {
+  if (
+    !regioes.data ||
+    !territorios.data ||
+    !fronteiras.data ||
+    !jogadores.data ||
+    !tropas.data ||
+    !marchas.data ||
+    !protecoes.data ||
+    !estruturas.data
+  ) {
     throw new Error('Não foi possível carregar o mapa.');
   }
   if (territorios.data.length === 0) return null;
@@ -210,6 +271,13 @@ async function buscarMapa(): Promise<DadosMapa | null> {
     escudos: new Map(protecoes.data.map((p) => [p.jogador_id, Date.parse(p.ate)])),
     // Já vêm do mais recente para o mais antigo: o primeiro de cada território fica.
     reconhecimentos: new Map([...reconhecimentos].reverse().map((r) => [r.territorioId, r])),
+    estruturas: new Map(
+      estruturas.data.map((e) => [
+        e.territorio_id,
+        { territorioId: e.territorio_id, jogadorId: e.jogador_id, tipo: e.tipo, prontoEm: Date.parse(e.pronto_em) },
+      ]),
+    ),
+    marchasVistas,
   };
 }
 
@@ -239,6 +307,12 @@ export function useMapa() {
     const t = setTimeout(() => void recarregar(), espera);
     return () => clearTimeout(t);
   }, [proximaChegada, recarregar]);
+
+  // A torre só serve se o mapa souber de marchas novas: relê a cada minuto enquanto o mapa está aberto.
+  useEffect(() => {
+    const t = setInterval(() => void recarregar(), 60_000);
+    return () => clearInterval(t);
+  }, [recarregar]);
 
   return { dados, erro, recarregar };
 }

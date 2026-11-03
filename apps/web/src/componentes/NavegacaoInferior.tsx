@@ -8,10 +8,10 @@ export const ABAS = [
   { id: 'relatorios', rotulo: 'Relatórios', icone: '📜' },
 ] as const;
 
-type Props = { aba: Aba; onMudar: (aba: Aba) => void; naoLidos: number };
+type Props = { aba: Aba; onMudar: (aba: Aba) => void; naoLidos: number; ameacas: number };
 
 /** Barra inferior do celular. */
-export default function NavegacaoInferior({ aba, onMudar, naoLidos }: Props) {
+export default function NavegacaoInferior({ aba, onMudar, naoLidos, ameacas }: Props) {
   return (
     <nav className="border-t border-couro bg-noite/95 pb-[env(safe-area-inset-bottom)] md:hidden">
       <ul className="grid grid-cols-4">
@@ -28,6 +28,11 @@ export default function NavegacaoInferior({ aba, onMudar, naoLidos }: Props) {
                   {item.icone}
                 </span>
                 {item.rotulo}
+                {item.id === 'mapa' && ameacas > 0 && (
+                  <span className="absolute right-[calc(50%-1.9rem)] top-1 rounded-full bg-sangue px-1 text-[10px] font-bold text-pergaminho">
+                    ⚠️{ameacas}
+                  </span>
+                )}
                 {item.id === 'relatorios' && naoLidos > 0 && (
                   <span className="absolute right-[calc(50%-1.6rem)] top-1 min-w-4 rounded-full bg-sangue px-1 text-[10px] font-bold text-pergaminho">
                     {naoLidos}

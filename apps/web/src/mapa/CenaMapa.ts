@@ -5,6 +5,8 @@ import { COR_NEUTRA, corDoJogador, type DadosMapa, type TerritorioMapa } from '.
 const ESCALA = 20;
 const CORES_TERRENO = { planicie: 0x7d8a45, floresta: 0x3d5e36, montanha: 0x6e6257 } as const;
 const ICONE_TERRENO = { planicie: '', floresta: '🌲', montanha: '⛰️' } as const;
+const ICONE_ESTRUTURA = { torre: '🗼', palicada: '🪵', entreposto: '🏪' } as const;
+const COR_AMEACA = 0xff4d3d;
 const ARRASTO_MINIMO = 6;
 
 const cor = (hex: string) => Phaser.Display.Color.HexStringToColor(hex).color;
@@ -99,36 +101,45 @@ export class CenaMapa extends Phaser.Scene {
     this.desenharMarchas();
   }
 
-  /** Setas das marchas do jogador: dourada para ataque, verde para tropas voltando, azul para movimento. */
+  /**
+   * Setas das marchas do jogador (dourada para ataque, verde para tropas voltando, azul para movimento,
+   * lilás para batedor) e, em vermelho grosso, as marchas inimigas que as torres dele avistam.
+   */
   private desenharMarchas() {
     const g = this.camadaMarchas!;
     g.clear();
     const { dados } = this.opcoes;
     for (const m of dados.marchas) {
-      const de = dados.territorios.find((t) => t.id === m.origemId);
-      const para = dados.territorios.find((t) => t.id === m.destinoId);
-      if (!de || !para) continue;
       const batedor = m.tipo === 'reconhecimento' || (m.tipo === 'retorno' && m.tropas.lanceiro + m.tropas.arqueiro + m.tropas.cavalaria === 0);
       const cor = batedor ? 0xc39bd3 : m.tipo === 'retorno' ? 0x8fd18a : m.tipo === 'movimento' ? 0x7fb3e8 : 0xe8c475;
-      const [x1, y1, x2, y2] = [de.x * ESCALA, de.y * ESCALA, para.x * ESCALA, para.y * ESCALA];
-      const angulo = Math.atan2(y2 - y1, x2 - x1);
-      // Para um pouco antes do centro do alvo, para não cobrir o nome.
-      const fimX = x2 - Math.cos(angulo) * 26;
-      const fimY = y2 - Math.sin(angulo) * 26;
-      g.lineStyle(6, 0x1c1410, 0.8);
-      g.lineBetween(x1, y1, fimX, fimY);
-      g.lineStyle(3, cor, 1);
-      g.lineBetween(x1, y1, fimX, fimY);
-      g.fillStyle(cor, 1);
-      g.fillTriangle(
-        fimX + Math.cos(angulo) * 12,
-        fimY + Math.sin(angulo) * 12,
-        fimX + Math.cos(angulo + 2.5) * 12,
-        fimY + Math.sin(angulo + 2.5) * 12,
-        fimX + Math.cos(angulo - 2.5) * 12,
-        fimY + Math.sin(angulo - 2.5) * 12,
-      );
+      this.desenharSeta(g, m.origemId, m.destinoId, cor, 3);
     }
+    for (const m of dados.marchasVistas) this.desenharSeta(g, m.origemId, m.destinoId, COR_AMEACA, 4);
+  }
+
+  private desenharSeta(g: Phaser.GameObjects.Graphics, origemId: string, destinoId: string, cor: number, espessura: number) {
+    const { dados } = this.opcoes;
+    const de = dados.territorios.find((t) => t.id === origemId);
+    const para = dados.territorios.find((t) => t.id === destinoId);
+    if (!de || !para) return;
+    const [x1, y1, x2, y2] = [de.x * ESCALA, de.y * ESCALA, para.x * ESCALA, para.y * ESCALA];
+    const angulo = Math.atan2(y2 - y1, x2 - x1);
+    // Para um pouco antes do centro do alvo, para não cobrir o nome.
+    const fimX = x2 - Math.cos(angulo) * 26;
+    const fimY = y2 - Math.sin(angulo) * 26;
+    g.lineStyle(espessura + 3, 0x1c1410, 0.8);
+    g.lineBetween(x1, y1, fimX, fimY);
+    g.lineStyle(espessura, cor, 1);
+    g.lineBetween(x1, y1, fimX, fimY);
+    g.fillStyle(cor, 1);
+    g.fillTriangle(
+      fimX + Math.cos(angulo) * 12,
+      fimY + Math.sin(angulo) * 12,
+      fimX + Math.cos(angulo + 2.5) * 12,
+      fimY + Math.sin(angulo + 2.5) * 12,
+      fimX + Math.cos(angulo - 2.5) * 12,
+      fimY + Math.sin(angulo - 2.5) * 12,
+    );
   }
 
   /** Arestas entre regiões diferentes (ou na borda do mapa) em dourado. */
@@ -173,6 +184,20 @@ export class CenaMapa extends Phaser.Scene {
       this.rotulos.push(this.add.text(x, y - 16, ICONE_TERRENO[t.terreno], { ...estilo, fontSize: '20px' }).setOrigin(0.5));
     }
     this.rotulos.push(this.add.text(x, y + 6, t.nome, { ...estilo, fontSize: '13px', wordWrap: { width: 110 } }).setOrigin(0.5));
+    // Estrutura do território num canto do ícone; meio apagada enquanto está em construção.
+    const estrutura = this.opcoes.dados.estruturas.get(t.id);
+    if (estrutura) {
+      // Selo redondo escuro para o ícone se destacar sobre qualquer cor de território.
+      const [ix, iy] = [x + (t.cidade_principal ? 32 : 22), y - 14];
+      const emObra = estrutura.prontoEm > Date.now();
+      const g = this.camadaBandeiras!;
+      g.fillStyle(0x1c1410, emObra ? 0.55 : 0.9);
+      g.fillCircle(ix, iy, 12);
+      g.lineStyle(2, emObra ? 0x8a7a66 : 0xffe08a, 1);
+      g.strokeCircle(ix, iy, 12);
+      const icone = this.add.text(ix, iy, ICONE_ESTRUTURA[estrutura.tipo], { ...estilo, fontSize: '14px', strokeThickness: 0 });
+      this.rotulos.push(icone.setOrigin(0.5).setAlpha(emObra ? 0.5 : 1));
+    }
   }
 
   /** Bandeirinha: mastro escuro e flâmula com rabo de andorinha na cor do jogador. (x, y) = base do mastro. */

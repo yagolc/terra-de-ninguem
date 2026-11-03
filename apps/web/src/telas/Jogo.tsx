@@ -2,6 +2,7 @@ import type { Session } from '@supabase/supabase-js';
 import { Suspense, lazy, useEffect, useState } from 'react';
 import NavegacaoInferior, { ABAS, type Aba } from '../componentes/NavegacaoInferior';
 import { supabase } from '../lib/supabase';
+import { buscarMarchasVistas } from '../lib/useMapa';
 import { contarNaoLidos } from '../lib/useRelatorios';
 import Cidade from './Cidade';
 import FimDeTemporada from './FimDeTemporada';
@@ -27,6 +28,8 @@ export default function Jogo({ sessao }: { sessao: Session }) {
   // undefined = carregando; null = nenhuma temporada ativa (mostra o fim da última).
   const [temporada, setTemporada] = useState<number | null | undefined>(undefined);
   const [naoLidos, setNaoLidos] = useState(0);
+  // Marchas inimigas que as torres do jogador avistam (aviso vermelho na aba Mapa).
+  const [ameacas, setAmeacas] = useState(0);
 
   // Aviso de relatórios novos: confere ao trocar de aba e a cada minuto (as batalhas são resolvidas de minuto em minuto).
   useEffect(() => {
@@ -35,6 +38,13 @@ export default function Jogo({ sessao }: { sessao: Session }) {
       return;
     }
     const conferir = () => void contarNaoLidos(sessao.user.id).then(setNaoLidos);
+    conferir();
+    const t = setInterval(conferir, 60_000);
+    return () => clearInterval(t);
+  }, [aba, sessao.user.id]);
+
+  useEffect(() => {
+    const conferir = () => void buscarMarchasVistas().then((m) => setAmeacas(m.length));
     conferir();
     const t = setInterval(conferir, 60_000);
     return () => clearInterval(t);
@@ -88,6 +98,9 @@ export default function Jogo({ sessao }: { sessao: Session }) {
                 {item.id === 'relatorios' && naoLidos > 0 && (
                   <span className="ml-1.5 rounded-full bg-sangue px-1.5 text-[11px] font-bold text-pergaminho">{naoLidos}</span>
                 )}
+                {item.id === 'mapa' && ameacas > 0 && (
+                  <span className="ml-1.5 rounded-full bg-sangue px-1.5 text-[11px] font-bold text-pergaminho">⚠️ {ameacas}</span>
+                )}
               </button>
             ))}
           </nav>
@@ -127,7 +140,7 @@ export default function Jogo({ sessao }: { sessao: Session }) {
         )}
       </main>
 
-      {temporada !== null && <NavegacaoInferior aba={aba} onMudar={irPara} naoLidos={naoLidos} />}
+      {temporada !== null && <NavegacaoInferior aba={aba} onMudar={irPara} naoLidos={naoLidos} ameacas={ameacas} />}
     </div>
   );
 }

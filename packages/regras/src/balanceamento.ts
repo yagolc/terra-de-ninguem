@@ -1,6 +1,6 @@
 // TODOS os números de balanceamento do jogo ficam aqui. Valores provisórios até o playtest (Épico 8).
 // Tempos em minutos/segundos e taxas "por hora" para facilitar a leitura; as funções convertem para ms.
-import type { Recursos, TipoPredio, TipoUnidade } from './tipos.ts';
+import type { Recursos, TipoEstrutura, TipoPredio, TipoUnidade } from './tipos.ts';
 
 type ConfigPredio = {
   /** Custo para construir o nível 1. Os níveis seguintes multiplicam por `crescimentoCusto`. */
@@ -148,6 +148,17 @@ export const BALANCEAMENTO = {
   marcha: {
     duracaoMinimaMin: 10,
   },
+
+  /** Estruturas dos territórios: pagas com comida e ouro, uma por território, destruídas se o território for conquistado. */
+  estruturas: {
+    torre: { custo: { comida: 80, madeira: 0, ouro: 40 }, tempoMin: 20 },
+    palicada: { custo: { comida: 150, madeira: 0, ouro: 60 }, tempoMin: 30 },
+    entreposto: { custo: { comida: 120, madeira: 0, ouro: 50 }, tempoMin: 30 },
+  } satisfies Record<TipoEstrutura, { custo: Recursos; tempoMin: number }>,
+  /** Bônus de defesa da paliçada no território dela (soma com a muralha na cidade). */
+  bonusPalicada: 0.2,
+  /** O entreposto multiplica o bônus de produção do terreno (2 = +10% vira +20%). */
+  multiplicadorEntreposto: 2,
 
   reconhecimento: {
     /** Custo de mandar um batedor. */

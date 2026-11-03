@@ -11,10 +11,14 @@ export const BONUS_DO_TERRENO: Record<Terreno, Recurso> = {
   montanha: 'ouro',
 };
 
-/** Soma o bônus de produção dos territórios de um jogador (um item por território). */
-export function bonusDeTerritorios(bonusDeCada: Recurso[]): Recursos {
+/**
+ * Soma o bônus de produção dos territórios de um jogador (um item por território). `comEntreposto` lista o
+ * recurso dos territórios que têm entreposto pronto: o bônus deles é multiplicado.
+ */
+export function bonusDeTerritorios(bonusDeCada: Recurso[], comEntreposto: Recurso[] = []): Recursos {
   const total = recursos();
   for (const r of bonusDeCada) total[r] += BALANCEAMENTO.mapa.bonusTerritorio;
+  for (const r of comEntreposto) total[r] += BALANCEAMENTO.mapa.bonusTerritorio * (BALANCEAMENTO.multiplicadorEntreposto - 1);
   return total;
 }
 

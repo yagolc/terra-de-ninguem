@@ -8,6 +8,8 @@ import CanvasMapa from '../mapa/CanvasMapa';
 import { COR_NEUTRA, corDoJogador, useMapa } from '../lib/useMapa';
 import { UNIDADES_INFO, formatarDuracao } from '../lib/textos';
 
+type Etiqueta = 'legenda' | 'marchas' | 'ameacas';
+
 /** Tela Mapa: carregada sob demanda (o Phaser só baixa quando o jogador abre a aba). */
 export default function Mapa({ sessao }: { sessao: Session }) {
   const { dados, erro, recarregar } = useMapa();
@@ -15,8 +17,8 @@ export default function Mapa({ sessao }: { sessao: Session }) {
   const [modo, setModo] = useState<'detalhe' | 'ataque' | 'movimento'>('detalhe');
   const [aviso, setAviso] = useState<string | null>(null);
   const [agora, setAgora] = useState(() => Date.now());
-  // No celular, legenda e marchas ficam recolhidas em etiquetas para não tampar o mapa.
-  const [aberto, setAberto] = useState<'legenda' | 'marchas' | null>(null);
+  // No celular, legenda, marchas e ameaças ficam recolhidas em etiquetas para não tampar o mapa.
+  const [aberto, setAberto] = useState<Etiqueta | null>(null);
   const meuId = sessao.user.id;
 
   useEffect(() => {
@@ -39,7 +41,8 @@ export default function Mapa({ sessao }: { sessao: Session }) {
   const legenda = [...presentes].map((id) => dados.jogadores.get(id)).filter((j) => !!j);
   const nomeDe = (id: string) => dados.territorios.find((t) => t.id === id)?.nome ?? '?';
   const proximaChegada = Math.min(...dados.marchas.map((m) => m.chegadaEm));
-  const alternar = (qual: 'legenda' | 'marchas') => setAberto((atual) => (atual === qual ? null : qual));
+  const alternar = (qual: Etiqueta) => setAberto((atual) => (atual === qual ? null : qual));
+  const ameacas = dados.marchasVistas;
 
   function selecionar(id: string | null) {
     setSelecionado(id);
@@ -52,7 +55,17 @@ export default function Mapa({ sessao }: { sessao: Session }) {
       <CanvasMapa dados={dados} meuId={meuId} selecionado={selecionado} onSelecionar={selecionar} />
 
       <div className="pointer-events-none absolute left-3 top-3 max-w-[calc(100%-1.5rem)] space-y-2 md:max-w-[60%]">
-        <div className="pointer-events-auto flex gap-2 md:hidden">
+        <div className="pointer-events-auto flex flex-wrap gap-2 md:hidden">
+          {ameacas.length > 0 && (
+            <button
+              onClick={() => alternar('ameacas')}
+              aria-expanded={aberto === 'ameacas'}
+              className={`rounded-full border bg-sangue/85 px-3 py-1.5 text-xs font-semibold text-pergaminho backdrop-blur ${aberto === 'ameacas' ? 'border-ouro' : 'border-sangue'}`}
+            >
+              ⚠️ {ameacas.length} vindo ·{' '}
+              <span className="tabular-nums">{ameacas[0]!.chegadaEm > agora ? formatarDuracao(ameacas[0]!.chegadaEm - agora) : 'chegando…'}</span>
+            </button>
+          )}
           <button
             onClick={() => alternar('legenda')}
             aria-expanded={aberto === 'legenda'}
@@ -76,6 +89,24 @@ export default function Mapa({ sessao }: { sessao: Session }) {
             </button>
           )}
         </div>
+
+        {ameacas.length > 0 && (
+          <div
+            className={`rounded-lg border border-sangue bg-noite/90 px-3 py-2 text-xs backdrop-blur md:block ${aberto === 'ameacas' ? 'block' : 'hidden'}`}
+          >
+            <p className="mb-1 font-semibold text-red-300">⚠️ Suas torres avistam</p>
+            <ul className="space-y-1">
+              {ameacas.map((m) => (
+                <li key={m.id}>
+                  {dados.jogadores.get(m.jogadorId)?.nome ?? 'Alguém'}:{' '}
+                  {m.tipo === 'reconhecimento' ? '🔭 batedor' : `${m.tipo === 'saque' ? '💰' : '🚩'} ${m.soldados} soldados`} → {nomeDe(m.destinoId)}
+                  {' · '}
+                  <span className="tabular-nums">{m.chegadaEm > agora ? formatarDuracao(m.chegadaEm - agora) : 'chegando…'}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div
           className={`rounded-lg border border-couro bg-noite/85 px-3 py-2 text-xs backdrop-blur md:block ${aberto === 'legenda' ? 'block' : 'hidden'}`}
@@ -183,6 +214,10 @@ export default function Mapa({ sessao }: { sessao: Session }) {
               onAtacar={() => setModo('ataque')}
               onMover={() => setModo('movimento')}
               onBatedorEnviado={(mensagem) => {
+                setAviso(mensagem);
+                void recarregar();
+              }}
+              onConstruido={(mensagem) => {
                 setAviso(mensagem);
                 void recarregar();
               }}

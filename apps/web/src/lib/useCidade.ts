@@ -60,6 +60,7 @@ function converter(
   territorios: TerritorioDoJogador[],
   tropas: LinhaTropas[],
   marchas: LinhaTropas[],
+  comEntreposto: Set<string>,
 ): CidadeSalva {
   const predios = Object.fromEntries(TIPOS_PREDIO.map((tipo) => [tipo, 0])) as NiveisPredios;
   for (const p of linha.predios) predios[p.tipo] = p.nivel;
@@ -67,7 +68,10 @@ function converter(
     obras: linha.obras
       .map((o) => ({ tipo: o.tipo, prontoEm: Date.parse(o.pronto_em) }))
       .sort((a, b) => a.prontoEm - b.prontoEm),
-    bonus: bonusDeTerritorios(territorios.map((t) => t.bonus_recurso)),
+    bonus: bonusDeTerritorios(
+      territorios.map((t) => t.bonus_recurso),
+      territorios.filter((t) => comEntreposto.has(t.id)).map((t) => t.bonus_recurso),
+    ),
     tropas: somarExercitos(exercito(), ...tropas.map((t) => exercito(t))),
     emMarcha: somarExercitos(exercito(), ...marchas.map((m) => exercito(m))),
     fila: linha.filas_treino
@@ -102,7 +106,7 @@ async function buscarCidade(jogadorId: string): Promise<CidadeSalva | null> {
   if (error) throw new Error('Não foi possível carregar sua cidade.');
   if (!data) return null;
 
-  const [territorios, tropas, marchas] = await Promise.all([
+  const [territorios, tropas, marchas, entrepostos] = await Promise.all([
     supabase
       .from('territorios')
       .select('id, nome, terreno, bonus_recurso')
@@ -122,9 +126,21 @@ async function buscarCidade(jogadorId: string): Promise<CidadeSalva | null> {
       .eq('jogador_id', jogadorId)
       .eq('status', 'a_caminho')
       .returns<LinhaTropas[]>(),
+    // Entrepostos prontos: dobram o bônus do território, como no servidor.
+    supabase
+      .from('estruturas')
+      .select('territorio_id')
+      .eq('temporada_id', data.temporada_id)
+      .eq('jogador_id', jogadorId)
+      .eq('tipo', 'entreposto')
+      .lte('pronto_em', new Date().toISOString())
+      .returns<{ territorio_id: string }[]>(),
   ]);
-  if (!territorios.data || !tropas.data || !marchas.data) throw new Error('Não foi possível carregar seus territórios e tropas.');
-  return converter(data, territorios.data, tropas.data, marchas.data);
+  if (!territorios.data || !tropas.data || !marchas.data || !entrepostos.data) {
+    throw new Error('Não foi possível carregar seus territórios e tropas.');
+  }
+  const comEntreposto = new Set(entrepostos.data.map((e) => e.territorio_id));
+  return converter(data, territorios.data, tropas.data, marchas.data, comEntreposto);
 }
 
 /**

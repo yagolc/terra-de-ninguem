@@ -1,7 +1,9 @@
 import {
+  BALANCEAMENTO,
   MENSAGENS_ATAQUE,
   TIPOS_UNIDADE,
   duracaoMarchaMs,
+  estruturaAtiva,
   exercito,
   fimProtecaoIniciante,
   mapearExercito,
@@ -46,6 +48,7 @@ export default function PainelAtaque({ dados, alvoId, meuId, agora, onVoltar, on
   const origem = dados.territorios.find((t) => t.id === origemId);
   const disponiveis = dados.minhasTropas.get(origemId) ?? exercito();
   const dono = alvo.dono_id ? dados.jogadores.get(alvo.dono_id) : null;
+  const palicada = estruturaAtiva(dados.estruturas.get(alvoId), 'palicada', agora);
   const verificacao = verificarAtaque({
     tipo,
     enviar,
@@ -93,7 +96,13 @@ export default function PainelAtaque({ dados, alvoId, meuId, agora, onVoltar, on
           reconhecimento={dados.reconhecimentos.get(alvoId)!}
           agora={agora}
           nomeDono={dono ? dono.nome : 'Bárbaros'}
+          palicada={palicada}
         />
+      )}
+      {palicada && !dados.reconhecimentos.get(alvoId) && (
+        <p className="rounded-lg bg-noite/60 px-3 py-2 text-sm">
+          🪵 Este território tem paliçada: +{Math.round(BALANCEAMENTO.bonusPalicada * 100)}% de defesa.
+        </p>
       )}
 
       {origens.length === 0 ? (

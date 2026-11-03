@@ -3,6 +3,7 @@ export * from './aleatorio.ts';
 export * from './ataques.ts';
 export * from './balanceamento.ts';
 export * from './batalha.ts';
+export * from './estruturas.ts';
 export * from './marcha.ts';
 export * from './mensagens.ts';
 export * from './objetivos.ts';

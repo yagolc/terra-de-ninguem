@@ -97,11 +97,20 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
   const grupoDefensor = defensor ? grupoEm(defensor, destino.id) : null;
   const exercitoDefensor = grupoDefensor ? grupoDefensor.tropas : exercito(barbaros);
 
+  // Paliçada pronta no território atacado (só jogadores constroem; bárbaros não têm).
+  const [comPalicada] = defensor
+    ? await tx`
+        select 1 from estruturas
+         where territorio_id = ${destino.id} and tipo = 'palicada' and pronto_em <= ${new Date(agora)}`
+    : [];
+  const palicada = !!comPalicada;
+
   const batalha = resolverBatalha({
     atacante: atacanteDaMarcha,
     defensor: exercitoDefensor,
     terreno: destino.terreno,
     nivelMuralha: defensor && destino.cidade_principal ? defensor.estado.predios.muralha : 0,
+    palicada,
     sorte: sortearSorte(geradorComSemente(sementeDeTexto(m.id))),
     alvoCidadePrincipal: destino.cidade_principal,
   });
@@ -123,6 +132,8 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
   if (conquistou) {
     // O atacante fica no território; os sobreviventes do defensor recuam para a cidade dele (bárbaros se dispersam).
     await tx`update territorios set dono_id = ${m.jogador_id} where id = ${destino.id}`;
+    // A estrutura do território (pronta ou em obra) é destruída na conquista.
+    await tx`delete from estruturas where territorio_id = ${destino.id}`;
     grupoEm(atacante, destino.id).tropas = batalha.sobreviventesAtacante;
     if (defensor && grupoDefensor) {
       grupoDefensor.tropas = exercito();
@@ -163,6 +174,7 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
               terreno: destino.terreno,
               cidadePrincipal: destino.cidade_principal,
               muralha: defensor && destino.cidade_principal ? defensor.estado.predios.muralha : 0,
+              palicada,
               forcaAtaque: batalha.forcaAtaque,
               forcaDefesa: batalha.forcaDefesa,
               margem: Number.isFinite(batalha.margem) ? batalha.margem : null,

@@ -77,6 +77,20 @@ describe('modificadores do defensor', () => {
     expect(forcaDefesa(defensor, atacante, 'montanha', 0)).toBeCloseTo(base * (1 + BALANCEAMENTO.batalha.bonusMontanha));
   });
 
+  it('a paliçada dá bônus geral de defesa e soma com a muralha', () => {
+    const { bonusMuralhaPorNivel } = BALANCEAMENTO.batalha;
+    expect(forcaDefesa(defensor, atacante, 'planicie', 0, true)).toBeCloseTo(base * (1 + BALANCEAMENTO.bonusPalicada));
+    expect(forcaDefesa(defensor, atacante, 'planicie', 2, true)).toBeCloseTo(
+      base * (1 + 2 * bonusMuralhaPorNivel) * (1 + BALANCEAMENTO.bonusPalicada),
+    );
+  });
+
+  it('com paliçada, um ataque que venceria pode perder', () => {
+    const entrada = { atacante: exercito({ lanceiro: 80 }), defensor: exercito({ lanceiro: 50 }), sorte: 0 };
+    expect(batalha(entrada).vencedor).toBe('atacante');
+    expect(batalha({ ...entrada, palicada: true }).vencedor).toBe('defensor');
+  });
+
   it('floresta dá bônus só aos arqueiros', () => {
     const soLanceiros = exercito({ lanceiro: 40 });
     expect(forcaDefesa(soLanceiros, atacante, 'floresta', 0)).toBe(forcaDefesa(soLanceiros, atacante, 'planicie', 0));

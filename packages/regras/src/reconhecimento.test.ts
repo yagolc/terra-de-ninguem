@@ -37,6 +37,13 @@ describe('analisarDefesa', () => {
     });
   });
 
+  it('com paliçada, pede mais tropas', () => {
+    const defensor = exercito({ lanceiro: 20, arqueiro: 10 });
+    const sem = analisarDefesa({ defensor, terreno: 'planicie', nivelMuralha: 0 }).necessariosParaConquistar;
+    const com = analisarDefesa({ defensor, terreno: 'planicie', nivelMuralha: 0, palicada: true }).necessariosParaConquistar;
+    expect(com.cavalaria).toBeGreaterThan(sem.cavalaria);
+  });
+
   it('o triângulo aparece na recomendação: contra arqueiros, cavalaria é a melhor', () => {
     const r = analisarDefesa({ defensor: exercito({ arqueiro: 20 }), terreno: 'planicie', nivelMuralha: 0 });
     expect(r.melhorTipo).toBe('cavalaria');

@@ -1,6 +1,14 @@
-import { BALANCEAMENTO, BONUS_DO_TERRENO, TIPOS_UNIDADE, capacidadeArmazem, limitePopulacao, protecaoArmazem } from '@terra/regras';
+import {
+  BALANCEAMENTO,
+  BONUS_DO_TERRENO,
+  TIPOS_ESTRUTURA,
+  TIPOS_UNIDADE,
+  capacidadeArmazem,
+  limitePopulacao,
+  protecaoArmazem,
+} from '@terra/regras';
 import type { ReactNode } from 'react';
-import { PREDIOS, RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO } from '../lib/textos';
+import { ESTRUTURAS_INFO, PREDIOS, RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO } from '../lib/textos';
 
 const B = BALANCEAMENTO;
 const pct = (fracao: number) => `${Math.round(fracao * 100)}%`;
@@ -155,6 +163,25 @@ export default function Regras() {
           No painel de um território vizinho, mande um <b>batedor</b> por {B.reconhecimento.custoOuro} 🪙. Quando ele volta, você vê as
           tropas que estavam lá, o terreno, a muralha e quantas unidades de cada tipo conquistam mesmo com o azar máximo. A informação é
           daquele momento: a defesa pode mudar depois.
+        </p>
+      </Secao>
+
+      <Secao icone="🏗️" titulo="Estruturas nos territórios">
+        <p>
+          No painel de um território seu (a cidade também conta), construa <b>uma estrutura</b>. Elas custam comida e ouro, não usam a
+          fila de obras da cidade e aparecem no mapa para todos. <b>Se o território for conquistado, a estrutura é destruída.</b>
+        </p>
+        <ul className="space-y-1">
+          {TIPOS_ESTRUTURA.map((t) => (
+            <li key={t}>
+              {ESTRUTURAS_INFO[t].icone} <b>{ESTRUTURAS_INFO[t].nome}</b> ({custo(B.estruturas[t].custo)}, {B.estruturas[t].tempoMin} min):{' '}
+              {ESTRUTURAS_INFO[t].descricao}
+            </li>
+          ))}
+        </ul>
+        <p>
+          A torre não mostra de que tipo são os soldados: para isso, ainda é preciso um batedor. Quando ela avista alguém, a aba Mapa
+          ganha um aviso ⚠️ vermelho.
         </p>
       </Secao>
 

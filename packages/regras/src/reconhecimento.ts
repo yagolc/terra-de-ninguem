@@ -39,10 +39,10 @@ export type AnaliseDefesa = {
 
 /**
  * Estima o ataque necessário contra uma defesa observada, com as mesmas regras da batalha:
- * triângulo de vantagens, terreno, muralha, margem de conquista e a sorte no pior caso (−10%).
+ * triângulo de vantagens, terreno, muralha, paliçada, margem de conquista e a sorte no pior caso (−10%).
  */
-export function analisarDefesa(entrada: { defensor: Exercito; terreno: Terreno; nivelMuralha: number }): AnaliseDefesa {
-  const { defensor, terreno, nivelMuralha } = entrada;
+export function analisarDefesa(entrada: { defensor: Exercito; terreno: Terreno; nivelMuralha: number; palicada?: boolean }): AnaliseDefesa {
+  const { defensor, terreno, nivelMuralha, palicada } = entrada;
   const { margemConquista, sorteMaxima } = BALANCEAMENTO.batalha;
   const necessarios = exercito();
   if (totalUnidades(defensor) === 0) {
@@ -52,7 +52,7 @@ export function analisarDefesa(entrada: { defensor: Exercito; terreno: Terreno; 
   const total = totalUnidades(defensor);
   for (const tipo of TIPOS_UNIDADE) {
     // Defesa contra um exército só desse tipo (a proporção importa, não o tamanho).
-    const defesa = forcaDefesa(defensor, exercito({ [tipo]: 1 }), terreno, nivelMuralha);
+    const defesa = forcaDefesa(defensor, exercito({ [tipo]: 1 }), terreno, nivelMuralha, palicada);
     const vantagem = TIPOS_UNIDADE.reduce((soma, alvo) => soma + (defensor[alvo] / total) * multiplicadorVantagem(tipo, alvo), 0);
     const ataquePorUnidade = BALANCEAMENTO.unidades[tipo].ataque * vantagem * (1 - sorteMaxima);
     necessarios[tipo] = Math.max(1, Math.ceil((defesa * margemConquista) / ataquePorUnidade));

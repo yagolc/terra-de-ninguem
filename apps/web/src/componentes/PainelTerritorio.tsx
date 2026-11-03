@@ -1,9 +1,10 @@
-import { BALANCEAMENTO, TIPOS_UNIDADE, totalUnidades } from '@terra/regras';
+import { BALANCEAMENTO, TIPOS_UNIDADE, estruturaAtiva, totalUnidades } from '@terra/regras';
 import { COR_NEUTRA, corDoJogador, type DadosMapa } from '../lib/useMapa';
-import { RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarDuracao } from '../lib/textos';
+import { ESTRUTURAS_INFO, RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarDuracao } from '../lib/textos';
 import { useState } from 'react';
 import { chamarFuncao } from '../lib/funcoes';
 import InfoReconhecimento from './InfoReconhecimento';
+import PainelConstrucao from './PainelConstrucao';
 import { origensPossiveis } from './PainelAtaque';
 
 type Props = {
@@ -15,11 +16,23 @@ type Props = {
   onMover: () => void;
   /** Batedor enviado: mostra o aviso e relê o mapa. */
   onBatedorEnviado: (mensagem: string) => void;
+  /** Estrutura em construção: mostra o aviso e relê o mapa. */
+  onConstruido: (mensagem: string) => void;
   agora: number;
 };
 
 /** Detalhes do território tocado no mapa. */
-export default function PainelTerritorio({ dados, id, meuId, onSelecionar, onAtacar, onMover, onBatedorEnviado, agora }: Props) {
+export default function PainelTerritorio({
+  dados,
+  id,
+  meuId,
+  onSelecionar,
+  onAtacar,
+  onMover,
+  onBatedorEnviado,
+  onConstruido,
+  agora,
+}: Props) {
   const [enviandoBatedor, setEnviandoBatedor] = useState(false);
   const [erroBatedor, setErroBatedor] = useState<string | null>(null);
   const t = dados.territorios.find((x) => x.id === id);
@@ -38,6 +51,9 @@ export default function PainelTerritorio({ dados, id, meuId, onSelecionar, onAta
   const escudo = fimEscudo && fimEscudo > agora ? fimEscudo : null;
   const reconhecimento = dados.reconhecimentos.get(t.id);
   const batedorACaminho = dados.marchas.some((m) => m.tipo === 'reconhecimento' && m.destinoId === t.id);
+  const estrutura = dados.estruturas.get(t.id);
+  const torre = meu && estruturaAtiva(estrutura, 'torre', agora);
+  const vindo = torre ? dados.marchasVistas.filter((m) => m.destinoId === t.id) : [];
 
   async function enviarBatedor() {
     // Sai do território próprio vizinho mais perto do alvo.
@@ -95,9 +111,40 @@ export default function PainelTerritorio({ dados, id, meuId, onSelecionar, onAta
         </dd>
         <dt className="text-pergaminho-escuro">Bônus</dt>
         <dd>
-          +{bonus}% de {RECURSOS_INFO[t.bonus_recurso].nome.toLowerCase()} para o dono
+          +{estruturaAtiva(estrutura, 'entreposto', agora) ? bonus * BALANCEAMENTO.multiplicadorEntreposto : bonus}% de{' '}
+          {RECURSOS_INFO[t.bonus_recurso].nome.toLowerCase()} para o dono
         </dd>
+        {estrutura && (
+          <>
+            <dt className="text-pergaminho-escuro">Estrutura</dt>
+            <dd>
+              {ESTRUTURAS_INFO[estrutura.tipo].icone} {ESTRUTURAS_INFO[estrutura.tipo].nome}
+              {estrutura.prontoEm > agora && (
+                <span className="text-pergaminho-escuro"> · em construção, pronta em {formatarDuracao(estrutura.prontoEm - agora)}</span>
+              )}
+              <span className="block text-xs text-pergaminho-escuro">{ESTRUTURAS_INFO[estrutura.tipo].descricao}</span>
+            </dd>
+          </>
+        )}
       </dl>
+
+      {torre && (
+        <div className={`rounded-lg border px-3 py-2 text-sm ${vindo.length > 0 ? 'border-sangue/70 bg-sangue/15' : 'border-couro bg-noite/60'}`}>
+          <p className="font-semibold">{vindo.length > 0 ? '⚠️ A torre avista marchas vindo' : '🗼 A torre não avista ninguém vindo'}</p>
+          <ul className="mt-1 space-y-1">
+            {vindo.map((m) => (
+              <li key={m.id} className="text-xs">
+                {dados.jogadores.get(m.jogadorId)?.nome ?? 'Alguém'}:{' '}
+                {m.tipo === 'reconhecimento'
+                  ? '🔭 batedor'
+                  : `${m.tipo === 'saque' ? '💰 saque' : '🚩 conquista'} com ${m.soldados} ${m.soldados === 1 ? 'soldado' : 'soldados'}`}{' '}
+                vindo de {dados.territorios.find((x) => x.id === m.origemId)?.nome ?? '?'} · chega em{' '}
+                <span className="tabular-nums">{m.chegadaEm > agora ? formatarDuracao(m.chegadaEm - agora) : 'instantes'}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {minhas && totalUnidades(minhas) > 0 && (
         <div className="rounded-lg bg-noite/60 px-3 py-2 text-sm">
@@ -113,6 +160,8 @@ export default function PainelTerritorio({ dados, id, meuId, onSelecionar, onAta
           </button>
         </div>
       )}
+
+      {meu && !estrutura && <PainelConstrucao territorioId={t.id} meuId={meuId} onConstruido={onConstruido} />}
 
       <div>
         <h3 className="mb-1.5 text-sm text-pergaminho-escuro">Vizinhos ({vizinhos.length})</h3>
@@ -140,6 +189,7 @@ export default function PainelTerritorio({ dados, id, meuId, onSelecionar, onAta
           reconhecimento={reconhecimento}
           agora={agora}
           nomeDono={reconhecimento.donoId ? (dados.jogadores.get(reconhecimento.donoId)?.nome ?? 'Defensor') : 'Bárbaros'}
+          palicada={estruturaAtiva(estrutura, 'palicada', agora)}
         />
       )}
 

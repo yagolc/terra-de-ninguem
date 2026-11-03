@@ -1,4 +1,4 @@
-import { BALANCEAMENTO, type Objetivo, type Recurso, type Terreno, type TipoPredio, type TipoUnidade } from '@terra/regras';
+import { BALANCEAMENTO, type Objetivo, type Recurso, type Terreno, type TipoEstrutura, type TipoPredio, type TipoUnidade } from '@terra/regras';
 
 export const TERRENOS_INFO: Record<Terreno, { nome: string; icone: string; efeito: string }> = {
   planicie: { nome: 'Planície', icone: '🌾', efeito: 'sem bônus de defesa' },
@@ -21,6 +21,24 @@ export const UNIDADES_INFO: Record<TipoUnidade, { nome: string; plural: string; 
   lanceiro: { nome: 'Lanceiro', plural: 'Lanceiros', icone: '🔱', descricao: 'Barato e bom na defesa. Vence a cavalaria.' },
   arqueiro: { nome: 'Arqueiro', plural: 'Arqueiros', icone: '🏹', descricao: 'Dano alto, pouca resistência. Vence lanceiros.' },
   cavalaria: { nome: 'Cavalaria', plural: 'Cavalaria', icone: '🐎', descricao: 'Rápida, cara, ótima no saque. Vence arqueiros.' },
+};
+
+export const ESTRUTURAS_INFO: Record<TipoEstrutura, { nome: string; icone: string; descricao: string }> = {
+  torre: {
+    nome: 'Torre de vigia',
+    icone: '🗼',
+    descricao: 'Mostra marchas e batedores vindo para este território: de quem, quantos soldados e quando chegam.',
+  },
+  palicada: {
+    nome: 'Paliçada',
+    icone: '🪵',
+    descricao: `+${Math.round(BALANCEAMENTO.bonusPalicada * 100)}% de defesa neste território (na cidade, soma com a muralha).`,
+  },
+  entreposto: {
+    nome: 'Entreposto',
+    icone: '🏪',
+    descricao: `Multiplica por ${BALANCEAMENTO.multiplicadorEntreposto} o bônus de produção do terreno deste território.`,
+  },
 };
 
 export const RECURSOS_INFO: Record<Recurso, { nome: string; icone: string }> = {

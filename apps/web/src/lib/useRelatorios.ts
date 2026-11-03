@@ -9,6 +9,8 @@ export type DadosBatalha = {
   terreno: Terreno;
   cidadePrincipal: boolean;
   muralha: number;
+  /** Ausente nos relatórios de antes das estruturas. */
+  palicada?: boolean;
   forcaAtaque: number;
   forcaDefesa: number;
   margem: number | null;

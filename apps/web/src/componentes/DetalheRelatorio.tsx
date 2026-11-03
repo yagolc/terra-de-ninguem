@@ -23,6 +23,7 @@ export default function DetalheRelatorio({ relatorio, nomeDefensor }: { relatori
   const bonus: string[] = [];
   if (d.terreno !== 'planicie') bonus.push(`${TERRENOS_INFO[d.terreno].icone} ${TERRENOS_INFO[d.terreno].efeito}`);
   if (d.muralha > 0) bonus.push(`🧱 muralha nível ${d.muralha}`);
+  if (d.palicada) bonus.push('🪵 paliçada');
 
   return (
     <div className="space-y-3 text-sm">

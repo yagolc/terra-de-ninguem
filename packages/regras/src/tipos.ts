@@ -12,6 +12,10 @@ export type TipoPredio = (typeof TIPOS_PREDIO)[number];
 /** Nível de cada prédio da cidade; 0 = ainda não construído. */
 export type NiveisPredios = Record<TipoPredio, number>;
 
+/** Estruturas que se constroem nos territórios (uma por território). */
+export const TIPOS_ESTRUTURA = ['torre', 'palicada', 'entreposto'] as const;
+export type TipoEstrutura = (typeof TIPOS_ESTRUTURA)[number];
+
 export const TERRENOS = ['planicie', 'floresta', 'montanha'] as const;
 export type Terreno = (typeof TERRENOS)[number];
 
