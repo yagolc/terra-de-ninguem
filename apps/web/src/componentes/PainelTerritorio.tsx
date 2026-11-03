@@ -117,13 +117,22 @@ export default function PainelTerritorio({
         {estrutura && (
           <>
             <dt className="text-pergaminho-escuro">Estrutura</dt>
-            <dd>
-              {ESTRUTURAS_INFO[estrutura.tipo].icone} {ESTRUTURAS_INFO[estrutura.tipo].nome}
-              {estrutura.prontoEm > agora && (
-                <span className="text-pergaminho-escuro"> · em construção, pronta em {formatarDuracao(estrutura.prontoEm - agora)}</span>
-              )}
-              <span className="block text-xs text-pergaminho-escuro">{ESTRUTURAS_INFO[estrutura.tipo].descricao}</span>
-            </dd>
+            {estrutura.tipo ? (
+              <dd>
+                {ESTRUTURAS_INFO[estrutura.tipo].icone} {ESTRUTURAS_INFO[estrutura.tipo].nome}
+                {estrutura.prontoEm > agora && (
+                  <span className="text-pergaminho-escuro"> · em construção, pronta em {formatarDuracao(estrutura.prontoEm - agora)}</span>
+                )}
+                <span className="block text-xs text-pergaminho-escuro">{ESTRUTURAS_INFO[estrutura.tipo].descricao}</span>
+              </dd>
+            ) : (
+              <dd>
+                ❓ Desconhecida
+                <span className="block text-xs text-pergaminho-escuro">
+                  Pode ser torre, paliçada ou entreposto. Mande um batedor para descobrir.
+                </span>
+              </dd>
+            )}
           </>
         )}
       </dl>
@@ -189,7 +198,6 @@ export default function PainelTerritorio({
           reconhecimento={reconhecimento}
           agora={agora}
           nomeDono={reconhecimento.donoId ? (dados.jogadores.get(reconhecimento.donoId)?.nome ?? 'Defensor') : 'Bárbaros'}
-          palicada={estruturaAtiva(estrutura, 'palicada', agora)}
         />
       )}
 

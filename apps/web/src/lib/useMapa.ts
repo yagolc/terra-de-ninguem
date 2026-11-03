@@ -29,8 +29,13 @@ export type MarchaMapa = {
   chegadaEm: number;
 };
 
-/** Estrutura de um território (todas são públicas no mapa). Antes de `prontoEm` está em construção. */
-export type EstruturaMapa = { territorioId: string; jogadorId: string; tipo: TipoEstrutura; prontoEm: number };
+/**
+ * Estrutura de um território. As do jogador vêm com tipo e prazo (antes de `prontoEm` está em construção);
+ * as dos outros são secretas: só se sabe que existem (tipo e prazo nulos) até um batedor ver.
+ */
+export type EstruturaMapa =
+  | { territorioId: string; tipo: TipoEstrutura; prontoEm: number }
+  | { territorioId: string; tipo: null; prontoEm: null };
 
 /** Marcha alheia vindo para um território do jogador com torre de vigia pronta (só o total de soldados). */
 export type MarchaVista = {
@@ -50,6 +55,9 @@ export type Reconhecimento = {
   terreno: Terreno;
   muralha: number;
   tropas: Exercito;
+  /** Estrutura que o batedor viu (nula se não havia) e se já estava pronta. */
+  estrutura: TipoEstrutura | null;
+  estruturaPronta: boolean;
   observadoEm: number;
   disponivelEm: number;
   lido: boolean;
@@ -106,10 +114,14 @@ type LinhaReconhecimento = {
   lanceiro: number;
   arqueiro: number;
   cavalaria: number;
+  estrutura: TipoEstrutura | null;
+  estrutura_pronta: boolean;
   observado_em: string;
   disponivel_em: string;
   lido: boolean;
 };
+
+type LinhaEstrutura = { territorio_id: string; tipo: TipoEstrutura | null; pronto_em: string | null };
 
 type LinhaMarchaVista = {
   id: string;
@@ -143,7 +155,9 @@ export async function buscarReconhecimentos(temporadaId: string): Promise<Reconh
   if (!supabase) return [];
   const { data } = await supabase
     .from('reconhecimentos')
-    .select('territorio_id, dono_id, terreno, muralha, lanceiro, arqueiro, cavalaria, observado_em, disponivel_em, lido')
+    .select(
+      'territorio_id, dono_id, terreno, muralha, lanceiro, arqueiro, cavalaria, estrutura, estrutura_pronta, observado_em, disponivel_em, lido',
+    )
     .eq('temporada_id', temporadaId)
     .order('observado_em', { ascending: false })
     .limit(100)
@@ -154,6 +168,8 @@ export async function buscarReconhecimentos(temporadaId: string): Promise<Reconh
     terreno: r.terreno,
     muralha: r.muralha,
     tropas: exercito({ lanceiro: r.lanceiro, arqueiro: r.arqueiro, cavalaria: r.cavalaria }),
+    estrutura: r.estrutura,
+    estruturaPronta: r.estrutura_pronta,
     observadoEm: Date.parse(r.observado_em),
     disponivelEm: Date.parse(r.disponivel_em),
     lido: r.lido,
@@ -211,11 +227,8 @@ async function buscarMapa(): Promise<DadosMapa | null> {
         filas_treino: { tipo_unidade: TipoUnidade; quantidade: number; pronto_em: string }[];
       }>(),
     buscarReconhecimentos(temporada.id),
-    supabase
-      .from('estruturas')
-      .select('territorio_id, jogador_id, tipo, pronto_em')
-      .eq('temporada_id', temporada.id)
-      .returns<{ territorio_id: string; jogador_id: string; tipo: TipoEstrutura; pronto_em: string }[]>(),
+    // Tipo e prazo só nas estruturas do próprio jogador; nas outras, nulos (o batedor descobre).
+    supabase.rpc('estruturas_no_mapa', { p_temporada: temporada.id }),
     buscarMarchasVistas(),
   ]);
   if (
@@ -272,9 +285,11 @@ async function buscarMapa(): Promise<DadosMapa | null> {
     // Já vêm do mais recente para o mais antigo: o primeiro de cada território fica.
     reconhecimentos: new Map([...reconhecimentos].reverse().map((r) => [r.territorioId, r])),
     estruturas: new Map(
-      estruturas.data.map((e) => [
+      (estruturas.data as LinhaEstrutura[]).map((e): [string, EstruturaMapa] => [
         e.territorio_id,
-        { territorioId: e.territorio_id, jogadorId: e.jogador_id, tipo: e.tipo, prontoEm: Date.parse(e.pronto_em) },
+        e.tipo && e.pronto_em
+          ? { territorioId: e.territorio_id, tipo: e.tipo, prontoEm: Date.parse(e.pronto_em) }
+          : { territorioId: e.territorio_id, tipo: null, prontoEm: null },
       ]),
     ),
     marchasVistas,

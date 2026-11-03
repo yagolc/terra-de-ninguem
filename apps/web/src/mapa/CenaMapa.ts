@@ -184,18 +184,19 @@ export class CenaMapa extends Phaser.Scene {
       this.rotulos.push(this.add.text(x, y - 16, ICONE_TERRENO[t.terreno], { ...estilo, fontSize: '20px' }).setOrigin(0.5));
     }
     this.rotulos.push(this.add.text(x, y + 6, t.nome, { ...estilo, fontSize: '13px', wordWrap: { width: 110 } }).setOrigin(0.5));
-    // Estrutura do território num canto do ícone; meio apagada enquanto está em construção.
+    // Estrutura do território num canto do ícone; meio apagada enquanto está em construção. As dos outros
+    // jogadores são secretas: aparecem como ❓ até um batedor descobrir.
     const estrutura = this.opcoes.dados.estruturas.get(t.id);
     if (estrutura) {
       // Selo redondo escuro para o ícone se destacar sobre qualquer cor de território.
       const [ix, iy] = [x + (t.cidade_principal ? 32 : 22), y - 14];
-      const emObra = estrutura.prontoEm > Date.now();
+      const emObra = estrutura.prontoEm !== null && estrutura.prontoEm > Date.now();
       const g = this.camadaBandeiras!;
       g.fillStyle(0x1c1410, emObra ? 0.55 : 0.9);
       g.fillCircle(ix, iy, 12);
       g.lineStyle(2, emObra ? 0x8a7a66 : 0xffe08a, 1);
       g.strokeCircle(ix, iy, 12);
-      const icone = this.add.text(ix, iy, ICONE_ESTRUTURA[estrutura.tipo], { ...estilo, fontSize: '14px', strokeThickness: 0 });
+      const icone = this.add.text(ix, iy, estrutura.tipo ? ICONE_ESTRUTURA[estrutura.tipo] : '❓', { ...estilo, fontSize: '14px', strokeThickness: 0 });
       this.rotulos.push(icone.setOrigin(0.5).setAlpha(emObra ? 0.5 : 1));
     }
   }

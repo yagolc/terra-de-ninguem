@@ -1,18 +1,17 @@
 import { BALANCEAMENTO, TIPOS_UNIDADE, analisarDefesa, totalUnidades } from '@terra/regras';
 import type { Reconhecimento } from '../lib/useMapa';
-import { TERRENOS_INFO, UNIDADES_INFO, formatarDuracao } from '../lib/textos';
+import { ESTRUTURAS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarDuracao } from '../lib/textos';
 
 type Props = {
   reconhecimento: Reconhecimento;
   agora: number;
   nomeDono: string;
-  /** Paliçada pronta no território agora (as estruturas são públicas, então entra na conta mesmo sem o batedor). */
-  palicada?: boolean;
 };
 
-/** O que o batedor viu: tropas, terreno, muralha e quanto mandar para conquistar com folga. */
-export default function InfoReconhecimento({ reconhecimento, agora, nomeDono, palicada = false }: Props) {
-  const { tropas, terreno, muralha } = reconhecimento;
+/** O que o batedor viu: tropas, terreno, muralha, estrutura e quanto mandar para conquistar com folga. */
+export default function InfoReconhecimento({ reconhecimento, agora, nomeDono }: Props) {
+  const { tropas, terreno, muralha, estrutura, estruturaPronta } = reconhecimento;
+  const palicada = estrutura === 'palicada' && estruturaPronta;
   const analise = analisarDefesa({ defensor: tropas, terreno, nivelMuralha: muralha, palicada });
   const efeitos: string[] = [];
   if (terreno === 'floresta') efeitos.push(`🌲 floresta: arqueiros defendem +${Math.round(BALANCEAMENTO.batalha.bonusFlorestaArqueiro * 100)}%`);
@@ -38,6 +37,11 @@ export default function InfoReconhecimento({ reconhecimento, agora, nomeDono, pa
       <p className="text-xs text-pergaminho-escuro">
         {TERRENOS_INFO[terreno].icone} {TERRENOS_INFO[terreno].nome}
         {efeitos.length > 0 ? ` · ${efeitos.join(' · ')}` : ': sem bônus de defesa'}
+      </p>
+      <p className="text-xs text-pergaminho-escuro">
+        {estrutura
+          ? `${ESTRUTURAS_INFO[estrutura].icone} Estrutura: ${ESTRUTURAS_INFO[estrutura].nome}${estruturaPronta ? '' : ' (em construção quando o batedor passou)'}`
+          : '🏗️ Nenhuma estrutura'}
       </p>
       {totalUnidades(tropas) > 0 && (
         <p className="text-xs">

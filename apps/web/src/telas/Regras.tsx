@@ -168,8 +168,8 @@ export default function Regras() {
 
       <Secao icone="🏗️" titulo="Estruturas nos territórios">
         <p>
-          No painel de um território seu (a cidade também conta), construa <b>uma estrutura</b>. Elas custam comida e ouro, não usam a
-          fila de obras da cidade e aparecem no mapa para todos. <b>Se o território for conquistado, a estrutura é destruída.</b>
+          No painel de um território seu (a cidade também conta), construa <b>uma estrutura</b>. Elas custam comida e ouro e não usam a
+          fila de obras da cidade. <b>Se o território for conquistado, a estrutura é destruída.</b>
         </p>
         <ul className="space-y-1">
           {TIPOS_ESTRUTURA.map((t) => (
@@ -180,7 +180,8 @@ export default function Regras() {
           ))}
         </ul>
         <p>
-          A torre não mostra de que tipo são os soldados: para isso, ainda é preciso um batedor. Quando ela avista alguém, a aba Mapa
+          <b>As estruturas dos outros são secretas:</b> no mapa aparece só um ❓. Para saber qual é (e se já está pronta),
+          mande um batedor. A torre não mostra de que tipo são os soldados: para isso, também é preciso um batedor. Quando ela avista alguém, a aba Mapa
           ganha um aviso ⚠️ vermelho.
         </p>
       </Secao>

@@ -187,7 +187,8 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
 }
 
 /**
- * Batedor chega: anota as tropas que defendem o território (de qualquer dono), o terreno e a muralha.
+ * Batedor chega: anota as tropas que defendem o território (de qualquer dono), o terreno, a muralha e a
+ * estrutura (só o batedor descobre qual é; no mapa os outros veem só que há uma).
  * O jogador só vê o relatório quando o batedor volta (disponivel_em), e uma marcha vazia de volta
  * desenha o caminho no mapa.
  */
@@ -203,13 +204,16 @@ async function resolverReconhecimento(tx: Transacao, m: Marcha, agora: number) {
         select p.nivel from predios p join cidades c on c.id = p.cidade_id
          where c.temporada_id = ${m.temporada_id} and c.territorio_id = ${destino!.id} and p.tipo = 'muralha'`
     : [];
+  const [estrutura] = await tx<{ tipo: string; pronta: boolean }[]>`
+    select tipo, pronto_em <= ${new Date(agora)} as pronta from estruturas where territorio_id = ${m.destino_id}`;
   const volta = duracaoReconhecimentoMs(destino!, casa!);
 
   await tx`
     insert into reconhecimentos (temporada_id, jogador_id, territorio_id, dono_id, terreno, muralha,
-                                 lanceiro, arqueiro, cavalaria, observado_em, disponivel_em)
+                                 lanceiro, arqueiro, cavalaria, estrutura, estrutura_pronta, observado_em, disponivel_em)
     values (${m.temporada_id}, ${m.jogador_id}, ${destino!.id}, ${destino!.dono_id}, ${destino!.terreno}, ${muralha?.nivel ?? 0},
-            ${vistas!.lanceiro}, ${vistas!.arqueiro}, ${vistas!.cavalaria}, ${new Date(agora)}, ${new Date(agora + volta)})`;
+            ${vistas!.lanceiro}, ${vistas!.arqueiro}, ${vistas!.cavalaria}, ${estrutura?.tipo ?? null}, ${estrutura?.pronta ?? false},
+            ${new Date(agora)}, ${new Date(agora + volta)})`;
   await tx`
     insert into marchas (temporada_id, jogador_id, origem_id, destino_id, tipo, partida_em, chegada_em)
     values (${m.temporada_id}, ${m.jogador_id}, ${destino!.id}, ${m.origem_id}, 'retorno', ${new Date(agora)}, ${new Date(agora + volta)})`;

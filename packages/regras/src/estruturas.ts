@@ -16,9 +16,16 @@ export function tempoEstruturaMs(tipo: TipoEstrutura): number {
   return BALANCEAMENTO.estruturas[tipo].tempoMin * MINUTO_MS;
 }
 
-/** A estrutura do tipo pedido já está pronta (as em construção ainda não têm efeito). */
-export function estruturaAtiva(estrutura: Estrutura | null | undefined, tipo: TipoEstrutura, agora: number): boolean {
-  return !!estrutura && estrutura.tipo === tipo && estrutura.prontoEm <= agora;
+/**
+ * A estrutura do tipo pedido já está pronta (as em construção ainda não têm efeito). Aceita a estrutura
+ * secreta de outro jogador (tipo e prazo nulos), que nunca conta.
+ */
+export function estruturaAtiva(
+  estrutura: { tipo: TipoEstrutura | null; prontoEm: number | null } | null | undefined,
+  tipo: TipoEstrutura,
+  agora: number,
+): boolean {
+  return !!estrutura && estrutura.tipo === tipo && estrutura.prontoEm !== null && estrutura.prontoEm <= agora;
 }
 
 /** Confere a construção: o território é do jogador, ainda não tem estrutura (pronta ou em obra) e há recursos. */

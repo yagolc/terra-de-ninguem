@@ -36,5 +36,7 @@ describe('estruturaAtiva', () => {
     expect(estruturaAtiva(torre, 'torre', torre.prontoEm)).toBe(true);
     expect(estruturaAtiva(torre, 'palicada', torre.prontoEm)).toBe(false);
     expect(estruturaAtiva(null, 'torre', AGORA)).toBe(false);
+    // Estrutura secreta de outro jogador: o tipo não se sabe.
+    expect(estruturaAtiva({ tipo: null, prontoEm: null }, 'torre', AGORA)).toBe(false);
   });
 });
