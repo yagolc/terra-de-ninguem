@@ -1,5 +1,6 @@
 import type { Session } from '@supabase/supabase-js';
 import { Suspense, lazy, useEffect, useState } from 'react';
+import IndicadorEscudo from '../componentes/IndicadorEscudo';
 import NavegacaoInferior, { ABAS, type Aba } from '../componentes/NavegacaoInferior';
 import { supabase } from '../lib/supabase';
 import { buscarMarchasVistas } from '../lib/useMapa';
@@ -27,6 +28,9 @@ export default function Jogo({ sessao }: { sessao: Session }) {
   const [nome, setNome] = useState<string | null>(null);
   // undefined = carregando; null = nenhuma temporada ativa (mostra o fim da última).
   const [temporada, setTemporada] = useState<number | null | undefined>(undefined);
+  const [temporadaId, setTemporadaId] = useState<string | null>(null);
+  // Fim do escudo do próprio jogador (null = sem escudo).
+  const [escudoAte, setEscudoAte] = useState<number | null>(null);
   const [naoLidos, setNaoLidos] = useState(0);
   // Marchas inimigas que as torres do jogador avistam (aviso vermelho na aba Mapa).
   const [ameacas, setAmeacas] = useState(0);
@@ -50,6 +54,23 @@ export default function Jogo({ sessao }: { sessao: Session }) {
     return () => clearInterval(t);
   }, [aba, sessao.user.id]);
 
+  // O escudo nasce numa defesa perdida e some ao atacar: confere ao trocar de aba e a cada minuto.
+  useEffect(() => {
+    if (!temporadaId) return;
+    const conferir = () =>
+      void supabase
+        ?.from('protecoes')
+        .select('ate')
+        .eq('temporada_id', temporadaId)
+        .eq('jogador_id', sessao.user.id)
+        .eq('tipo', 'escudo')
+        .maybeSingle<{ ate: string }>()
+        .then(({ data }) => setEscudoAte(data ? Date.parse(data.ate) : null));
+    conferir();
+    const t = setInterval(conferir, 60_000);
+    return () => clearInterval(t);
+  }, [aba, sessao.user.id, temporadaId]);
+
   useEffect(() => {
     const aoMudarEndereco = () => setAba(abaDoEndereco());
     addEventListener('hashchange', aoMudarEndereco);
@@ -65,10 +86,13 @@ export default function Jogo({ sessao }: { sessao: Session }) {
       .then(({ data }) => setNome(data?.nome ?? null));
     supabase
       ?.from('temporadas')
-      .select('numero')
+      .select('id, numero')
       .eq('status', 'ativa')
-      .maybeSingle<{ numero: number }>()
-      .then(({ data }) => setTemporada(data?.numero ?? null));
+      .maybeSingle<{ id: string; numero: number }>()
+      .then(({ data }) => {
+        setTemporada(data?.numero ?? null);
+        setTemporadaId(data?.id ?? null);
+      });
   }, [sessao.user.id]);
 
   function irPara(nova: Aba) {
@@ -84,7 +108,10 @@ export default function Jogo({ sessao }: { sessao: Session }) {
             <img src="/escudo.svg" alt="" className="size-8" />
             <div>
               <h1 className="font-titulo text-lg leading-tight text-ouro">{nome ?? 'Terra de Ninguém'}</h1>
-              <p className="text-xs text-pergaminho-escuro">{temporada ? `Temporada ${temporada}` : ' '}</p>
+              <p className="flex flex-wrap items-center gap-x-2 text-xs text-pergaminho-escuro">
+                {temporada ? `Temporada ${temporada}` : ' '}
+                {temporada && escudoAte !== null && <IndicadorEscudo ate={escudoAte} />}
+              </p>
             </div>
           </div>
           <nav className={`gap-1 ${temporada === null ? 'hidden' : 'hidden md:flex'}`}>

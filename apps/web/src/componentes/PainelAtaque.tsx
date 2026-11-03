@@ -49,6 +49,8 @@ export default function PainelAtaque({ dados, alvoId, meuId, agora, onVoltar, on
   const dono = alvo.dono_id ? dados.jogadores.get(alvo.dono_id) : null;
   // Estrutura secreta que o batedor ainda não viu (ou que apareceu depois que ele passou).
   const estruturaDesconhecida = !!dados.estruturas.get(alvoId) && !dados.reconhecimentos.get(alvoId)?.estrutura;
+  const fimMeuEscudo = dados.escudos.get(meuId);
+  const meuEscudo = fimMeuEscudo !== undefined && fimMeuEscudo > agora ? fimMeuEscudo : null;
   const verificacao = verificarAtaque({
     tipo,
     enviar,
@@ -198,6 +200,12 @@ export default function PainelAtaque({ dados, alvoId, meuId, agora, onVoltar, on
           {duracao !== null && (
             <p className="rounded-lg bg-noite/60 px-3 py-2 text-sm">
               ⏱ Marcha de {formatarDuracao(duracao)} · chega {horario.format(new Date(agora + duracao))}
+            </p>
+          )}
+
+          {meuEscudo !== null && (
+            <p className="rounded-lg border border-ouro/40 bg-ouro/10 px-3 py-2 text-sm text-ouro-claro">
+              🛡️ Você está com escudo por mais {formatarDuracao(meuEscudo - agora)}. Atacar quebra o seu escudo.
             </p>
           )}
 
