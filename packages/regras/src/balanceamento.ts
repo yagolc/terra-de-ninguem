@@ -60,8 +60,12 @@ export const BALANCEAMENTO = {
   },
 
   armazem: {
-    capacidadeBase: 600,
-    capacidadePorNivel: 400,
+    /**
+     * Capacidade sem armazém; cada nível multiplica por `crescimentoCapacidade` (arredondada a dezenas).
+     * Cresce como os custos dos prédios, para a obra mais cara (Centro nível 10) caber no armazém máximo.
+     */
+    capacidadeBase: 1000,
+    crescimentoCapacidade: 1.23,
     /** Quanto de cada recurso fica fora do alcance do saque. */
     protecaoBase: 100,
     protecaoPorNivel: 100,

@@ -4,6 +4,7 @@ import {
   capacidadeArmazem,
   custoEvolucao,
   limitePopulacao,
+  nivelArmazemNecessario,
   niveisProjetados,
   prediosIniciais,
   protecaoArmazem,
@@ -11,7 +12,7 @@ import {
   tempoEvolucaoMs,
   verificarEvolucao,
 } from './predios.ts';
-import { TIPOS_PREDIO, type Obra } from './tipos.ts';
+import { RECURSOS, TIPOS_PREDIO, type Obra } from './tipos.ts';
 import { MINUTO_MS, recursos } from './util.ts';
 
 const RICO = recursos({ comida: 1e9, madeira: 1e9, ouro: 1e9 });
@@ -112,6 +113,22 @@ describe('armazém e casas', () => {
     expect(capacidadeArmazem(3)).toBeGreaterThan(capacidadeArmazem(2));
     expect(protecaoArmazem(3)).toBeGreaterThan(protecaoArmazem(2));
     expect(protecaoArmazem(0)).toBeGreaterThan(0);
+  });
+
+  it('todo nível de todo prédio cabe em algum armazém até o nível máximo', () => {
+    for (const tipo of TIPOS_PREDIO) {
+      for (let nivel = 1; nivel <= BALANCEAMENTO.predios[tipo].nivelMaximo; nivel++) {
+        const custo = custoEvolucao(tipo, nivel);
+        for (const r of RECURSOS) expect(nivelArmazemNecessario(custo[r]), `${tipo} ${nivel} ${r}`).not.toBeNull();
+      }
+    }
+  });
+
+  it('nivelArmazemNecessario devolve o menor nível que guarda a quantidade', () => {
+    expect(nivelArmazemNecessario(0)).toBe(0);
+    expect(nivelArmazemNecessario(capacidadeArmazem(3))).toBe(3);
+    expect(nivelArmazemNecessario(capacidadeArmazem(3) + 1)).toBe(4);
+    expect(nivelArmazemNecessario(capacidadeArmazem(BALANCEAMENTO.predios.armazem.nivelMaximo) + 1)).toBeNull();
   });
 
   it('as casas aumentam o limite de população', () => {

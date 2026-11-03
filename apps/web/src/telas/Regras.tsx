@@ -68,7 +68,9 @@ export default function Regras() {
           ))}
         </ul>
         <p>
-          O Armazém guarda {num(capacidadeArmazem(0))} de cada recurso sem nível e +{num(B.armazem.capacidadePorNivel)} por nível. Ele
+          O Armazém guarda {num(capacidadeArmazem(0))} de cada recurso sem nível, e cada nível aumenta isso em{' '}
+          {Math.round((B.armazem.crescimentoCapacidade - 1) * 100)}% (no nível {B.predios.armazem.nivelMaximo}, guarda{' '}
+          {num(capacidadeArmazem(B.predios.armazem.nivelMaximo))}). Uma obra que custa mais do que ele guarda pede um Armazém maior. Ele
           também esconde uma parte que nenhum saque leva ({num(protecaoArmazem(0))} sem nível, +{num(B.armazem.protecaoPorNivel)} por
           nível).
         </p>

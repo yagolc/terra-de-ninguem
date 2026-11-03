@@ -5,6 +5,7 @@ import {
   capacidadeArmazem,
   custoEvolucao,
   limitePopulacao,
+  nivelArmazemNecessario,
   niveisProjetados,
   producaoHora,
   protecaoArmazem,
@@ -67,11 +68,16 @@ export default function CartaoPredio({ tipo, cidade, bonus, obras, agora, ocupad
   const info = PREDIOS[tipo];
   const nivel = cidade.predios[tipo];
   // Níveis contando as obras da fila: o próximo pedido deste prédio vai para o nível seguinte a eles.
-  const nivelProjetado = niveisProjetados(cidade.predios, obras)[tipo];
+  const projetados = niveisProjetados(cidade.predios, obras);
+  const nivelProjetado = projetados[tipo];
   const minhasObras = obras.flatMap((obra, posicao) => (obra.tipo === tipo ? [{ obra, posicao }] : []));
   const maximo = nivelProjetado >= BALANCEAMENTO.predios[tipo].nivelMaximo;
   const verificacao = verificarEvolucao({ predios: cidade.predios, tipo, recursos: cidade.recursos, obras, agora });
   const custo = custoEvolucao(tipo, nivelProjetado + 1);
+  // Custo maior que o armazém (contando os da fila): avisa o nível necessário em vez de esperar à toa.
+  const maiorCusto = Math.max(...RECURSOS.map((r) => custo[r]));
+  const armazemNecessario =
+    maiorCusto > capacidadeArmazem(projetados.armazem) ? nivelArmazemNecessario(maiorCusto) : null;
   const textoEfeito = efeito(tipo, cidade, bonus);
   const naFila = obras.length > 0;
 
@@ -129,6 +135,11 @@ export default function CartaoPredio({ tipo, cidade, bonus, obras, agora, ocupad
                 {verificacao.motivo === 'recursos_insuficientes'
                   ? `Faltam ${descreverFalta(recursosQueFaltam(cidade.recursos, custo))}.`
                   : MENSAGENS_EVOLUCAO[verificacao.motivo]}
+              </p>
+            )}
+            {armazemNecessario !== null && (
+              <p className="text-xs text-ouro-claro">
+                📦 Não cabe no armazém: precisa do {PREDIOS.armazem.nome} nível {armazemNecessario}.
               </p>
             )}
           </>

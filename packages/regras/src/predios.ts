@@ -59,8 +59,16 @@ export function recursosQueFaltam(estoque: Recursos, custo: Recursos): Recursos 
 
 /** Máximo de cada recurso que a cidade guarda. */
 export function capacidadeArmazem(nivelArmazem: number): number {
-  const { capacidadeBase, capacidadePorNivel } = BALANCEAMENTO.armazem;
-  return capacidadeBase + capacidadePorNivel * nivelArmazem;
+  const { capacidadeBase, crescimentoCapacidade } = BALANCEAMENTO.armazem;
+  return Math.round((capacidadeBase * crescimentoCapacidade ** nivelArmazem) / 10) * 10;
+}
+
+/** Menor nível de armazém que guarda `quantidade` de um recurso (null se nem o máximo guarda). */
+export function nivelArmazemNecessario(quantidade: number): number | null {
+  for (let nivel = 0; nivel <= BALANCEAMENTO.predios.armazem.nivelMaximo; nivel++) {
+    if (capacidadeArmazem(nivel) >= quantidade) return nivel;
+  }
+  return null;
 }
 
 /** Quanto de cada recurso fica fora do alcance de saques. */
