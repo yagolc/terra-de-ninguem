@@ -1,6 +1,6 @@
 import { BALANCEAMENTO, RECURSOS, TIPOS_UNIDADE, totalUnidades, type Exercito } from '@terra/regras';
-import type { Relatorio } from '../lib/useRelatorios';
-import { RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarNumero } from '../lib/textos';
+import type { HeroiNoRelatorio, Relatorio } from '../lib/useRelatorios';
+import { ESPECIALIDADES_INFO, RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarNumero } from '../lib/textos';
 
 function LinhaExercito({ rotulo, exercito, perdas }: { rotulo: string; exercito: Exercito; perdas: Exercito }) {
   return (
@@ -16,7 +16,16 @@ function LinhaExercito({ rotulo, exercito, perdas }: { rotulo: string; exercito:
   );
 }
 
-/** Detalhe de uma batalha: exércitos, perdas, forças, modificadores e saque. */
+function LinhaHeroi({ lado, heroi }: { lado: string; heroi: HeroiNoRelatorio }) {
+  const info = ESPECIALIDADES_INFO[heroi.especialidade];
+  return (
+    <p className="text-xs">
+      🎖️ {lado}: {heroi.nome} ({info.icone} {info.nome} nível {heroi.nivel}){heroi.ferido && <span className="text-red-300"> · ferido</span>}
+    </p>
+  );
+}
+
+/** Detalhe de uma batalha: exércitos, perdas, forças, modificadores, heróis e saque. */
 export default function DetalheRelatorio({ relatorio, nomeDefensor }: { relatorio: Relatorio; nomeDefensor: string }) {
   const d = relatorio.dados;
   const saqueTotal = RECURSOS.reduce((s, r) => s + d.saque[r], 0);
@@ -52,6 +61,8 @@ export default function DetalheRelatorio({ relatorio, nomeDefensor }: { relatori
         {totalUnidades(d.defensor) === 0 && ' · ninguém defendia'}
         {bonus.length > 0 && ` · defesa com ${bonus.join(', ')}`}.
       </p>
+      {d.heroiAtacante && <LinhaHeroi lado="Herói do atacante" heroi={d.heroiAtacante} />}
+      {d.heroiDefensor && <LinhaHeroi lado={`Herói de ${nomeDefensor}`} heroi={d.heroiDefensor} />}
 
       {saqueTotal > 0 && (
         <p>

@@ -24,9 +24,9 @@ export function vilaCheiaEm(saqueadaEm: number | null, agora: number): number {
 }
 
 /** Leva `disponivel` inteiro se couber na carga; senão, cada recurso na mesma proporção. Devolve a fração levada. */
-function levar(disponivel: Recursos, sobreviventes: Exercito): { saque: Recursos; fator: number } {
+function levar(disponivel: Recursos, sobreviventes: Exercito, bonusCarga = 0): { saque: Recursos; fator: number } {
   const total = RECURSOS.reduce((soma, r) => soma + disponivel[r], 0);
-  const carga = capacidadeCarga(sobreviventes);
+  const carga = capacidadeCarga(sobreviventes, bonusCarga);
   const fator = total === 0 ? 1 : Math.min(1, carga / total);
   return { saque: mapearRecursos((r) => Math.floor(disponivel[r] * fator)), fator };
 }
@@ -35,13 +35,18 @@ function levar(disponivel: Recursos, sobreviventes: Exercito): { saque: Recursos
  * Saque vitorioso numa vila neutra: leva o que couber na carga (sem o limite de 30%, que protege jogadores).
  * O que sobra continua lá: o novo `saqueadaEm` é recuado para o estoque voltar a encher a partir do resto.
  */
-export function saquearVilaNeutra(entrada: { saqueadaEm: number | null; agora: number; sobreviventes: Exercito }): {
+export function saquearVilaNeutra(entrada: {
+  saqueadaEm: number | null;
+  agora: number;
+  sobreviventes: Exercito;
+  bonusCarga?: number;
+}): {
   saque: Recursos;
   saqueadaEm: number;
 } {
   const { saqueadaEm, agora, sobreviventes } = entrada;
   const fracao = fracaoEstoque(saqueadaEm, agora);
-  const { saque, fator } = levar(estoqueVila(saqueadaEm, agora), sobreviventes);
+  const { saque, fator } = levar(estoqueVila(saqueadaEm, agora), sobreviventes, entrada.bonusCarga);
   const resta = fracao * (1 - fator);
   return { saque, saqueadaEm: agora - resta * BALANCEAMENTO.povoados.vila.horasParaEncher * HORA_MS };
 }
@@ -55,7 +60,7 @@ export function custoNivelVila(nivelAlvo: number): Recursos {
  * Saque vitorioso na vila de outro jogador: ela volta ao nível 0 e o saqueador leva parte do que foi
  * investido nos níveis (até a carga). O estoque da cidade do dono não é tocado.
  */
-export function saquearVilaDeJogador(entrada: { nivel: number; sobreviventes: Exercito }): Recursos {
+export function saquearVilaDeJogador(entrada: { nivel: number; sobreviventes: Exercito; bonusCarga?: number }): Recursos {
   const investido = recursos();
   for (let n = 1; n <= entrada.nivel; n++) {
     const custo = custoNivelVila(n);
@@ -65,6 +70,7 @@ export function saquearVilaDeJogador(entrada: { nivel: number; sobreviventes: Ex
   return levar(
     mapearRecursos((r) => Math.floor(investido[r] * fracao)),
     entrada.sobreviventes,
+    entrada.bonusCarga,
   ).saque;
 }
 

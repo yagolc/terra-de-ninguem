@@ -3,13 +3,17 @@ import {
   avancarCidade,
   bonusDeTerritorios,
   bonusDosPovoados,
+  bonusIntendente,
   exercito,
   mapearExercito,
   soldadosNaConta,
   somarExercitos,
+  somarRecursos,
   totalUnidades,
   type EstadoCidade,
+  type Especialidade,
   type Exercito,
+  type Heroi,
   type LoteTreino,
   type NiveisPredios,
   type Obra,
@@ -57,7 +61,22 @@ type CidadeSalva = {
   territorios: number;
   /** Vilas e cidades livres do jogador: o bônus delas depende da lealdade, então é calculado a cada segundo. */
   povoados: { tipo: TipoPovoado; nivel: number; lealDesde: number | null }[];
+  /** Todos os territórios do jogador (o intendente fora da cidade usa o recurso de um deles). */
+  meusTerritorios: TerritorioDoJogador[];
+  heroi: Heroi | null;
 };
+
+type LinhaHeroi = {
+  nome: string;
+  especialidade: Especialidade;
+  nivel: number;
+  territorio_id: string | null;
+  marcha_id: string | null;
+  treino_pronto_em: string | null;
+  ferido_ate: string | null;
+};
+
+const lerData = (v: string | null) => (v ? Date.parse(v) : null);
 
 type LinhaPovoado = { territorio_id: string; tipo: TipoPovoado; nivel: number; leal_desde: string | null };
 
@@ -68,6 +87,7 @@ function converter(
   marchas: LinhaTropas[],
   comEntreposto: Set<string>,
   povoados: LinhaPovoado[],
+  heroi: LinhaHeroi | null,
 ): CidadeSalva {
   const predios = Object.fromEntries(TIPOS_PREDIO.map((tipo) => [tipo, 0])) as NiveisPredios;
   for (const p of linha.predios) predios[p.tipo] = p.nivel;
@@ -86,6 +106,16 @@ function converter(
       .sort((a, b) => a.prontoEm - b.prontoEm),
     territorio: territorios.find((t) => t.id === linha.territorio_id) ?? null,
     territorios: territorios.length,
+    meusTerritorios: territorios,
+    heroi: heroi && {
+      nome: heroi.nome,
+      especialidade: heroi.especialidade,
+      nivel: heroi.nivel,
+      territorioId: heroi.territorio_id,
+      marchaId: heroi.marcha_id,
+      treinoProntoEm: lerData(heroi.treino_pronto_em),
+      feridoAte: lerData(heroi.ferido_ate),
+    },
     povoados: povoados
       .filter((p) => territorios.some((t) => t.id === p.territorio_id))
       .map((p) => ({ tipo: p.tipo, nivel: p.nivel, lealDesde: p.leal_desde ? Date.parse(p.leal_desde) : null })),
@@ -116,7 +146,7 @@ async function buscarCidade(jogadorId: string): Promise<CidadeSalva | null> {
   if (error) throw new Error('Não foi possível carregar sua cidade.');
   if (!data) return null;
 
-  const [territorios, tropas, marchas, entrepostos, povoados] = await Promise.all([
+  const [territorios, tropas, marchas, entrepostos, povoados, heroi] = await Promise.all([
     supabase
       .from('territorios')
       .select('id, nome, terreno, bonus_recurso')
@@ -150,12 +180,18 @@ async function buscarCidade(jogadorId: string): Promise<CidadeSalva | null> {
       .select('territorio_id, tipo, nivel, leal_desde')
       .eq('temporada_id', data.temporada_id)
       .returns<LinhaPovoado[]>(),
+    // O RLS devolve só o herói do próprio jogador.
+    supabase
+      .from('herois')
+      .select('nome, especialidade, nivel, territorio_id, marcha_id, treino_pronto_em, ferido_ate')
+      .eq('temporada_id', data.temporada_id)
+      .maybeSingle<LinhaHeroi>(),
   ]);
   if (!territorios.data || !tropas.data || !marchas.data || !entrepostos.data || !povoados.data) {
     throw new Error('Não foi possível carregar seus territórios e tropas.');
   }
   const comEntreposto = new Set(entrepostos.data.map((e) => e.territorio_id));
-  return converter(data, territorios.data, tropas.data, marchas.data, comEntreposto, povoados.data);
+  return converter(data, territorios.data, tropas.data, marchas.data, comEntreposto, povoados.data, heroi.data);
 }
 
 /**
@@ -192,21 +228,35 @@ export function useCidade(jogadorId: string) {
   }, []);
 
   const extras = useMemo(() => (salva ? bonusDosPovoados(salva.povoados, agora) : null), [salva, agora]);
+  // Herói intendente: soma ao bônus dos territórios e, na cidade, ao crescimento da população.
+  const intendente = useMemo(
+    () =>
+      salva
+        ? bonusIntendente({
+            heroi: salva.heroi,
+            cidadeTerritorioId: salva.territorio?.id ?? null,
+            recursoDoTerritorio: new Map(salva.meusTerritorios.map((t) => [t.id, t.bonus_recurso])),
+            agora,
+          })
+        : null,
+    [salva, agora],
+  );
   const atual = useMemo(
     () =>
-      salva && extras
+      salva && extras && intendente
         ? avancarCidade({
             cidade: salva.cidade,
             tropas: somarExercitos(salva.tropas, salva.emMarcha),
             obras: salva.obras,
             treinos: salva.fila,
             agora,
-            bonusTerritorios: salva.bonus,
+            bonusTerritorios: somarRecursos(salva.bonus, intendente.bonusTerritorios),
             producaoFixaHora: extras.producaoFixaHora,
             populacaoExtra: extras.populacaoExtra,
+            bonusCrescimento: intendente.bonusCrescimento,
           })
         : null,
-    [salva, extras, agora],
+    [salva, extras, intendente, agora],
   );
 
   const comandar = useCallback(
@@ -224,12 +274,15 @@ export function useCidade(jogadorId: string) {
     tropas: atual && salva ? mapearExercito((t) => Math.max(0, atual.tropas[t] - salva.emMarcha[t])) : exercito(),
     emMarcha: salva?.emMarcha ?? exercito(),
     fila: atual?.treinos ?? [],
-    soldados: atual ? soldadosNaConta(totalUnidades(atual.tropas), atual.treinos) : 0,
-    bonus: salva?.bonus ?? null,
+    // O herói também é um habitante: conta como soldado na população.
+    soldados: atual ? soldadosNaConta(totalUnidades(atual.tropas), atual.treinos) + (salva?.heroi ? 1 : 0) : 0,
+    bonus: salva && intendente ? somarRecursos(salva.bonus, intendente.bonusTerritorios) : null,
     /** Ouro das cidades livres e população a mais das vilas (só as leais). */
     extras,
     territorio: salva?.territorio ?? null,
     territorios: salva?.territorios ?? 0,
+    meusTerritorios: salva?.meusTerritorios ?? [],
+    heroi: salva?.heroi ?? null,
     agora,
     erro,
     comandar,

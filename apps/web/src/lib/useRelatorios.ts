@@ -1,8 +1,10 @@
-import type { Exercito, Recursos, Terreno } from '@terra/regras';
+import type { Especialidade, Exercito, Recursos, Terreno } from '@terra/regras';
 import { useCallback, useEffect, useState } from 'react';
 import { chamarFuncao } from './funcoes';
 import { buscarReconhecimentos, type Reconhecimento } from './useMapa';
 import { supabase } from './supabase';
+
+export type HeroiNoRelatorio = { nome: string; especialidade: Especialidade; nivel: number; ferido: boolean };
 
 /** Formato de `relatorios.dados`, gravado pela função resolver-marchas. */
 export type DadosBatalha = {
@@ -17,6 +19,9 @@ export type DadosBatalha = {
   vilaZerada?: boolean;
   /** A milícia da cidade livre se juntou ao conquistador. */
   milicia?: boolean;
+  /** Heróis de cada lado (ausentes antes dos heróis); `ferido` = perdeu a batalha. */
+  heroiAtacante?: HeroiNoRelatorio | null;
+  heroiDefensor?: HeroiNoRelatorio | null;
   forcaAtaque: number;
   forcaDefesa: number;
   margem: number | null;

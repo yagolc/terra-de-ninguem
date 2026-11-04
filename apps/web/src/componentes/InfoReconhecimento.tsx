@@ -1,6 +1,6 @@
-import { BALANCEAMENTO, TIPOS_UNIDADE, analisarDefesa, totalUnidades } from '@terra/regras';
+import { BALANCEAMENTO, TIPOS_UNIDADE, analisarDefesa, bonusHeroi, totalUnidades } from '@terra/regras';
 import type { Reconhecimento } from '../lib/useMapa';
-import { ESTRUTURAS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarDuracao } from '../lib/textos';
+import { ESPECIALIDADES_INFO, ESTRUTURAS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarDuracao } from '../lib/textos';
 
 type Props = {
   reconhecimento: Reconhecimento;
@@ -14,12 +14,16 @@ type Props = {
 export default function InfoReconhecimento({ reconhecimento, agora, nomeDono, cidadeLivre = false }: Props) {
   const { tropas, terreno, muralha, estrutura, estruturaPronta } = reconhecimento;
   const palicada = estrutura === 'palicada' && estruturaPronta;
-  const analise = analisarDefesa({ defensor: tropas, terreno, nivelMuralha: muralha, palicada, cidadeLivre });
+  const heroi = reconhecimento.heroi;
+  // Castelão visto pelo batedor: conta como se estivesse livre (pode estar ferido, mas é melhor sobrar tropa).
+  const bonusDefesa = heroi?.especialidade === 'castelao' ? bonusHeroi(heroi.nivel) : 0;
+  const analise = analisarDefesa({ defensor: tropas, terreno, nivelMuralha: muralha, palicada, cidadeLivre, bonusDefesa });
   const efeitos: string[] = [];
   if (terreno === 'floresta') efeitos.push(`🌲 floresta: arqueiros defendem +${Math.round(BALANCEAMENTO.batalha.bonusFlorestaArqueiro * 100)}%`);
   if (terreno === 'montanha') efeitos.push(`⛰️ montanha: defesa +${Math.round(BALANCEAMENTO.batalha.bonusMontanha * 100)}%`);
   if (muralha > 0) efeitos.push(`🧱 muralha nível ${muralha}: defesa +${Math.round(BALANCEAMENTO.batalha.bonusMuralhaPorNivel * muralha * 100)}%`);
   if (palicada) efeitos.push(`🪵 paliçada: defesa +${Math.round(BALANCEAMENTO.bonusPalicada * 100)}%`);
+  if (bonusDefesa > 0) efeitos.push(`🛡️ herói castelão: defesa +${Math.round(bonusDefesa * 100)}%`);
   if (cidadeLivre) efeitos.push(`⚖️ cidade livre: defesa +${Math.round(BALANCEAMENTO.povoados.cidadeLivre.bonusDefesa * 100)}%`);
   const idade = agora - reconhecimento.observadoEm;
 
@@ -46,6 +50,12 @@ export default function InfoReconhecimento({ reconhecimento, agora, nomeDono, ci
           ? `${ESTRUTURAS_INFO[estrutura].icone} Estrutura: ${ESTRUTURAS_INFO[estrutura].nome}${estruturaPronta ? '' : ' (em construção quando o batedor passou)'}`
           : '🏗️ Nenhuma estrutura'}
       </p>
+      {heroi && (
+        <p className="text-xs">
+          🎖️ Herói: {heroi.nome} ({ESPECIALIDADES_INFO[heroi.especialidade].icone} {ESPECIALIDADES_INFO[heroi.especialidade].nome} nível{' '}
+          {heroi.nivel})
+        </p>
+      )}
       {totalUnidades(tropas) > 0 && (
         <p className="text-xs">
           <span className="text-pergaminho-escuro">Para conquistar com folga (mesmo com azar), mande cerca de: </span>

@@ -20,6 +20,10 @@ export type TipoEstrutura = (typeof TIPOS_ESTRUTURA)[number];
 export const TIPOS_POVOADO = ['vila', 'cidade_livre'] as const;
 export type TipoPovoado = (typeof TIPOS_POVOADO)[number];
 
+/** Especialidade do herói: define o único bônus que ele dá. */
+export const TIPOS_ESPECIALIDADE = ['comandante', 'castelao', 'desbravador', 'saqueador', 'intendente'] as const;
+export type Especialidade = (typeof TIPOS_ESPECIALIDADE)[number];
+
 export const TERRENOS = ['planicie', 'floresta', 'montanha'] as const;
 export type Terreno = (typeof TERRENOS)[number];
 

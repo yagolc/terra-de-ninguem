@@ -5,6 +5,7 @@ import {
   avancarCidade,
   bonusDeTerritorios,
   bonusDosPovoados,
+  bonusIntendente,
   cidadeInicial,
   distribuirPerdas,
   escolherCor,
@@ -13,6 +14,7 @@ import {
   grafoDeFronteiras,
   mapearExercito,
   soldadosNaConta,
+  somarRecursos,
   somarExercitos,
   totalUnidades,
   type EstadoCidade,
@@ -26,6 +28,7 @@ import {
   type TipoUnidade,
 } from '../../../packages/regras/src/index.ts';
 import type { Transacao } from './db.ts';
+import { heroiDoJogador, type HeroiSalvo } from './herois.ts';
 import { ErroDoJogo } from './http.ts';
 
 export type Temporada = { id: string; inicio: number };
@@ -115,6 +118,10 @@ export type CidadeCarregada = {
   /** Ouro das cidades livres e população a mais das vilas (só povoados leais). */
   producaoFixaHora: Recursos;
   populacaoExtra: number;
+  /** Crescimento da população a mais (herói intendente na cidade). */
+  bonusCrescimento: number;
+  /** O herói do jogador (travado), se ele já recrutou um. Ocupa 1 de população. */
+  heroi: HeroiSalvo | null;
   /** Tropas paradas, uma entrada por território. */
   grupos: GrupoTropas[];
   /** Tropas em marcha: comem e ocupam população, mas não desertam. */
@@ -145,8 +152,8 @@ export async function carregarCidade(tx: Transacao, temporadaId: string, jogador
   if (!linha) throw new ErroDoJogo('Você ainda não tem cidade nesta temporada.', 404);
 
   // Bônus de produção de todos os territórios do jogador nesta temporada (dobrado onde há entreposto pronto).
-  const territorios = await tx<{ bonus_recurso: Recurso; entreposto: boolean }[]>`
-    select t.bonus_recurso,
+  const territorios = await tx<{ id: string; bonus_recurso: Recurso; entreposto: boolean }[]>`
+    select t.id, t.bonus_recurso,
            exists (select 1 from estruturas e
                     where e.territorio_id = t.id and e.tipo = 'entreposto' and e.pronto_em <= now()) as entreposto
       from territorios t where t.temporada_id = ${temporadaId} and t.dono_id = ${jogadorId}`;
@@ -159,6 +166,15 @@ export async function carregarCidade(tx: Transacao, temporadaId: string, jogador
     povoados.map((p) => ({ tipo: p.tipo, nivel: p.nivel, lealDesde: p.leal_desde?.getTime() ?? null })),
     Date.now(),
   );
+
+  // Herói intendente: produção (e crescimento, na cidade) a mais onde ele está.
+  const heroi = await heroiDoJogador(tx, temporadaId, jogadorId);
+  const intendente = bonusIntendente({
+    heroi,
+    cidadeTerritorioId: linha.territorio_id,
+    recursoDoTerritorio: new Map(territorios.map((t) => [t.id, t.bonus_recurso])),
+    agora: Date.now(),
+  });
 
   const linhasPredios = await tx<{ tipo: TipoPredio; nivel: number }[]>`select tipo, nivel from predios where cidade_id = ${linha.id}`;
   const predios = Object.fromEntries(TIPOS_PREDIO.map((tipo) => [tipo, 0])) as EstadoCidade['predios'];
@@ -184,12 +200,17 @@ export async function carregarCidade(tx: Transacao, temporadaId: string, jogador
     territorioId: linha.territorio_id,
     obras: linhasObras.map((o) => ({ id: o.id, tipo: o.tipo, prontoEm: o.pronto_em.getTime() })),
     fila: linhasFila.map((l) => ({ id: l.id, tipo: l.tipo_unidade, quantidade: l.quantidade, prontoEm: l.pronto_em.getTime() })),
-    bonus: bonusDeTerritorios(
-      territorios.map((t) => t.bonus_recurso),
-      territorios.filter((t) => t.entreposto).map((t) => t.bonus_recurso),
+    bonus: somarRecursos(
+      bonusDeTerritorios(
+        territorios.map((t) => t.bonus_recurso),
+        territorios.filter((t) => t.entreposto).map((t) => t.bonus_recurso),
+      ),
+      intendente.bonusTerritorios,
     ),
     producaoFixaHora: bonusPovoados.producaoFixaHora,
     populacaoExtra: bonusPovoados.populacaoExtra,
+    bonusCrescimento: intendente.bonusCrescimento,
+    heroi,
     grupos: linhasTropas.map((t) => ({
       id: t.id,
       territorioId: t.territorio_id,
@@ -238,6 +259,7 @@ export function avancarAteAgora(c: CidadeCarregada, agora: number): CidadeAvanca
     bonusTerritorios: c.bonus,
     producaoFixaHora: c.producaoFixaHora,
     populacaoExtra: c.populacaoExtra,
+    bonusCrescimento: c.bonusCrescimento,
   });
 
   const resultado: CidadeAvancada = {
@@ -272,8 +294,9 @@ export function grupoEm(c: CidadeAvancada, territorioId: string): GrupoTropas {
 }
 
 /** Soldados para a conta da população: paradas, em marcha e em treino. */
+/** Soldados para a conta da população: tropas, lotes em treino e o herói (que também é um habitante). */
 export function soldados(c: CidadeAvancada): number {
-  return soldadosNaConta(totalUnidades(c.tropasTotais), c.fila);
+  return soldadosNaConta(totalUnidades(c.tropasTotais), c.fila) + (c.carregada.heroi ? 1 : 0);
 }
 
 /** Grava cidade, prédios, tropas, obras e fila de treino. */

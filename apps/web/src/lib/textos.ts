@@ -1,4 +1,13 @@
-import { BALANCEAMENTO, type Objetivo, type Recurso, type Terreno, type TipoEstrutura, type TipoPredio, type TipoUnidade } from '@terra/regras';
+import {
+  BALANCEAMENTO,
+  type Especialidade,
+  type Objetivo,
+  type Recurso,
+  type Terreno,
+  type TipoEstrutura,
+  type TipoPredio,
+  type TipoUnidade,
+} from '@terra/regras';
 
 export const TERRENOS_INFO: Record<Terreno, { nome: string; icone: string; efeito: string }> = {
   planicie: { nome: 'Planície', icone: '🌾', efeito: 'sem bônus de defesa' },
@@ -38,6 +47,19 @@ export const ESTRUTURAS_INFO: Record<TipoEstrutura, { nome: string; icone: strin
     nome: 'Entreposto',
     icone: '🏪',
     descricao: `Multiplica por ${BALANCEAMENTO.multiplicadorEntreposto} o bônus de produção do terreno deste território.`,
+  },
+};
+
+/** O que cada especialidade de herói faz (o bônus é o mesmo para todas: +2% por nível). */
+export const ESPECIALIDADES_INFO: Record<Especialidade, { nome: string; icone: string; descricao: string }> = {
+  comandante: { nome: 'Comandante', icone: '⚔️', descricao: 'Mais força de ataque na marcha em que ele vai.' },
+  castelao: { nome: 'Castelão', icone: '🛡️', descricao: 'Mais defesa no território onde ele está.' },
+  desbravador: { nome: 'Desbravador', icone: '🐎', descricao: 'Marchas com ele andam mais rápido, inclusive na volta.' },
+  saqueador: { nome: 'Saqueador', icone: '💰', descricao: 'As tropas com ele carregam mais saque, de cidades e vilas.' },
+  intendente: {
+    nome: 'Intendente',
+    icone: '📜',
+    descricao: `Na cidade: mais produção de tudo e mais crescimento da população. Noutro território seu: ${BALANCEAMENTO.herois.multiplicadorIntendenteTerritorio}× o bônus, só no recurso daquele território.`,
   },
 };
 

@@ -2,7 +2,9 @@ import {
   CORES_JOGADORES,
   exercito,
   somarExercitos,
+  type Especialidade,
   type Exercito,
+  type Heroi,
   type Recurso,
   type Recursos,
   type Terreno,
@@ -97,6 +99,8 @@ export type Reconhecimento = {
   /** Estrutura que o batedor viu (nula se não havia) e se já estava pronta. */
   estrutura: TipoEstrutura | null;
   estruturaPronta: boolean;
+  /** Herói que o batedor viu no território, se havia um. */
+  heroi: { nome: string; especialidade: Especialidade; nivel: number } | null;
   observadoEm: number;
   disponivelEm: number;
   lido: boolean;
@@ -122,6 +126,8 @@ export type DadosMapa = {
   marchasVistas: MarchaVista[];
   /** Vila ou cidade livre de cada território que tem uma. */
   povoados: Map<string, PovoadoMapa>;
+  /** O herói do próprio jogador (o dos outros é secreto). */
+  heroi: Heroi | null;
 };
 
 export const COR_NEUTRA = '#6b5a48';
@@ -157,6 +163,7 @@ type LinhaReconhecimento = {
   cavalaria: number;
   estrutura: TipoEstrutura | null;
   estrutura_pronta: boolean;
+  heroi: { nome: string; especialidade: Especialidade; nivel: number } | null;
   observado_em: string;
   disponivel_em: string;
   lido: boolean;
@@ -197,7 +204,7 @@ export async function buscarReconhecimentos(temporadaId: string): Promise<Reconh
   const { data } = await supabase
     .from('reconhecimentos')
     .select(
-      'territorio_id, dono_id, terreno, muralha, lanceiro, arqueiro, cavalaria, estrutura, estrutura_pronta, observado_em, disponivel_em, lido',
+      'territorio_id, dono_id, terreno, muralha, lanceiro, arqueiro, cavalaria, estrutura, estrutura_pronta, heroi, observado_em, disponivel_em, lido',
     )
     .eq('temporada_id', temporadaId)
     .order('observado_em', { ascending: false })
@@ -211,6 +218,7 @@ export async function buscarReconhecimentos(temporadaId: string): Promise<Reconh
     tropas: exercito({ lanceiro: r.lanceiro, arqueiro: r.arqueiro, cavalaria: r.cavalaria }),
     estrutura: r.estrutura,
     estruturaPronta: r.estrutura_pronta,
+    heroi: r.heroi,
     observadoEm: Date.parse(r.observado_em),
     disponivelEm: Date.parse(r.disponivel_em),
     lido: r.lido,
@@ -239,6 +247,7 @@ async function buscarMapa(): Promise<DadosMapa | null> {
     estruturas,
     marchasVistas,
     povoados,
+    heroi,
   ] = await Promise.all([
     supabase.from('regioes').select('id, indice, nome, terreno').eq('temporada_id', temporada.id).returns<RegiaoMapa[]>(),
     supabase
@@ -288,6 +297,19 @@ async function buscarMapa(): Promise<DadosMapa | null> {
       .select('territorio_id, tipo, nivel, saqueada_em, posse_desde, leal_desde, milicia, milicia_entregue')
       .eq('temporada_id', temporada.id)
       .returns<LinhaPovoado[]>(),
+    supabase
+      .from('herois')
+      .select('nome, especialidade, nivel, territorio_id, marcha_id, treino_pronto_em, ferido_ate')
+      .eq('temporada_id', temporada.id)
+      .maybeSingle<{
+        nome: string;
+        especialidade: Especialidade;
+        nivel: number;
+        territorio_id: string | null;
+        marcha_id: string | null;
+        treino_pronto_em: string | null;
+        ferido_ate: string | null;
+      }>(),
   ]);
   if (
     !regioes.data ||
@@ -367,6 +389,15 @@ async function buscarMapa(): Promise<DadosMapa | null> {
         },
       ]),
     ),
+    heroi: heroi.data && {
+      nome: heroi.data.nome,
+      especialidade: heroi.data.especialidade,
+      nivel: heroi.data.nivel,
+      territorioId: heroi.data.territorio_id,
+      marchaId: heroi.data.marcha_id,
+      treinoProntoEm: data(heroi.data.treino_pronto_em),
+      feridoAte: data(heroi.data.ferido_ate),
+    },
   };
 }
 

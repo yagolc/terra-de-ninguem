@@ -19,6 +19,10 @@ export function subtrairRecursos(a: Recursos, b: Recursos): Recursos {
   return mapearRecursos((r) => a[r] - b[r]);
 }
 
+export function somarRecursos(...lista: Recursos[]): Recursos {
+  return mapearRecursos((r) => lista.reduce((soma, x) => soma + x[r], 0));
+}
+
 export function totalRecursos(r: Recursos): number {
   return r.comida + r.madeira + r.ouro;
 }

@@ -6,12 +6,15 @@
 // Exige o cabeçalho x-segredo-cron igual à variável SEGREDO_CRON (npx supabase secrets set).
 import {
   BALANCEAMENTO,
+  bonusHeroi,
+  bonusSeDisponivel,
   calcularSaque,
   distribuirPerdas,
   duracaoMarchaMs,
   duracaoReconhecimentoMs,
   escudoAte,
   exercito,
+  feridoAte,
   geradorComSemente,
   lealDesdeNaConquista,
   mapearExercito,
@@ -32,6 +35,7 @@ import {
 } from '../../../packages/regras/src/index.ts';
 import { avancarAteAgora, carregarCidade, grupoEm, salvarCidade, type CidadeAvancada } from '../_compartilhado/cidade.ts';
 import { sql, type Transacao } from '../_compartilhado/db.ts';
+import { heroiNoRelatorio, heroiNoTerritorio, posicionarHeroi, type HeroiSalvo } from '../_compartilhado/herois.ts';
 import { atualizarPlacar } from '../_compartilhado/objetivos.ts';
 import { resposta } from '../_compartilhado/http.ts';
 
@@ -48,6 +52,7 @@ type Marcha = {
   saque_comida: number;
   saque_madeira: number;
   saque_ouro: number;
+  heroi_id: string | null;
 };
 
 type Territorio = { id: string; dono_id: string | null; cidade_principal: boolean; terreno: Terreno; x: number; y: number };
@@ -63,17 +68,35 @@ async function concluir(tx: Transacao, marchaId: string) {
   await tx`update marchas set status = 'concluida' where id = ${marchaId}`;
 }
 
-/** Tropas que voltam para casa (com ou sem saque). */
-async function mandarDeVolta(tx: Transacao, m: Marcha, de: Territorio, sobreviventes: Exercito, saque: Recursos, agora: number) {
-  if (totalUnidades(sobreviventes) === 0) return;
+/**
+ * Tropas que voltam para casa (com ou sem saque), levando o herói se ele vier junto. Sem sobreviventes,
+ * o herói volta direto para a cidade (`cidadeTerritorioId`).
+ */
+async function mandarDeVolta(
+  tx: Transacao,
+  m: Marcha,
+  de: Territorio,
+  sobreviventes: Exercito,
+  saque: Recursos,
+  agora: number,
+  heroi: HeroiSalvo | null = null,
+  cidadeTerritorioId: string | null = null,
+) {
+  if (totalUnidades(sobreviventes) === 0) {
+    if (heroi) await posicionarHeroi(tx, heroi.id, { territorioId: cidadeTerritorioId, marchaId: null });
+    return;
+  }
   const [casa] = await tx<{ x: number; y: number }[]>`select x, y from territorios where id = ${m.origem_id}`;
-  const chegada = agora + duracaoMarchaMs(de, casa!, sobreviventes);
-  await tx`
+  const bonusVelocidade = heroi?.especialidade === 'desbravador' ? bonusHeroi(heroi.nivel) : 0;
+  const chegada = agora + duracaoMarchaMs(de, casa!, sobreviventes, bonusVelocidade);
+  const [volta] = await tx<{ id: string }[]>`
     insert into marchas (temporada_id, jogador_id, origem_id, destino_id, tipo, lanceiro, arqueiro, cavalaria,
-                         saque_comida, saque_madeira, saque_ouro, partida_em, chegada_em)
+                         saque_comida, saque_madeira, saque_ouro, partida_em, chegada_em, heroi_id)
     values (${m.temporada_id}, ${m.jogador_id}, ${de.id}, ${m.origem_id}, 'retorno',
             ${sobreviventes.lanceiro}, ${sobreviventes.arqueiro}, ${sobreviventes.cavalaria},
-            ${saque.comida}, ${saque.madeira}, ${saque.ouro}, ${new Date(agora)}, ${new Date(chegada)})`;
+            ${saque.comida}, ${saque.madeira}, ${saque.ouro}, ${new Date(agora)}, ${new Date(chegada)}, ${heroi?.id ?? null})
+    returning id`;
+  if (heroi) await posicionarHeroi(tx, heroi.id, { territorioId: null, marchaId: volta!.id });
 }
 
 async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
@@ -86,14 +109,21 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
   const cidades = new Map<string, CidadeAvancada>();
   for (const id of [...new Set(ids)]) cidades.set(id, avancarAteAgora(await carregarCidade(tx, m.temporada_id, id), agora));
   const atacante = cidades.get(m.jogador_id)!;
+  // Herói que veio na marcha (comandante ataca mais, saqueador carrega mais).
+  const heroiAtacante = atacante.carregada.heroi?.marchaId === m.id ? atacante.carregada.heroi : null;
   // Se o alvo virou do próprio atacante enquanto a marcha andava (ex.: conquista anterior), vira reforço.
   if (destino.dono_id === m.jogador_id) {
     grupoEm(atacante, destino.id).tropas = somarExercitos(grupoEm(atacante, destino.id).tropas, atacanteDaMarcha);
+    if (heroiAtacante) await posicionarHeroi(tx, heroiAtacante.id, { territorioId: destino.id, marchaId: null });
     await salvarCidade(tx, atacante);
     await concluir(tx, m.id);
     return;
   }
   const defensor = destino.dono_id ? cidades.get(destino.dono_id)! : null;
+  // Herói do dono parado no território atacado (castelão defende mais, se estiver livre).
+  const heroiDefensor = defensor?.carregada.heroi?.territorioId === destino.id ? defensor.carregada.heroi : null;
+  const bonusAtaque = heroiAtacante?.especialidade === 'comandante' ? bonusHeroi(heroiAtacante.nivel) : 0;
+  const bonusCarga = heroiAtacante?.especialidade === 'saqueador' ? bonusHeroi(heroiAtacante.nivel) : 0;
 
   // Exército que defende: as tropas do dono no território, ou os bárbaros.
   const [barbaros] = defensor
@@ -127,6 +157,8 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
     nivelMuralha: defensor && destino.cidade_principal ? defensor.estado.predios.muralha : 0,
     palicada,
     cidadeLivre,
+    bonusAtaque,
+    bonusDefesa: bonusSeDisponivel(heroiDefensor, 'castelao', agora),
     sorte: sortearSorte(geradorComSemente(sementeDeTexto(m.id))),
     alvoCidadePrincipal: destino.cidade_principal,
   });
@@ -148,11 +180,12 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
       estoque: defensor.estado.recursos,
       nivelArmazem: defensor.estado.predios.armazem,
       sobreviventes: batalha.sobreviventesAtacante,
+      bonusCarga,
     });
     defensor.estado = { ...defensor.estado, recursos: subtrairRecursos(defensor.estado.recursos, saque) };
   } else if (tipo === 'saque' && atacanteVenceu && povoado?.tipo === 'vila') {
     if (defensor) {
-      saque = saquearVilaDeJogador({ nivel: povoado.nivel, sobreviventes: batalha.sobreviventesAtacante });
+      saque = saquearVilaDeJogador({ nivel: povoado.nivel, sobreviventes: batalha.sobreviventesAtacante, bonusCarga });
       vilaZerada = povoado.nivel > 0;
       await tx`update povoados set nivel = 0 where id = ${povoado.id}`;
     } else {
@@ -160,6 +193,7 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
         saqueadaEm: povoado.saqueada_em?.getTime() ?? null,
         agora,
         sobreviventes: batalha.sobreviventesAtacante,
+        bonusCarga,
       });
       saque = r.saque;
       await tx`update povoados set saqueada_em = ${new Date(r.saqueadaEm)} where id = ${povoado.id}`;
@@ -208,7 +242,35 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
       if (totalUnidades(s) === 0) await tx`delete from tropas where id = ${barbaros.id}`;
       else await tx`update tropas set lanceiro = ${s.lanceiro}, arqueiro = ${s.arqueiro}, cavalaria = ${s.cavalaria} where id = ${barbaros.id}`;
     }
-    await mandarDeVolta(tx, m, destino, batalha.sobreviventesAtacante, saque, agora);
+    // O herói volta com as tropas se elas venceram; se perderam, ele é levado ferido para a cidade (abaixo).
+    await mandarDeVolta(
+      tx,
+      m,
+      destino,
+      batalha.sobreviventesAtacante,
+      saque,
+      agora,
+      atacanteVenceu ? heroiAtacante : null,
+      atacante.carregada.territorioId,
+    );
+  }
+
+  // Heróis: quem conquista fica no território; quem perde fica ferido e vai para a própria cidade.
+  if (heroiAtacante && conquistou) {
+    await posicionarHeroi(tx, heroiAtacante.id, { territorioId: destino.id, marchaId: null });
+  } else if (heroiAtacante && !atacanteVenceu) {
+    await posicionarHeroi(tx, heroiAtacante.id, {
+      territorioId: atacante.carregada.territorioId,
+      marchaId: null,
+      feridoAte: feridoAte(agora),
+    });
+  }
+  if (heroiDefensor && atacanteVenceu) {
+    await posicionarHeroi(tx, heroiDefensor.id, {
+      territorioId: defensor!.carregada.territorioId,
+      marchaId: null,
+      feridoAte: feridoAte(agora),
+    });
   }
 
   // Quem perde uma defesa ganha escudo.
@@ -235,6 +297,8 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
               povoado: povoado ? { tipo: povoado.tipo, nivel: povoado.nivel } : null,
               vilaZerada,
               milicia,
+              heroiAtacante: heroiAtacante ? heroiNoRelatorio(heroiAtacante, !atacanteVenceu) : null,
+              heroiDefensor: heroiDefensor ? heroiNoRelatorio(heroiDefensor, atacanteVenceu) : null,
               forcaAtaque: batalha.forcaAtaque,
               forcaDefesa: batalha.forcaDefesa,
               margem: Number.isFinite(batalha.margem) ? batalha.margem : null,
@@ -268,14 +332,17 @@ async function resolverReconhecimento(tx: Transacao, m: Marcha, agora: number) {
     select tipo, pronto_em <= ${new Date(agora)} as pronta from estruturas where territorio_id = ${m.destino_id}`;
   // A milícia da cidade livre também defende: o batedor a conta junto com os lanceiros.
   const [povoado] = await tx<{ milicia: number }[]>`select milicia from povoados where territorio_id = ${m.destino_id}`;
+  // Herói parado no território: o batedor descobre nome, especialidade e nível.
+  const heroi = await heroiNoTerritorio(tx, m.destino_id);
   const volta = duracaoReconhecimentoMs(destino!, casa!);
 
   await tx`
     insert into reconhecimentos (temporada_id, jogador_id, territorio_id, dono_id, terreno, muralha,
-                                 lanceiro, arqueiro, cavalaria, estrutura, estrutura_pronta, observado_em, disponivel_em)
+                                 lanceiro, arqueiro, cavalaria, estrutura, estrutura_pronta, heroi, observado_em, disponivel_em)
     values (${m.temporada_id}, ${m.jogador_id}, ${destino!.id}, ${destino!.dono_id}, ${destino!.terreno}, ${muralha?.nivel ?? 0},
             ${vistas!.lanceiro + (destino!.dono_id ? (povoado?.milicia ?? 0) : 0)}, ${vistas!.arqueiro}, ${vistas!.cavalaria},
             ${estrutura?.tipo ?? null}, ${estrutura?.pronta ?? false},
+            ${heroi ? tx.json({ nome: heroi.nome, especialidade: heroi.especialidade, nivel: heroi.nivel }) : null},
             ${new Date(agora)}, ${new Date(agora + volta)})`;
   await tx`
     insert into marchas (temporada_id, jogador_id, origem_id, destino_id, tipo, partida_em, chegada_em)
@@ -294,6 +361,9 @@ async function resolverRetorno(tx: Transacao, m: Marcha, agora: number) {
   }
   const saque = { comida: m.saque_comida, madeira: m.saque_madeira, ouro: m.saque_ouro };
   c.estado = { ...c.estado, recursos: receberSaque(c.estado.recursos, saque, c.estado.predios.armazem) };
+  if (c.carregada.heroi?.marchaId === m.id) {
+    await posicionarHeroi(tx, c.carregada.heroi.id, { territorioId: destino, marchaId: null });
+  }
   await salvarCidade(tx, c);
   await concluir(tx, m.id);
 }
@@ -302,7 +372,7 @@ async function resolverMarcha(id: string): Promise<boolean> {
   return await sql.begin(async (tx) => {
     const [m] = await tx<Marcha[]>`
       select id, temporada_id, jogador_id, origem_id, destino_id, tipo, lanceiro, arqueiro, cavalaria,
-             saque_comida, saque_madeira, saque_ouro
+             saque_comida, saque_madeira, saque_ouro, heroi_id
         from marchas where id = ${id} and status = 'a_caminho' and chegada_em <= now()
          for update skip locked`;
     if (!m) return false;

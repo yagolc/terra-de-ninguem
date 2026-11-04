@@ -1,6 +1,7 @@
 import {
   MENSAGENS_MOVIMENTO,
   TIPOS_UNIDADE,
+  bonusHeroi,
   duracaoMarchaMs,
   exercito,
   ligadosPorTerritoriosProprios,
@@ -11,6 +12,7 @@ import {
 } from '@terra/regras';
 import { useState } from 'react';
 import { chamarFuncao } from '../lib/funcoes';
+import OpcaoHeroi from './OpcaoHeroi';
 import type { DadosMapa } from '../lib/useMapa';
 import { UNIDADES_INFO, formatarDuracao } from '../lib/textos';
 
@@ -38,6 +40,7 @@ export default function PainelMovimento({ dados, origemId, meuId, agora, onVolta
   const [destinoId, setDestinoId] = useState(destinos.find((t) => t.cidade_principal)?.id ?? destinos[0]?.id ?? '');
   const [enviar, setEnviar] = useState<Exercito>(exercito());
   const [enviando, setEnviando] = useState(false);
+  const [levarHeroi, setLevarHeroi] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   const destino = dados.territorios.find((t) => t.id === destinoId);
@@ -50,13 +53,23 @@ export default function PainelMovimento({ dados, origemId, meuId, agora, onVolta
     mesmoTerritorio: destinoId === origemId,
     ligados: !!destino && ligadosPorTerritoriosProprios({ grafo: dados.vizinhos, origem: origemId, destino: destinoId, proprios }),
   });
-  const duracao = destino && totalUnidades(enviar) > 0 ? duracaoMarchaMs(origem, destino, enviar) : null;
+  const heroi = dados.heroi;
+  const comHeroi = levarHeroi && heroi?.territorioId === origemId;
+  const bonusVelocidade = comHeroi && heroi.especialidade === 'desbravador' ? bonusHeroi(heroi.nivel) : 0;
+  const duracao = destino && totalUnidades(enviar) > 0 ? duracaoMarchaMs(origem, destino, enviar, bonusVelocidade) : null;
 
   async function confirmar() {
     setEnviando(true);
     setErro(null);
     try {
-      await chamarFuncao('cidade', { acao: 'enviar_marcha', origem_id: origemId, destino_id: destinoId, tipo: 'movimento', tropas: enviar });
+      await chamarFuncao('cidade', {
+        acao: 'enviar_marcha',
+        origem_id: origemId,
+        destino_id: destinoId,
+        tipo: 'movimento',
+        tropas: enviar,
+        com_heroi: comHeroi,
+      });
       onEnviado(`Tropas a caminho de ${destino?.nome}.`);
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível mover as tropas.');
@@ -136,6 +149,8 @@ export default function PainelMovimento({ dados, origemId, meuId, agora, onVolta
           >
             Mover todas
           </button>
+
+          <OpcaoHeroi heroi={heroi} origemId={origemId} agora={agora} marcado={levarHeroi} onMudar={setLevarHeroi} />
 
           {duracao !== null && (
             <p className="rounded-lg bg-noite/60 px-3 py-2 text-sm">

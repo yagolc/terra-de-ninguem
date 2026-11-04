@@ -202,6 +202,17 @@ export class CenaMapa extends Phaser.Scene {
     }
     // Povoado no canto esquerdo: vila (borda clara) ou cidade livre (borda dourada, maior). Vila neutra
     // recém-saqueada aparece apagada até o estoque voltar a encher.
+    // Herói do próprio jogador (só ele vê): medalha embaixo, à direita do nome.
+    const heroi = this.opcoes.dados.heroi;
+    if (heroi?.territorioId === t.id) {
+      const [hx, hy] = [x + 30, y + 20];
+      const g = this.camadaBandeiras!;
+      g.fillStyle(0x1c1410, 0.9);
+      g.fillCircle(hx, hy, 11);
+      g.lineStyle(2, 0xffd54a, 1);
+      g.strokeCircle(hx, hy, 11);
+      this.rotulos.push(this.add.text(hx, hy, '🎖️', { ...estilo, fontSize: '13px', strokeThickness: 0 }).setOrigin(0.5));
+    }
     const povoado = this.opcoes.dados.povoados.get(t.id);
     if (povoado) {
       const livre = povoado.tipo === 'cidade_livre';

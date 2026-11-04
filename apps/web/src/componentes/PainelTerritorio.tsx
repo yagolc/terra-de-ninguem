@@ -139,6 +139,12 @@ export default function PainelTerritorio({
         )}
       </dl>
 
+      {dados.heroi?.territorioId === t.id && (
+        <p className="rounded-lg border border-ouro/40 bg-ouro/5 px-3 py-2 text-sm">
+          🎖️ {dados.heroi.nome}, seu herói, está aqui. Para levá-lo, marque a opção ao mandar tropas daqui.
+        </p>
+      )}
+
       {povoado && <PainelPovoado povoado={povoado} donoId={t.dono_id} meuId={meuId} onMelhorado={onConstruido} agora={agora} />}
 
       {torre && (

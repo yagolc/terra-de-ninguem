@@ -207,6 +207,23 @@ export const BALANCEAMENTO = {
     },
   },
 
+  /** Heróis: um por jogador na temporada, com nome e especialidade; o ouro do treino é o ralo da economia. */
+  herois: {
+    custoRecrutar: { comida: 0, madeira: 0, ouro: 300 },
+    nivelQuartelMinimo: 1,
+    nivelMaximo: 10,
+    /** Bônus da especialidade por nível (0,02 = +2% por nível, +20% no nível 10). */
+    bonusPorNivel: 0.02,
+    /** Treino para o nível n: ouro = ouroBase × crescimentoOuro^(n−2); tempo = minutosBase × crescimentoTempo^(n−2). */
+    treino: { ouroBase: 200, crescimentoOuro: 1.5, minutosBase: 60, crescimentoTempo: 1.3 },
+    /** Horas fora de combate depois de perder uma batalha (ele nunca morre). */
+    feridoHoras: 12,
+    /** O intendente fora da cidade rende este múltiplo do bônus, só no recurso daquele território. */
+    multiplicadorIntendenteTerritorio: 2,
+    nomeMinimo: 2,
+    nomeMaximo: 20,
+  },
+
   reconhecimento: {
     /** Custo de mandar um batedor. */
     custoOuro: 20,

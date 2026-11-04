@@ -2,6 +2,7 @@ import {
   BALANCEAMENTO,
   MENSAGENS_ATAQUE,
   TIPOS_UNIDADE,
+  bonusHeroi,
   duracaoMarchaMs,
   exercito,
   fimProtecaoIniciante,
@@ -13,6 +14,7 @@ import {
 } from '@terra/regras';
 import { useState } from 'react';
 import { chamarFuncao } from '../lib/funcoes';
+import OpcaoHeroi from './OpcaoHeroi';
 import InfoReconhecimento from './InfoReconhecimento';
 import type { DadosMapa } from '../lib/useMapa';
 import { UNIDADES_INFO, formatarDuracao } from '../lib/textos';
@@ -42,6 +44,7 @@ export default function PainelAtaque({ dados, alvoId, meuId, agora, onVoltar, on
   const [tipo, setTipo] = useState<TipoAtaque>(alvo.cidade_principal ? 'saque' : 'conquista');
   const [enviar, setEnviar] = useState<Exercito>(exercito());
   const [enviando, setEnviando] = useState(false);
+  const [levarHeroi, setLevarHeroi] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   const origem = dados.territorios.find((t) => t.id === origemId);
@@ -63,13 +66,23 @@ export default function PainelAtaque({ dados, alvoId, meuId, agora, onVoltar, on
     escudoDoAlvoAte: alvo.dono_id ? (dados.escudos.get(alvo.dono_id) ?? null) : null,
     agora,
   });
-  const duracao = origem && totalUnidades(enviar) > 0 ? duracaoMarchaMs(origem, alvo, enviar) : null;
+  const heroi = dados.heroi;
+  const comHeroi = levarHeroi && heroi?.territorioId === origemId;
+  const bonusVelocidade = comHeroi && heroi.especialidade === 'desbravador' ? bonusHeroi(heroi.nivel) : 0;
+  const duracao = origem && totalUnidades(enviar) > 0 ? duracaoMarchaMs(origem, alvo, enviar, bonusVelocidade) : null;
 
   async function confirmar() {
     setEnviando(true);
     setErro(null);
     try {
-      await chamarFuncao('cidade', { acao: 'enviar_marcha', origem_id: origemId, destino_id: alvoId, tipo, tropas: enviar });
+      await chamarFuncao('cidade', {
+        acao: 'enviar_marcha',
+        origem_id: origemId,
+        destino_id: alvoId,
+        tipo,
+        tropas: enviar,
+        com_heroi: comHeroi,
+      });
       onEnviado(`Tropas a caminho de ${alvo.nome}. O relatório chega quando a batalha acontecer.`);
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível enviar o ataque.');
@@ -197,6 +210,8 @@ export default function PainelAtaque({ dados, alvoId, meuId, agora, onVoltar, on
           >
             Mandar todas
           </button>
+
+          <OpcaoHeroi heroi={heroi} origemId={origemId} agora={agora} marcado={levarHeroi} onMudar={setLevarHeroi} />
 
           {duracao !== null && (
             <p className="rounded-lg bg-noite/60 px-3 py-2 text-sm">

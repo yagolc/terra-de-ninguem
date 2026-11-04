@@ -91,6 +91,20 @@ O mapa é dividido em territórios ligados por fronteiras, como no War. Um mapa 
   - **Vilas** (cerca de 6 por mapa, guarda fraca): neutras, têm um estoque que o saque leva inteiro e que volta a encher em 8 h. Conquistadas, viram do dono no nível 1 e dão +5 de população máxima por nível (até 3). Saqueada por outro jogador, a vila volta ao nível 0.
   - **Cidades livres** (3 no meio do mapa, guarda forte e muralha própria de +30%): dão +60 de ouro por hora. Na primeira conquista, 5 lanceiros de milícia passam a defendê-la para o conquistador, sem ocupar população nem comer. Ter todas por 12 h seguidas é o monopólio comercial.
 
+## Heróis
+
+Com o Quartel construído, cada jogador recruta **um herói** por temporada (300 de ouro), com nome e uma especialidade que não muda. Ele ocupa 1 de população, não come e nunca morre. O bônus é de +2% por nível, até +20% no nível 10.
+
+| Especialidade | Bônus |
+| --- | --- |
+| Comandante | Força de ataque da marcha em que ele vai |
+| Castelão | Defesa do território onde ele está |
+| Desbravador | Velocidade das marchas com ele (ida e volta) |
+| Saqueador | Carga de saque das tropas com ele (cidades e vilas) |
+| Intendente | Na cidade: toda a produção e o crescimento da população. Noutro território próprio: o dobro, só no recurso daquele território |
+
+Para subir de nível, ele treina na cidade pagando ouro (de 200 no nível 2 a ~5.100 no 10; ~15.000 no total) e fica ocupado durante o treino. Vai nas marchas de ataque e movimento junto com pelo menos 1 soldado. Se o exército dele perde, ou o território onde ele está perde uma defesa, ele fica ferido por 12 h e volta para a cidade. É secreto: os outros só o veem com batedor ou em relatório de batalha.
+
 ## Ataques, defesa e proteções
 
 Ataques podem chegar sem aviso a qualquer hora. Três proteções evitam que alguém entre no jogo e encontre a cidade destruída.

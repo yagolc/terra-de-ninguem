@@ -1,6 +1,7 @@
 // Textos para o jogador de cada motivo de recusa. Servidor e interface usam os mesmos.
 import type { MotivoRecusaAtaque, MotivoRecusaMovimento } from './ataques.ts';
 import type { MotivoRecusaEstrutura } from './estruturas.ts';
+import type { MotivoRecusaRecrutamento, MotivoRecusaTreinoHeroi } from './herois.ts';
 import type { MotivoRecusaVila } from './povoados.ts';
 import type { MotivoRecusaEvolucao } from './predios.ts';
 import type { MotivoRecusaReconhecimento } from './reconhecimento.ts';
@@ -64,5 +65,23 @@ export const MENSAGENS_ESTRUTURA: Record<MotivoRecusaEstrutura, string> = {
 export const MENSAGENS_VILA: Record<MotivoRecusaVila, string> = {
   povoado_invalido: 'Só dá para melhorar vilas suas.',
   nivel_maximo: 'Esta vila já está no nível máximo.',
+  recursos_insuficientes: 'Recursos insuficientes.',
+};
+
+export const MENSAGENS_RECRUTAMENTO: Record<MotivoRecusaRecrutamento, string> = {
+  ja_tem_heroi: 'Você já tem um herói nesta temporada.',
+  sem_quartel: 'Construa o Quartel para recrutar um herói.',
+  nome_invalido: 'O nome precisa ter de 2 a 20 letras.',
+  especialidade_invalida: 'Escolha uma especialidade.',
+  sem_populacao: 'Falta um habitante livre para virar herói.',
+  recursos_insuficientes: 'Recursos insuficientes.',
+};
+
+export const MENSAGENS_TREINO_HEROI: Record<MotivoRecusaTreinoHeroi, string> = {
+  sem_heroi: 'Você ainda não tem um herói.',
+  nivel_maximo: 'Seu herói já está no nível máximo.',
+  em_treino: 'Seu herói já está treinando.',
+  ferido: 'Seu herói está ferido e precisa se recuperar antes de treinar.',
+  fora_da_cidade: 'O herói só treina na cidade. Traga-o de volta com uma marcha de movimento.',
   recursos_insuficientes: 'Recursos insuficientes.',
 };

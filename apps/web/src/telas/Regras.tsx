@@ -1,14 +1,16 @@
 import {
   BALANCEAMENTO,
   BONUS_DO_TERRENO,
+  TIPOS_ESPECIALIDADE,
   TIPOS_ESTRUTURA,
   TIPOS_UNIDADE,
   capacidadeArmazem,
+  custoTreinoHeroi,
   limitePopulacao,
   protecaoArmazem,
 } from '@terra/regras';
 import type { ReactNode } from 'react';
-import { ESTRUTURAS_INFO, PREDIOS, RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO } from '../lib/textos';
+import { ESPECIALIDADES_INFO, ESTRUTURAS_INFO, PREDIOS, RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO } from '../lib/textos';
 
 const B = BALANCEAMENTO;
 const pct = (fracao: number) => `${Math.round(fracao * 100)}%`;
@@ -185,6 +187,30 @@ export default function Regras() {
           <b>As estruturas dos outros são secretas:</b> no mapa aparece só um ❓. Para saber qual é (e se já está pronta),
           mande um batedor. A torre não mostra de que tipo são os soldados: para isso, também é preciso um batedor. Quando ela avista alguém, a aba Mapa
           ganha um aviso ⚠️ vermelho.
+        </p>
+      </Secao>
+
+      <Secao icone="🎖️" titulo="Herói">
+        <p>
+          Com o Quartel construído, recrute <b>um herói</b> por temporada ({custo(B.herois.custoRecrutar)}): você escolhe o nome e a
+          especialidade, que não muda depois. Ele ocupa 1 de população, não come e <b>nunca morre</b>.
+        </p>
+        <ul className="space-y-1">
+          {TIPOS_ESPECIALIDADE.map((e) => (
+            <li key={e}>
+              {ESPECIALIDADES_INFO[e].icone} <b>{ESPECIALIDADES_INFO[e].nome}:</b> {ESPECIALIDADES_INFO[e].descricao}
+            </li>
+          ))}
+        </ul>
+        <p>
+          O bônus é de <b>{pct(B.herois.bonusPorNivel)} por nível</b>, até {pct(B.herois.bonusPorNivel * B.herois.nivelMaximo)} no nível{' '}
+          {B.herois.nivelMaximo}. Para subir, ele treina na cidade pagando ouro (do nível 2 por {num(custoTreinoHeroi(2).ouro)} 🪙 ao nível{' '}
+          {B.herois.nivelMaximo} por {num(custoTreinoHeroi(B.herois.nivelMaximo).ouro)} 🪙); enquanto treina, fica ocupado.
+        </p>
+        <p>
+          Para levá-lo numa marcha, marque a opção ao mandar tropas do território onde ele está (ele nunca vai sozinho). Se o exército dele
+          perder, ou se o território onde ele está perder uma defesa, ele fica <b>ferido por {B.herois.feridoHoras} h</b> e volta para a
+          cidade. Ninguém sabe onde está o seu herói, a não ser que mande um batedor.
         </p>
       </Secao>
 

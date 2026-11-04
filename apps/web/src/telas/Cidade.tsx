@@ -1,18 +1,44 @@
-import { BALANCEAMENTO, RECURSOS, TIPOS_PREDIO, somarExercitos, type Recursos, type TipoPredio, type TipoUnidade } from '@terra/regras';
+import {
+  BALANCEAMENTO,
+  RECURSOS,
+  TIPOS_PREDIO,
+  habitantesLivres,
+  somarExercitos,
+  type Especialidade,
+  type Recursos,
+  type TipoPredio,
+  type TipoUnidade,
+} from '@terra/regras';
 import type { Session } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 import BarraRecursos from '../componentes/BarraRecursos';
 import CartaoPredio from '../componentes/CartaoPredio';
+import PainelHeroi from '../componentes/PainelHeroi';
 import PainelQuartel from '../componentes/PainelQuartel';
 import PainelTrabalhadores from '../componentes/PainelTrabalhadores';
 import { useCidade } from '../lib/useCidade';
-import { PREDIOS, RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarDuracao } from '../lib/textos';
+import { ESPECIALIDADES_INFO, PREDIOS, RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarDuracao } from '../lib/textos';
 
 type Aviso = { tipo: 'erro' | 'ok'; texto: string };
 
 export default function Cidade({ sessao }: { sessao: Session }) {
-  const { cidade, obras, tropas, emMarcha, fila, soldados, bonus, extras, territorio, territorios, agora, erro, comandar } =
-    useCidade(sessao.user.id);
+  const {
+    cidade,
+    obras,
+    tropas,
+    emMarcha,
+    fila,
+    soldados,
+    bonus,
+    extras,
+    territorio,
+    territorios,
+    meusTerritorios,
+    heroi,
+    agora,
+    erro,
+    comandar,
+  } = useCidade(sessao.user.id);
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState<Aviso | null>(null);
 
@@ -40,6 +66,12 @@ export default function Cidade({ sessao }: { sessao: Session }) {
     executar({ acao: 'treinar_tropas', tipo, quantidade }, `Treino iniciado: ${quantidade} ${UNIDADES_INFO[tipo].plural.toLowerCase()}.`);
   const alocar = (alocacao: Recursos) =>
     executar({ acao: 'alocar_trabalhadores', alocacao }, 'Trabalhadores redistribuídos.');
+  const recrutar = (nome: string, especialidade: Especialidade) =>
+    executar(
+      { acao: 'recrutar_heroi', nome, especialidade },
+      `${nome}, ${ESPECIALIDADES_INFO[especialidade].nome.toLowerCase()}, se juntou a você.`,
+    );
+  const treinarHeroi = () => executar({ acao: 'treinar_heroi' }, 'Treino do herói começou.');
 
   if (erro) {
     return (
@@ -131,6 +163,17 @@ export default function Cidade({ sessao }: { sessao: Session }) {
             agora={agora}
             ocupado={ocupado}
             onTreinar={treinar}
+          />
+          <PainelHeroi
+            heroi={heroi}
+            cidade={cidade}
+            cidadeTerritorioId={territorio?.id ?? null}
+            nomeDoTerritorio={(id) => meusTerritorios.find((t) => t.id === id)?.nome ?? null}
+            habitantesLivres={habitantesLivres(cidade, soldados)}
+            agora={agora}
+            ocupado={ocupado}
+            onRecrutar={recrutar}
+            onTreinar={treinarHeroi}
           />
         </aside>
       </div>

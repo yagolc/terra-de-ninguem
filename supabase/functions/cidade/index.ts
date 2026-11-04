@@ -5,6 +5,8 @@
 //      | { acao: 'enviar_reconhecimento', origem_id, destino_id }
 //      | { acao: 'construir_estrutura', territorio_id, tipo: 'torre' | 'palicada' | 'entreposto' }
 //      | { acao: 'melhorar_vila', territorio_id }
+//      | { acao: 'recrutar_heroi', nome, especialidade } | { acao: 'treinar_heroi' }
+//      (enviar_marcha aceita com_heroi: true para levar o herói, que precisa estar livre na origem)
 //      | { acao: 'marcar_relatorios_lidos' }
 // Publicar com: npx supabase functions deploy cidade --no-verify-jwt (o token é validado no código).
 import {
@@ -14,15 +16,20 @@ import {
   MENSAGENS_EVOLUCAO,
   MENSAGENS_MOVIMENTO,
   MENSAGENS_RECONHECIMENTO,
+  MENSAGENS_RECRUTAMENTO,
   MENSAGENS_TREINO,
+  MENSAGENS_TREINO_HEROI,
   MENSAGENS_VILA,
   TIPOS_ATAQUE,
   TIPOS_ESTRUTURA,
   TIPOS_PREDIO,
   TIPOS_UNIDADE,
+  bonusHeroi,
   duracaoMarchaMs,
   duracaoReconhecimentoMs,
   grafoDeFronteiras,
+  habitantesLivres,
+  heroiDisponivel,
   ligadosPorTerritoriosProprios,
   mapearExercito,
   subtrairRecursos,
@@ -33,6 +40,8 @@ import {
   verificarMelhoriaVila,
   verificarMovimento,
   verificarReconhecimento,
+  verificarRecrutamento,
+  verificarTreinoHeroi,
   verificarTreino,
   type Recursos,
   type TipoAtaque,
@@ -65,6 +74,24 @@ function lerAlocacao(valor: unknown): Recursos {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type TerritorioMarcha = { id: string; dono_id: string | null; cidade_principal: boolean; x: number; y: number };
+
+/**
+ * Herói que vai na marcha, se o jogador pediu (`com_heroi`): precisa estar livre no território de origem.
+ * Devolve o id e o bônus de velocidade (desbravador).
+ */
+function heroiDaMarcha(c: CidadeAvancada, corpo: Record<string, unknown>, origemId: string, agora: number) {
+  if (corpo.com_heroi !== true) return { heroiId: null, bonusVelocidade: 0 };
+  const heroi = c.carregada.heroi;
+  if (!heroi || heroi.territorioId !== origemId || !heroiDisponivel(heroi, agora)) {
+    throw new ErroDoJogo('O herói precisa estar livre (sem treino e sem ferimento) no território de onde a marcha sai.');
+  }
+  return { heroiId: heroi.id, bonusVelocidade: heroi.especialidade === 'desbravador' ? bonusHeroi(heroi.nivel) : 0 };
+}
+
+/** O herói sai do território e passa a viajar com a marcha recém-criada. */
+async function embarcarHeroi(tx: Transacao, heroiId: string | null, marchaId: string) {
+  if (heroiId) await tx`update herois set territorio_id = null, marcha_id = ${marchaId} where id = ${heroiId}`;
+}
 
 /**
  * Tira as tropas do território de origem e põe a marcha a caminho: ataque (saque ou conquista) contra um
@@ -110,12 +137,15 @@ async function enviarMarcha(
       }),
     });
     if (!v.ok) throw new ErroDoJogo(MENSAGENS_MOVIMENTO[v.motivo]);
+    const { heroiId, bonusVelocidade } = heroiDaMarcha(c, corpo, origemId, agora);
     grupo!.tropas = mapearExercito((t) => grupo!.tropas[t] - enviar[t]);
-    const chegada = agora + duracaoMarchaMs(origem, destino, enviar);
-    await tx`
-      insert into marchas (temporada_id, jogador_id, origem_id, destino_id, tipo, lanceiro, arqueiro, cavalaria, partida_em, chegada_em)
+    const chegada = agora + duracaoMarchaMs(origem, destino, enviar, bonusVelocidade);
+    const [marcha] = await tx<{ id: string }[]>`
+      insert into marchas (temporada_id, jogador_id, origem_id, destino_id, tipo, lanceiro, arqueiro, cavalaria, partida_em, chegada_em, heroi_id)
       values (${temporada.id}, ${jogadorId}, ${origemId}, ${destinoId}, 'movimento',
-              ${enviar.lanceiro}, ${enviar.arqueiro}, ${enviar.cavalaria}, ${new Date(agora)}, ${new Date(chegada)})`;
+              ${enviar.lanceiro}, ${enviar.arqueiro}, ${enviar.cavalaria}, ${new Date(agora)}, ${new Date(chegada)}, ${heroiId})
+      returning id`;
+    await embarcarHeroi(tx, heroiId, marcha!.id);
     return chegada;
   }
 
@@ -145,13 +175,16 @@ async function enviarMarcha(
     agora,
   });
   if (!v.ok) throw new ErroDoJogo(MENSAGENS_ATAQUE[v.motivo]);
+  const { heroiId, bonusVelocidade } = heroiDaMarcha(c, corpo, origemId, agora);
 
   grupo!.tropas = mapearExercito((t) => grupo!.tropas[t] - enviar[t]);
-  const chegada = agora + duracaoMarchaMs(origem, destino, enviar);
-  await tx`
-    insert into marchas (temporada_id, jogador_id, origem_id, destino_id, tipo, lanceiro, arqueiro, cavalaria, partida_em, chegada_em)
+  const chegada = agora + duracaoMarchaMs(origem, destino, enviar, bonusVelocidade);
+  const [marcha] = await tx<{ id: string }[]>`
+    insert into marchas (temporada_id, jogador_id, origem_id, destino_id, tipo, lanceiro, arqueiro, cavalaria, partida_em, chegada_em, heroi_id)
     values (${temporada.id}, ${jogadorId}, ${origemId}, ${destinoId}, ${tipo},
-            ${enviar.lanceiro}, ${enviar.arqueiro}, ${enviar.cavalaria}, ${new Date(agora)}, ${new Date(chegada)})`;
+            ${enviar.lanceiro}, ${enviar.arqueiro}, ${enviar.cavalaria}, ${new Date(agora)}, ${new Date(chegada)}, ${heroiId})
+    returning id`;
+  await embarcarHeroi(tx, heroiId, marcha!.id);
   await tx`delete from protecoes where temporada_id = ${temporada.id} and jogador_id = ${jogadorId} and tipo = 'escudo'`;
   return chegada;
 }
@@ -225,6 +258,34 @@ async function construirEstrutura(
   await tx`
     insert into estruturas (temporada_id, territorio_id, jogador_id, tipo, pronto_em)
     values (${temporada.id}, ${territorioId}, ${c.carregada.jogadorId}, ${tipo}, ${new Date(v.prontoEm)})`;
+  return v.prontoEm;
+}
+
+/** Recruta o herói do jogador na cidade (um por temporada; ocupa 1 de população). */
+async function recrutarHeroi(tx: Transacao, temporada: Temporada, c: CidadeAvancada, corpo: Record<string, unknown>) {
+  if (!c.carregada.territorioId) throw new ErroDoJogo('Sua cidade não tem território nesta temporada.', 409);
+  const v = verificarRecrutamento({
+    jaTemHeroi: !!c.carregada.heroi,
+    nivelQuartel: c.estado.predios.quartel,
+    habitantesLivres: habitantesLivres(c.estado, soldados(c)),
+    recursos: c.estado.recursos,
+    nome: String(corpo.nome ?? ''),
+    especialidade: String(corpo.especialidade ?? ''),
+  });
+  if (!v.ok) throw new ErroDoJogo(MENSAGENS_RECRUTAMENTO[v.motivo]);
+  c.estado = { ...c.estado, recursos: subtrairRecursos(c.estado.recursos, v.custo) };
+  await tx`
+    insert into herois (temporada_id, jogador_id, nome, especialidade, territorio_id)
+    values (${temporada.id}, ${c.carregada.jogadorId}, ${v.nome}, ${v.especialidade}, ${c.carregada.territorioId})`;
+}
+
+/** Começa o treino do herói: o nível sobe agora, mas ele fica ocupado na cidade até o fim. */
+async function treinarHeroi(tx: Transacao, c: CidadeAvancada, agora: number): Promise<number> {
+  const heroi = c.carregada.heroi;
+  const v = verificarTreinoHeroi({ heroi, cidadeTerritorioId: c.carregada.territorioId, recursos: c.estado.recursos, agora });
+  if (!v.ok) throw new ErroDoJogo(MENSAGENS_TREINO_HEROI[v.motivo]);
+  c.estado = { ...c.estado, recursos: subtrairRecursos(c.estado.recursos, v.custo) };
+  await tx`update herois set nivel = ${v.nivelAlvo}, treino_pronto_em = ${new Date(v.prontoEm)} where id = ${heroi!.id}`;
   return v.prontoEm;
 }
 
@@ -310,6 +371,14 @@ async function executar(jogadorId: string, corpo: Record<string, unknown>): Prom
       }
       case 'melhorar_vila': {
         resultado.nivel = await melhorarVila(tx, temporada, c, corpo);
+        break;
+      }
+      case 'recrutar_heroi': {
+        await recrutarHeroi(tx, temporada, c, corpo);
+        break;
+      }
+      case 'treinar_heroi': {
+        resultado.pronto_em = new Date(await treinarHeroi(tx, c, agora)).toISOString();
         break;
       }
       case 'enviar_marcha': {

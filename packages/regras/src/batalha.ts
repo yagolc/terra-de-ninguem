@@ -50,6 +50,9 @@ export type EntradaBatalha = {
   palicada?: boolean;
   /** Território com cidade livre (muralha própria, vale para qualquer defensor). */
   cidadeLivre?: boolean;
+  /** Heróis: comandante na marcha (ataque) e castelão no território (defesa); 0,2 = +20%. */
+  bonusAtaque?: number;
+  bonusDefesa?: number;
   /** Sorte em [-1, 1] (use `sortearSorte`); vira ±`sorteMaxima` na força do atacante. */
   sorte: number;
   /** A cidade principal pode ser saqueada, mas nunca conquistada. */
@@ -86,8 +89,9 @@ export function resolverBatalha(entrada: EntradaBatalha): ResultadoBatalha {
   const { sorteMaxima, expoentePerdasVencedor, perdaPerdedor, margemConquista } = BALANCEAMENTO.batalha;
 
   const sorte = Math.max(-1, Math.min(1, entrada.sorte));
-  const ataque = forcaAtaque(atacante, defensor) * (1 + sorteMaxima * sorte);
-  const defesa = forcaDefesa(defensor, atacante, terreno, nivelMuralha, entrada.palicada, entrada.cidadeLivre);
+  const ataque = forcaAtaque(atacante, defensor) * (1 + (entrada.bonusAtaque ?? 0)) * (1 + sorteMaxima * sorte);
+  const defesa =
+    forcaDefesa(defensor, atacante, terreno, nivelMuralha, entrada.palicada, entrada.cidadeLivre) * (1 + (entrada.bonusDefesa ?? 0));
 
   const atacanteVence = ataque > defesa;
   const maior = Math.max(ataque, defesa);
