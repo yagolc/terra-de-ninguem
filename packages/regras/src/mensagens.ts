@@ -1,6 +1,7 @@
 // Textos para o jogador de cada motivo de recusa. Servidor e interface usam os mesmos.
 import type { MotivoRecusaAtaque, MotivoRecusaMovimento } from './ataques.ts';
 import type { MotivoRecusaEstrutura } from './estruturas.ts';
+import type { MotivoRecusaVila } from './povoados.ts';
 import type { MotivoRecusaEvolucao } from './predios.ts';
 import type { MotivoRecusaReconhecimento } from './reconhecimento.ts';
 import type { MotivoRecusaAlocacao } from './producao.ts';
@@ -57,5 +58,11 @@ export const MENSAGENS_RECONHECIMENTO: Record<MotivoRecusaReconhecimento, string
 export const MENSAGENS_ESTRUTURA: Record<MotivoRecusaEstrutura, string> = {
   territorio_invalido: 'Só dá para construir em territórios seus.',
   ja_tem_estrutura: 'Esse território já tem uma estrutura. É uma por território.',
+  recursos_insuficientes: 'Recursos insuficientes.',
+};
+
+export const MENSAGENS_VILA: Record<MotivoRecusaVila, string> = {
+  povoado_invalido: 'Só dá para melhorar vilas suas.',
+  nivel_maximo: 'Esta vila já está no nível máximo.',
   recursos_insuficientes: 'Recursos insuficientes.',
 };

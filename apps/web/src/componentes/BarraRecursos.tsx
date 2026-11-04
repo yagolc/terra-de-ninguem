@@ -3,7 +3,7 @@ import {
   capacidadeArmazem,
   consumoComidaHora,
   habitantesLivres,
-  limitePopulacao,
+  limitePopulacaoCidade,
   producaoHora,
   type EstadoCidade,
   type Exercito,
@@ -14,6 +14,8 @@ import { RECURSOS_INFO, formatarNumero, formatarTaxa } from '../lib/textos';
 type Props = {
   cidade: EstadoCidade;
   bonus: Recursos;
+  /** Ouro das cidades livres e população a mais das vilas. */
+  extras: { producaoFixaHora: Recursos; populacaoExtra: number };
   /** Todas as tropas do jogador: comem comida continuamente. */
   tropas: Exercito;
   /** Tropas mais as que estão em treino (ocupam população). */
@@ -21,11 +23,11 @@ type Props = {
 };
 
 /** Estoque de cada recurso (subindo em tempo real), saldo por hora e população. */
-export default function BarraRecursos({ cidade, bonus, tropas, soldados }: Props) {
+export default function BarraRecursos({ cidade, bonus, extras, tropas, soldados }: Props) {
   const teto = capacidadeArmazem(cidade.predios.armazem);
-  const producao = producaoHora(cidade, bonus);
+  const producao = producaoHora(cidade, bonus, extras.producaoFixaHora);
   const saldo: Recursos = { ...producao, comida: producao.comida - consumoComidaHora(tropas) };
-  const limite = limitePopulacao(cidade.predios.casa);
+  const limite = limitePopulacaoCidade(cidade, extras.populacaoExtra);
   const livres = habitantesLivres(cidade, soldados);
   const fome = saldo.comida < 0 && cidade.recursos.comida < 1;
 

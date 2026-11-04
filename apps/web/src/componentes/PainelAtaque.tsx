@@ -98,6 +98,7 @@ export default function PainelAtaque({ dados, alvoId, meuId, agora, onVoltar, on
           reconhecimento={dados.reconhecimentos.get(alvoId)!}
           agora={agora}
           nomeDono={dono ? dono.nome : 'Bárbaros'}
+          cidadeLivre={dados.povoados.get(alvoId)?.tipo === 'cidade_livre'}
         />
       )}
       {estruturaDesconhecida && (

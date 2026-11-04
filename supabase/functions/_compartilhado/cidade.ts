@@ -4,6 +4,7 @@ import {
   TIPOS_PREDIO,
   avancarCidade,
   bonusDeTerritorios,
+  bonusDosPovoados,
   cidadeInicial,
   distribuirPerdas,
   escolherCor,
@@ -20,6 +21,7 @@ import {
   type Obra,
   type Recurso,
   type Recursos,
+  type TipoPovoado,
   type TipoPredio,
   type TipoUnidade,
 } from '../../../packages/regras/src/index.ts';
@@ -110,6 +112,9 @@ export type CidadeCarregada = {
   obras: ObraSalva[];
   fila: LoteSalvo[];
   bonus: Recursos;
+  /** Ouro das cidades livres e população a mais das vilas (só povoados leais). */
+  producaoFixaHora: Recursos;
+  populacaoExtra: number;
   /** Tropas paradas, uma entrada por território. */
   grupos: GrupoTropas[];
   /** Tropas em marcha: comem e ocupam população, mas não desertam. */
@@ -146,6 +151,15 @@ export async function carregarCidade(tx: Transacao, temporadaId: string, jogador
                     where e.territorio_id = t.id and e.tipo = 'entreposto' and e.pronto_em <= now()) as entreposto
       from territorios t where t.temporada_id = ${temporadaId} and t.dono_id = ${jogadorId}`;
 
+  const povoados = await tx<{ tipo: TipoPovoado; nivel: number; leal_desde: Date | null }[]>`
+    select p.tipo, p.nivel, p.leal_desde
+      from povoados p join territorios t on t.id = p.territorio_id
+     where t.temporada_id = ${temporadaId} and t.dono_id = ${jogadorId}`;
+  const bonusPovoados = bonusDosPovoados(
+    povoados.map((p) => ({ tipo: p.tipo, nivel: p.nivel, lealDesde: p.leal_desde?.getTime() ?? null })),
+    Date.now(),
+  );
+
   const linhasPredios = await tx<{ tipo: TipoPredio; nivel: number }[]>`select tipo, nivel from predios where cidade_id = ${linha.id}`;
   const predios = Object.fromEntries(TIPOS_PREDIO.map((tipo) => [tipo, 0])) as EstadoCidade['predios'];
   for (const p of linhasPredios) predios[p.tipo] = p.nivel;
@@ -174,6 +188,8 @@ export async function carregarCidade(tx: Transacao, temporadaId: string, jogador
       territorios.map((t) => t.bonus_recurso),
       territorios.filter((t) => t.entreposto).map((t) => t.bonus_recurso),
     ),
+    producaoFixaHora: bonusPovoados.producaoFixaHora,
+    populacaoExtra: bonusPovoados.populacaoExtra,
     grupos: linhasTropas.map((t) => ({
       id: t.id,
       territorioId: t.territorio_id,
@@ -220,6 +236,8 @@ export function avancarAteAgora(c: CidadeCarregada, agora: number): CidadeAvanca
     treinos: c.fila,
     agora,
     bonusTerritorios: c.bonus,
+    producaoFixaHora: c.producaoFixaHora,
+    populacaoExtra: c.populacaoExtra,
   });
 
   const resultado: CidadeAvancada = {

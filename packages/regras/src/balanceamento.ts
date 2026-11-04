@@ -126,14 +126,23 @@ export const BALANCEAMENTO = {
   objetivos: {
     /** "Dominar mais da metade do mapa": fração dos territórios. */
     fracaoMetadeDoMapa: 0.55,
-    /** "Territórios bem defendidos": fração dos territórios, cada um com a guarnição mínima. */
-    fracaoDefendidos: 0.4,
-    guarnicaoMinima: 10,
-    /** "Vitória econômica": habitantes (o limite máximo das casas é 110). */
-    populacaoAlvo: 100,
+    /** "Fronteiras de ferro": territórios com a guarnição mínima em cada (no total, até metade da população máxima). */
+    territoriosDefendidos: 8,
+    guarnicaoMinima: 6,
+    /** "Vitória econômica": habitantes (o limite das casas é 110; as vilas dão mais). */
+    populacaoAlvo: 110,
     /** "Duas regiões": soma dos territórios da dupla entre essas frações do mapa. */
-    duplaDeRegioesMin: 0.25,
-    duplaDeRegioesMax: 0.45,
+    duplaDeRegioesMin: 0.33,
+    duplaDeRegioesMax: 0.5,
+    /** "Senhor da guerra": batalhas vencidas contra jogadores (atacando ou defendendo). */
+    vitoriasContraJogadores: 30,
+    /** "Mestre construtor": quantos prédios da cidade no nível pedido (o Centro tem de chegar lá primeiro). */
+    mestreConstrutorPredios: 3,
+    mestreConstrutorNivel: 10,
+    /** "Tesouro do reino": ouro guardado (pede Armazém nível 10, o máximo). */
+    ouroGuardado: 7500,
+    /** "Monopólio comercial": horas seguidas com todas as cidades livres. */
+    monopolioHoras: 12,
   },
 
   pontos: {
@@ -163,6 +172,40 @@ export const BALANCEAMENTO = {
   bonusPalicada: 0.2,
   /** O entreposto multiplica o bônus de produção do terreno (2 = +10% vira +20%). */
   multiplicadorEntreposto: 2,
+
+  /** Povoados (vilas e cidades livres): posicionados pelo gerador de mapa, um por território no máximo. */
+  povoados: {
+    /** Fração dos territórios (fora cidades iniciais e cidades livres) que ganham uma vila. */
+    fracaoVilas: 0.3,
+    cidadesLivres: 3,
+    /** Horas até um povoado tomado de outro jogador passar a dar bônus ao novo dono. */
+    lealdadeHoras: 24,
+    vila: {
+      /** Estoque cheio de uma vila neutra; o saque leva o que couber na carga e ele volta a encher aos poucos. */
+      estoque: { comida: 300, madeira: 300, ouro: 120 },
+      horasParaEncher: 8,
+      nivelMaximo: 3,
+      /** População máxima a mais na cidade do dono, por nível da vila. */
+      populacaoPorNivel: 5,
+      /** Custo de levar a vila a um nível, multiplicado pelo nível (a primeira conquista já dá o nível 1). */
+      custoPorNivel: { comida: 0, madeira: 150, ouro: 50 },
+      /** Parte do que foi investido nos níveis que leva quem saqueia a vila de outro jogador (ela volta ao nível 0). */
+      fracaoSaqueInvestido: 0.5,
+      /** Guarda da vila neutra, em múltiplos dos bárbaros daquela distância. */
+      guarda: 0.5,
+    },
+    cidadeLivre: {
+      ouroHora: 60,
+      guarda: 3,
+      /** Muralha própria: vale para quem estiver defendendo, bárbaros ou jogador. */
+      bonusDefesa: 0.3,
+      /**
+       * Lanceiros de milícia que juram lealdade a quem conquista a cidade livre pela primeira vez. Ficam lá
+       * defendendo, sem ocupar população nem comer; não marcham e se dispersam se a cidade for tomada.
+       */
+      milicia: 5,
+    },
+  },
 
   reconhecimento: {
     /** Custo de mandar um batedor. */

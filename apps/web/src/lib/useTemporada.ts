@@ -72,7 +72,7 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
   if (!linha) return null;
   const temporada = converterTemporada(linha);
 
-  const [jogadores, regioes, placar, objetivos, territorios, tropas, conquistas] = await Promise.all([
+  const [jogadores, regioes, placar, objetivos, territorios, tropas, batalhas, cidade, cidadesLivres] = await Promise.all([
     supabase.from('jogadores').select('id, nome, cor').returns<{ id: string; nome: string; cor: string | null }[]>(),
     supabase.from('regioes').select('id, nome').eq('temporada_id', temporada.id).returns<{ id: string; nome: string }[]>(),
     supabase
@@ -98,15 +98,26 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
       .eq('temporada_id', temporada.id)
       .eq('dono_id', jogadorId)
       .returns<{ territorio_id: string; lanceiro: number; arqueiro: number; cavalaria: number }[]>(),
+    // O RLS devolve só as batalhas em que o jogador lutou.
     supabase
       .from('relatorios')
-      .select('defensor_id')
+      .select('atacante_id, defensor_id, vencedor, conquistou')
       .eq('temporada_id', temporada.id)
-      .eq('atacante_id', jogadorId)
-      .eq('conquistou', true)
-      .returns<{ defensor_id: string | null }[]>(),
+      .returns<{ atacante_id: string; defensor_id: string | null; vencedor: 'atacante' | 'defensor'; conquistou: boolean }[]>(),
+    supabase
+      .from('cidades')
+      .select('ouro, predios(nivel)')
+      .eq('temporada_id', temporada.id)
+      .eq('jogador_id', jogadorId)
+      .maybeSingle<{ ouro: number; predios: { nivel: number }[] }>(),
+    supabase
+      .from('povoados')
+      .select('territorio_id, posse_desde')
+      .eq('temporada_id', temporada.id)
+      .eq('tipo', 'cidade_livre')
+      .returns<{ territorio_id: string; posse_desde: string | null }[]>(),
   ]);
-  if (!jogadores.data || !regioes.data || !placar.data || !objetivos.data || !territorios.data || !tropas.data || !conquistas.data) {
+  if (!jogadores.data || !regioes.data || !placar.data || !objetivos.data || !territorios.data || !tropas.data || !batalhas.data || !cidadesLivres.data) {
     throw new Error('Não foi possível carregar o placar.');
   }
 
@@ -125,8 +136,18 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
         .filter((t) => t.dono_id === jogadorId)
         .map((t) => {
           const aqui = tropas.data.find((x) => x.territorio_id === t.id);
-          return { regiaoId: t.regiao_id, minhasTropas: aqui ? aqui.lanceiro + aqui.arqueiro + aqui.cavalaria : 0 };
+          return { id: t.id, regiaoId: t.regiao_id, minhasTropas: aqui ? aqui.lanceiro + aqui.arqueiro + aqui.cavalaria : 0 };
         }),
+      vitoriasContraJogadores: batalhas.data.filter((b) =>
+        b.vencedor === 'atacante' ? b.atacante_id === jogadorId && b.defensor_id !== null : b.defensor_id === jogadorId,
+      ).length,
+      niveisPredios: cidade.data?.predios.map((p) => p.nivel) ?? [],
+      ouro: cidade.data?.ouro ?? 0,
+      cidadesLivres: cidadesLivres.data.map((c) => ({
+        minha: territorios.data.find((t) => t.id === c.territorio_id)?.dono_id === jogadorId,
+        posseDesde: c.posse_desde ? Date.parse(c.posse_desde) : null,
+      })),
+      agora: Date.now(),
       territoriosPorRegiao,
       cidadesAlheiasPorRegiao: cidadesAlheiasPorRegiao(
         territorios.data.map((t) => ({ regiaoId: t.regiao_id, donoId: t.dono_id, cidadePrincipal: t.cidade_principal })),
@@ -137,7 +158,7 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
       rival: rivalId
         ? {
             territorios: territorios.data.filter((t) => t.dono_id === rivalId).length,
-            conquisteiDele: conquistas.data.some((c) => c.defensor_id === rivalId),
+            conquisteiDele: batalhas.data.some((b) => b.atacante_id === jogadorId && b.conquistou && b.defensor_id === rivalId),
             outrosConquistaramDele: false,
           }
         : undefined,

@@ -101,5 +101,29 @@ export function descreverObjetivo(
       };
     case 'populacao':
       return { icone: '🌾', titulo: 'Prosperidade', texto: `Chegue a ${objetivo.populacao} habitantes na sua cidade.` };
+    case 'senhor_da_guerra':
+      return {
+        icone: '⚔️',
+        titulo: 'Senhor da guerra',
+        texto: `Vença ${objetivo.vitorias} batalhas contra outros jogadores, atacando ou defendendo. Batalhas contra bárbaros não contam.`,
+      };
+    case 'mestre_construtor':
+      return {
+        icone: '🏰',
+        titulo: 'Mestre construtor',
+        texto: `Leve ${objetivo.predios} prédios da sua cidade ao nível ${objetivo.nivel}. O Centro da Cidade precisa chegar lá primeiro.`,
+      };
+    case 'tesouro':
+      return {
+        icone: '💰',
+        titulo: 'Tesouro do reino',
+        texto: `Junte ${formatarNumero(objetivo.ouro)} de ouro guardado na sua cidade. Só cabe no Armazém nível máximo, e o ouro atrai saqueadores.`,
+      };
+    case 'monopolio_comercial':
+      return {
+        icone: '⚖️',
+        titulo: 'Monopólio comercial',
+        texto: `Controle todas as cidades livres do mapa ao mesmo tempo por ${objetivo.horas} horas seguidas. Se perder uma, o relógio recomeça.`,
+      };
   }
 }

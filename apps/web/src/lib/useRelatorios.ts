@@ -11,6 +11,12 @@ export type DadosBatalha = {
   muralha: number;
   /** Ausente nos relatórios de antes das estruturas. */
   palicada?: boolean;
+  /** Vila ou cidade livre do território (ausente nos relatórios de antes dos povoados). */
+  povoado?: { tipo: 'vila' | 'cidade_livre'; nivel: number } | null;
+  /** A vila de um jogador foi saqueada e voltou ao nível 0. */
+  vilaZerada?: boolean;
+  /** A milícia da cidade livre se juntou ao conquistador. */
+  milicia?: boolean;
   forcaAtaque: number;
   forcaDefesa: number;
   margem: number | null;

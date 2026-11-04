@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { chamarFuncao } from '../lib/funcoes';
 import InfoReconhecimento from './InfoReconhecimento';
 import PainelConstrucao from './PainelConstrucao';
+import PainelPovoado from './PainelPovoado';
 import { origensPossiveis } from './PainelAtaque';
 
 type Props = {
@@ -52,6 +53,7 @@ export default function PainelTerritorio({
   const reconhecimento = dados.reconhecimentos.get(t.id);
   const batedorACaminho = dados.marchas.some((m) => m.tipo === 'reconhecimento' && m.destinoId === t.id);
   const estrutura = dados.estruturas.get(t.id);
+  const povoado = dados.povoados.get(t.id);
   const torre = meu && estruturaAtiva(estrutura, 'torre', agora);
   const vindo = torre ? dados.marchasVistas.filter((m) => m.destinoId === t.id) : [];
 
@@ -137,6 +139,8 @@ export default function PainelTerritorio({
         )}
       </dl>
 
+      {povoado && <PainelPovoado povoado={povoado} donoId={t.dono_id} meuId={meuId} onMelhorado={onConstruido} agora={agora} />}
+
       {torre && (
         <div className={`rounded-lg border px-3 py-2 text-sm ${vindo.length > 0 ? 'border-sangue/70 bg-sangue/15' : 'border-couro bg-noite/60'}`}>
           <p className="font-semibold">{vindo.length > 0 ? '⚠️ A torre avista marchas vindo' : '🗼 A torre não avista ninguém vindo'}</p>
@@ -198,6 +202,7 @@ export default function PainelTerritorio({
           reconhecimento={reconhecimento}
           agora={agora}
           nomeDono={reconhecimento.donoId ? (dados.jogadores.get(reconhecimento.donoId)?.nome ?? 'Defensor') : 'Bárbaros'}
+          cidadeLivre={povoado?.tipo === 'cidade_livre'}
         />
       )}
 

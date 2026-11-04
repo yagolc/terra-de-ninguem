@@ -83,6 +83,23 @@ describe('gerarMapa', () => {
     }
   });
 
+  it('povoados: cidades livres longe das iniciais e não vizinhas; vilas nunca num inicial', () => {
+    for (const m of MAPAS) {
+      const grafo = grafoDeFronteiras(m.fronteiras);
+      const livres = m.povoados.filter((p) => p.tipo === 'cidade_livre').map((p) => p.indice);
+      const vilas = m.povoados.filter((p) => p.tipo === 'vila').map((p) => p.indice);
+      expect(livres.length).toBeGreaterThan(0);
+      expect(livres.length).toBeLessThanOrEqual(BALANCEAMENTO.povoados.cidadesLivres);
+      expect(vilas.length).toBeGreaterThan(0);
+      expect(new Set(m.povoados.map((p) => p.indice)).size).toBe(m.povoados.length);
+      for (const p of m.povoados) expect(m.iniciais).not.toContain(p.indice);
+      for (const c of livres) {
+        for (const i of m.iniciais) expect(grafo.get(i)).not.toContain(c);
+      }
+      for (const p of m.povoados) expect(totalUnidades(m.territorios[p.indice]!.guarnicao)).toBeGreaterThan(0);
+    }
+  });
+
   it('recusa quantidade de jogadores fora de 1 a 6', () => {
     expect(() => gerarMapa({ semente: 1, jogadores: 7 })).toThrow(RangeError);
     expect(() => gerarMapa({ semente: 1, jogadores: 0 })).toThrow(RangeError);
@@ -91,11 +108,20 @@ describe('gerarMapa', () => {
 
 describe('escolherMelhorMapa', () => {
   it('fica com um mapa pelo menos tão justo quanto a primeira tentativa', () => {
-    const primeira = avaliarMapa(gerarMapa({ semente: 555, jogadores: 6 }));
-    const { avaliacao } = escolherMelhorMapa({ sementeBase: 555, jogadores: 6, tentativas: 10 });
-    expect(avaliacao.menorDistanciaEntreCidades).toBeGreaterThanOrEqual(primeira.menorDistanciaEntreCidades);
-    if (avaliacao.menorDistanciaEntreCidades === primeira.menorDistanciaEntreCidades) {
-      expect(avaliacao.desequilibrio).toBeLessThanOrEqual(primeira.desequilibrio);
+    const primeiroMapa = gerarMapa({ semente: 555, jogadores: 6 });
+    const primeira = avaliarMapa(primeiroMapa);
+    const { mapa, avaliacao } = escolherMelhorMapa({ sementeBase: 555, jogadores: 6, tentativas: 10 });
+    const livres = (m: MapaGerado) => m.povoados.filter((p) => p.tipo === 'cidade_livre').length;
+    expect(livres(mapa)).toBeGreaterThanOrEqual(livres(primeiroMapa));
+    if (livres(mapa) === livres(primeiroMapa)) {
+      expect(avaliacao.menorDistanciaEntreCidades).toBeGreaterThanOrEqual(primeira.menorDistanciaEntreCidades);
+    }
+  });
+
+  it('o mapa escolhido para a temporada tem todas as cidades livres', () => {
+    for (const sementeBase of [1, 2026, 555, 9999]) {
+      const { mapa } = escolherMelhorMapa({ sementeBase, jogadores: 6 });
+      expect(mapa.povoados.filter((p) => p.tipo === 'cidade_livre')).toHaveLength(BALANCEAMENTO.povoados.cidadesLivres);
     }
   });
 });

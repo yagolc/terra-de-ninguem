@@ -5,15 +5,21 @@
 // Publicar com: npx supabase functions deploy resolver-marchas --no-verify-jwt
 // Exige o cabeçalho x-segredo-cron igual à variável SEGREDO_CRON (npx supabase secrets set).
 import {
+  BALANCEAMENTO,
   calcularSaque,
+  distribuirPerdas,
   duracaoMarchaMs,
   duracaoReconhecimentoMs,
   escudoAte,
   exercito,
   geradorComSemente,
+  lealDesdeNaConquista,
+  mapearExercito,
   receberSaque,
   recursos,
   resolverBatalha,
+  saquearVilaDeJogador,
+  saquearVilaNeutra,
   sementeDeTexto,
   somarExercitos,
   sortearSorte,
@@ -22,6 +28,7 @@ import {
   type Exercito,
   type Recursos,
   type Terreno,
+  type TipoPovoado,
 } from '../../../packages/regras/src/index.ts';
 import { avancarAteAgora, carregarCidade, grupoEm, salvarCidade, type CidadeAvancada } from '../_compartilhado/cidade.ts';
 import { sql, type Transacao } from '../_compartilhado/db.ts';
@@ -95,7 +102,15 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
         select id, lanceiro, arqueiro, cavalaria from tropas
          where territorio_id = ${destino.id} and dono_id is null for update`;
   const grupoDefensor = defensor ? grupoEm(defensor, destino.id) : null;
-  const exercitoDefensor = grupoDefensor ? grupoDefensor.tropas : exercito(barbaros);
+
+  // Povoado do território (vila ou cidade livre): a cidade livre tem muralha própria e pode ter milícia
+  // (lanceiros que defendem o dono sem ocupar população); a vila tem o que saquear.
+  const [povoado] = await tx<
+    { id: string; tipo: TipoPovoado; nivel: number; saqueada_em: Date | null; milicia: number; milicia_entregue: boolean }[]
+  >`select id, tipo, nivel, saqueada_em, milicia, milicia_entregue from povoados where territorio_id = ${destino.id} for update`;
+  const cidadeLivre = povoado?.tipo === 'cidade_livre';
+  const miliciaDefendendo = exercito({ lanceiro: defensor && cidadeLivre ? povoado.milicia : 0 });
+  const exercitoDefensor = grupoDefensor ? somarExercitos(grupoDefensor.tropas, miliciaDefendendo) : exercito(barbaros);
 
   // Paliçada pronta no território atacado (só jogadores constroem; bárbaros não têm).
   const [comPalicada] = defensor
@@ -111,14 +126,23 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
     terreno: destino.terreno,
     nivelMuralha: defensor && destino.cidade_principal ? defensor.estado.predios.muralha : 0,
     palicada,
+    cidadeLivre,
     sorte: sortearSorte(geradorComSemente(sementeDeTexto(m.id))),
     alvoCidadePrincipal: destino.cidade_principal,
   });
   const atacanteVenceu = batalha.vencedor === 'atacante';
   const conquistou = tipo === 'conquista' && batalha.permiteConquista;
+  // Perdas do defensor divididas entre as tropas do dono e a milícia, na proporção de cada um.
+  const [perdasDono, perdasMilicia] = distribuirPerdas(
+    [grupoDefensor?.tropas ?? exercito(), miliciaDefendendo],
+    batalha.perdasDefensor,
+  );
+  const sobreviventesDono = mapearExercito((t) => (grupoDefensor?.tropas[t] ?? 0) - perdasDono![t]);
+  const miliciaDepois = miliciaDefendendo.lanceiro - perdasMilicia!.lanceiro;
 
-  // Saque: só uma cidade tem estoque para levar.
+  // Saque: a cidade principal (estoque do dono), a vila neutra (estoque dela) ou a vila de um jogador (volta ao nível 0).
   let saque = recursos();
+  let vilaZerada = false;
   if (tipo === 'saque' && atacanteVenceu && defensor && destino.cidade_principal) {
     saque = calcularSaque({
       estoque: defensor.estado.recursos,
@@ -126,27 +150,60 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
       sobreviventes: batalha.sobreviventesAtacante,
     });
     defensor.estado = { ...defensor.estado, recursos: subtrairRecursos(defensor.estado.recursos, saque) };
+  } else if (tipo === 'saque' && atacanteVenceu && povoado?.tipo === 'vila') {
+    if (defensor) {
+      saque = saquearVilaDeJogador({ nivel: povoado.nivel, sobreviventes: batalha.sobreviventesAtacante });
+      vilaZerada = povoado.nivel > 0;
+      await tx`update povoados set nivel = 0 where id = ${povoado.id}`;
+    } else {
+      const r = saquearVilaNeutra({
+        saqueadaEm: povoado.saqueada_em?.getTime() ?? null,
+        agora,
+        sobreviventes: batalha.sobreviventesAtacante,
+      });
+      saque = r.saque;
+      await tx`update povoados set saqueada_em = ${new Date(r.saqueadaEm)} where id = ${povoado.id}`;
+    }
   }
 
   // Perdas e posse do território.
+  let milicia = false;
   if (conquistou) {
     // O atacante fica no território; os sobreviventes do defensor recuam para a cidade dele (bárbaros se dispersam).
     await tx`update territorios set dono_id = ${m.jogador_id} where id = ${destino.id}`;
     // A estrutura do território (pronta ou em obra) é destruída na conquista.
     await tx`delete from estruturas where territorio_id = ${destino.id}`;
     grupoEm(atacante, destino.id).tropas = batalha.sobreviventesAtacante;
+    // Povoado: muda de dono. Neutro, é leal na hora (a vila já vem no nível 1); tomado de outro jogador,
+    // só dá bônus depois da lealdade. A milícia do antigo dono se dispersa; a cidade livre só entrega uma
+    // milícia nova na primeira conquista.
+    if (povoado) {
+      const nivel = povoado.tipo === 'vila' && !defensor ? Math.max(1, povoado.nivel) : povoado.nivel;
+      milicia = povoado.tipo === 'cidade_livre' && !povoado.milicia_entregue;
+      await tx`
+        update povoados
+           set nivel = ${nivel}, posse_desde = ${new Date(agora)},
+               leal_desde = ${new Date(lealDesdeNaConquista(agora, !!defensor))},
+               milicia = ${milicia ? BALANCEAMENTO.povoados.cidadeLivre.milicia : 0},
+               milicia_entregue = milicia_entregue or ${milicia}
+         where id = ${povoado.id}`;
+    }
     if (defensor && grupoDefensor) {
       grupoDefensor.tropas = exercito();
       if (defensor.carregada.territorioId) {
         const casa = grupoEm(defensor, defensor.carregada.territorioId);
-        casa.tropas = somarExercitos(casa.tropas, batalha.sobreviventesDefensor);
+        casa.tropas = somarExercitos(casa.tropas, sobreviventesDono);
       }
     } else if (barbaros) {
       await tx`delete from tropas where id = ${barbaros.id}`;
     }
   } else {
-    if (grupoDefensor) grupoDefensor.tropas = batalha.sobreviventesDefensor;
-    else if (barbaros) {
+    if (grupoDefensor) {
+      grupoDefensor.tropas = sobreviventesDono;
+      if (povoado && miliciaDepois !== miliciaDefendendo.lanceiro) {
+        await tx`update povoados set milicia = ${miliciaDepois} where id = ${povoado.id}`;
+      }
+    } else if (barbaros) {
       const s = batalha.sobreviventesDefensor;
       if (totalUnidades(s) === 0) await tx`delete from tropas where id = ${barbaros.id}`;
       else await tx`update tropas set lanceiro = ${s.lanceiro}, arqueiro = ${s.arqueiro}, cavalaria = ${s.cavalaria} where id = ${barbaros.id}`;
@@ -175,6 +232,9 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
               cidadePrincipal: destino.cidade_principal,
               muralha: defensor && destino.cidade_principal ? defensor.estado.predios.muralha : 0,
               palicada,
+              povoado: povoado ? { tipo: povoado.tipo, nivel: povoado.nivel } : null,
+              vilaZerada,
+              milicia,
               forcaAtaque: batalha.forcaAtaque,
               forcaDefesa: batalha.forcaDefesa,
               margem: Number.isFinite(batalha.margem) ? batalha.margem : null,
@@ -206,13 +266,16 @@ async function resolverReconhecimento(tx: Transacao, m: Marcha, agora: number) {
     : [];
   const [estrutura] = await tx<{ tipo: string; pronta: boolean }[]>`
     select tipo, pronto_em <= ${new Date(agora)} as pronta from estruturas where territorio_id = ${m.destino_id}`;
+  // A milícia da cidade livre também defende: o batedor a conta junto com os lanceiros.
+  const [povoado] = await tx<{ milicia: number }[]>`select milicia from povoados where territorio_id = ${m.destino_id}`;
   const volta = duracaoReconhecimentoMs(destino!, casa!);
 
   await tx`
     insert into reconhecimentos (temporada_id, jogador_id, territorio_id, dono_id, terreno, muralha,
                                  lanceiro, arqueiro, cavalaria, estrutura, estrutura_pronta, observado_em, disponivel_em)
     values (${m.temporada_id}, ${m.jogador_id}, ${destino!.id}, ${destino!.dono_id}, ${destino!.terreno}, ${muralha?.nivel ?? 0},
-            ${vistas!.lanceiro}, ${vistas!.arqueiro}, ${vistas!.cavalaria}, ${estrutura?.tipo ?? null}, ${estrutura?.pronta ?? false},
+            ${vistas!.lanceiro + (destino!.dono_id ? (povoado?.milicia ?? 0) : 0)}, ${vistas!.arqueiro}, ${vistas!.cavalaria},
+            ${estrutura?.tipo ?? null}, ${estrutura?.pronta ?? false},
             ${new Date(agora)}, ${new Date(agora + volta)})`;
   await tx`
     insert into marchas (temporada_id, jogador_id, origem_id, destino_id, tipo, partida_em, chegada_em)

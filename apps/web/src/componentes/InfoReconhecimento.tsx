@@ -6,18 +6,21 @@ type Props = {
   reconhecimento: Reconhecimento;
   agora: number;
   nomeDono: string;
+  /** O território tem cidade livre (muralha própria, +defesa para qualquer defensor). */
+  cidadeLivre?: boolean;
 };
 
 /** O que o batedor viu: tropas, terreno, muralha, estrutura e quanto mandar para conquistar com folga. */
-export default function InfoReconhecimento({ reconhecimento, agora, nomeDono }: Props) {
+export default function InfoReconhecimento({ reconhecimento, agora, nomeDono, cidadeLivre = false }: Props) {
   const { tropas, terreno, muralha, estrutura, estruturaPronta } = reconhecimento;
   const palicada = estrutura === 'palicada' && estruturaPronta;
-  const analise = analisarDefesa({ defensor: tropas, terreno, nivelMuralha: muralha, palicada });
+  const analise = analisarDefesa({ defensor: tropas, terreno, nivelMuralha: muralha, palicada, cidadeLivre });
   const efeitos: string[] = [];
   if (terreno === 'floresta') efeitos.push(`🌲 floresta: arqueiros defendem +${Math.round(BALANCEAMENTO.batalha.bonusFlorestaArqueiro * 100)}%`);
   if (terreno === 'montanha') efeitos.push(`⛰️ montanha: defesa +${Math.round(BALANCEAMENTO.batalha.bonusMontanha * 100)}%`);
   if (muralha > 0) efeitos.push(`🧱 muralha nível ${muralha}: defesa +${Math.round(BALANCEAMENTO.batalha.bonusMuralhaPorNivel * muralha * 100)}%`);
   if (palicada) efeitos.push(`🪵 paliçada: defesa +${Math.round(BALANCEAMENTO.bonusPalicada * 100)}%`);
+  if (cidadeLivre) efeitos.push(`⚖️ cidade livre: defesa +${Math.round(BALANCEAMENTO.povoados.cidadeLivre.bonusDefesa * 100)}%`);
   const idade = agora - reconhecimento.observadoEm;
 
   return (

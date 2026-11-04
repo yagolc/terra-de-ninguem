@@ -1,4 +1,15 @@
-import { CORES_JOGADORES, exercito, somarExercitos, type Exercito, type Recurso, type Recursos, type Terreno, type TipoEstrutura, type TipoUnidade } from '@terra/regras';
+import {
+  CORES_JOGADORES,
+  exercito,
+  somarExercitos,
+  type Exercito,
+  type Recurso,
+  type Recursos,
+  type Terreno,
+  type TipoEstrutura,
+  type TipoPovoado,
+  type TipoUnidade,
+} from '@terra/regras';
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from './supabase';
 
@@ -36,6 +47,34 @@ export type MarchaMapa = {
 export type EstruturaMapa =
   | { territorioId: string; tipo: TipoEstrutura; prontoEm: number }
   | { territorioId: string; tipo: null; prontoEm: null };
+
+/** Vila ou cidade livre de um território (públicas: todos veem nível, estoque e lealdade). O dono é o do território. */
+export type PovoadoMapa = {
+  territorioId: string;
+  tipo: TipoPovoado;
+  nivel: number;
+  /** Vila neutra: o estoque volta a encher a partir daqui (null = nunca saqueada, cheia). */
+  saqueadaEm: number | null;
+  posseDesde: number | null;
+  /** Dá bônus ao dono a partir daqui (null = nunca teve dono). */
+  lealDesde: number | null;
+  /** Lanceiros de milícia que defendem a cidade livre para o dono (fora da população). */
+  milicia: number;
+  miliciaEntregue: boolean;
+};
+
+type LinhaPovoado = {
+  territorio_id: string;
+  tipo: TipoPovoado;
+  nivel: number;
+  saqueada_em: string | null;
+  posse_desde: string | null;
+  leal_desde: string | null;
+  milicia: number;
+  milicia_entregue: boolean;
+};
+
+const data = (valor: string | null) => (valor ? Date.parse(valor) : null);
 
 /** Marcha alheia vindo para um território do jogador com torre de vigia pronta (só o total de soldados). */
 export type MarchaVista = {
@@ -81,6 +120,8 @@ export type DadosMapa = {
   estruturas: Map<string, EstruturaMapa>;
   /** Marchas alheias vistas pelas torres do jogador, da que chega primeiro para a última. */
   marchasVistas: MarchaVista[];
+  /** Vila ou cidade livre de cada território que tem uma. */
+  povoados: Map<string, PovoadoMapa>;
 };
 
 export const COR_NEUTRA = '#6b5a48';
@@ -185,8 +226,20 @@ async function buscarMapa(): Promise<DadosMapa | null> {
     .maybeSingle<{ id: string; numero: number; inicio: string }>();
   if (!temporada) return null;
 
-  const [regioes, territorios, fronteiras, jogadores, tropas, marchas, protecoes, minhaCidade, reconhecimentos, estruturas, marchasVistas] =
-    await Promise.all([
+  const [
+    regioes,
+    territorios,
+    fronteiras,
+    jogadores,
+    tropas,
+    marchas,
+    protecoes,
+    minhaCidade,
+    reconhecimentos,
+    estruturas,
+    marchasVistas,
+    povoados,
+  ] = await Promise.all([
     supabase.from('regioes').select('id, indice, nome, terreno').eq('temporada_id', temporada.id).returns<RegiaoMapa[]>(),
     supabase
       .from('territorios')
@@ -230,6 +283,11 @@ async function buscarMapa(): Promise<DadosMapa | null> {
     // Tipo e prazo só nas estruturas do próprio jogador; nas outras, nulos (o batedor descobre).
     supabase.rpc('estruturas_no_mapa', { p_temporada: temporada.id }),
     buscarMarchasVistas(),
+    supabase
+      .from('povoados')
+      .select('territorio_id, tipo, nivel, saqueada_em, posse_desde, leal_desde, milicia, milicia_entregue')
+      .eq('temporada_id', temporada.id)
+      .returns<LinhaPovoado[]>(),
   ]);
   if (
     !regioes.data ||
@@ -239,7 +297,8 @@ async function buscarMapa(): Promise<DadosMapa | null> {
     !tropas.data ||
     !marchas.data ||
     !protecoes.data ||
-    !estruturas.data
+    !estruturas.data ||
+    !povoados.data
   ) {
     throw new Error('Não foi possível carregar o mapa.');
   }
@@ -293,6 +352,21 @@ async function buscarMapa(): Promise<DadosMapa | null> {
       ]),
     ),
     marchasVistas,
+    povoados: new Map(
+      povoados.data.map((p): [string, PovoadoMapa] => [
+        p.territorio_id,
+        {
+          territorioId: p.territorio_id,
+          tipo: p.tipo,
+          nivel: p.nivel,
+          saqueadaEm: data(p.saqueada_em),
+          posseDesde: data(p.posse_desde),
+          lealDesde: data(p.leal_desde),
+          milicia: p.milicia,
+          miliciaEntregue: p.milicia_entregue,
+        },
+      ]),
+    ),
   };
 }
 

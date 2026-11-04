@@ -1,3 +1,4 @@
+import { estoqueVila, totalRecursos } from '@terra/regras';
 import Phaser from 'phaser';
 import { COR_NEUTRA, corDoJogador, type DadosMapa, type TerritorioMapa } from '../lib/useMapa';
 
@@ -198,6 +199,21 @@ export class CenaMapa extends Phaser.Scene {
       g.strokeCircle(ix, iy, 12);
       const icone = this.add.text(ix, iy, estrutura.tipo ? ICONE_ESTRUTURA[estrutura.tipo] : '❓', { ...estilo, fontSize: '14px', strokeThickness: 0 });
       this.rotulos.push(icone.setOrigin(0.5).setAlpha(emObra ? 0.5 : 1));
+    }
+    // Povoado no canto esquerdo: vila (borda clara) ou cidade livre (borda dourada, maior). Vila neutra
+    // recém-saqueada aparece apagada até o estoque voltar a encher.
+    const povoado = this.opcoes.dados.povoados.get(t.id);
+    if (povoado) {
+      const livre = povoado.tipo === 'cidade_livre';
+      const [px, py, raio] = [x - (livre ? 30 : 26), y - 14, livre ? 14 : 12];
+      const vazia = !livre && !t.dono_id && totalRecursos(estoqueVila(povoado.saqueadaEm, Date.now())) === 0;
+      const g = this.camadaBandeiras!;
+      g.fillStyle(0x1c1410, vazia ? 0.55 : 0.9);
+      g.fillCircle(px, py, raio);
+      g.lineStyle(livre ? 3 : 2, livre ? 0xffd54a : 0xd9c3a0, 1);
+      g.strokeCircle(px, py, raio);
+      const icone = this.add.text(px, py, livre ? '⚖️' : '🏘️', { ...estilo, fontSize: livre ? '16px' : '14px', strokeThickness: 0 });
+      this.rotulos.push(icone.setOrigin(0.5).setAlpha(vazia ? 0.5 : 1));
     }
   }
 

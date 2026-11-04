@@ -27,6 +27,8 @@ export async function garantirObjetivo(tx: Transacao, temporadaId: string, jogad
   const rivais = await tx<{ jogador_id: string }[]>`
     select jogador_id from cidades where temporada_id = ${temporadaId} and jogador_id <> ${jogadorId}`;
   const jaSorteados = await tx<{ objetivo: Objetivo }[]>`select objetivo from objetivos where temporada_id = ${temporadaId}`;
+  const [livres] = await tx<{ n: number }[]>`
+    select count(*)::int as n from povoados where temporada_id = ${temporadaId} and tipo = 'cidade_livre'`;
 
   const objetivo = sortearObjetivo({
     semente: sementeDeTexto(`${temporadaId}:${jogadorId}`),
@@ -34,6 +36,7 @@ export async function garantirObjetivo(tx: Transacao, temporadaId: string, jogad
     totalTerritorios: regioes.reduce((soma, r) => soma + r.territorios, 0),
     rivais: rivais.map((r) => r.jogador_id),
     jaSorteados: jaSorteados.map((o) => o.objetivo),
+    cidadesLivres: livres?.n ?? 0,
   });
   await tx`insert into objetivos (temporada_id, jogador_id, objetivo) values (${temporadaId}, ${jogadorId}, ${tx.json(objetivo)})`;
 }
@@ -64,6 +67,18 @@ export async function atualizarPlacar(tx: Transacao): Promise<{ encerrada: boole
       union all
       select defensor_id from relatorios where temporada_id = ${temporadaId} and vencedor = 'defensor' and defensor_id is not null
     ) v group by jogador_id`;
+  // Para o "senhor da guerra": vitórias só contra jogadores (o atacante é sempre jogador).
+  const vitoriasContraJogadores = await tx<{ jogador_id: string; vitorias: number }[]>`
+    select jogador_id, count(*)::int as vitorias from (
+      select atacante_id as jogador_id from relatorios
+       where temporada_id = ${temporadaId} and vencedor = 'atacante' and defensor_id is not null
+      union all
+      select defensor_id from relatorios where temporada_id = ${temporadaId} and vencedor = 'defensor' and defensor_id is not null
+    ) v group by jogador_id`;
+  // Para o "monopólio comercial": dono atual de cada cidade livre e desde quando.
+  const cidadesLivres = await tx<{ dono_id: string | null; posse_desde: Date | null }[]>`
+    select t.dono_id, p.posse_desde from povoados p join territorios t on t.id = p.territorio_id
+     where p.temporada_id = ${temporadaId} and p.tipo = 'cidade_livre'`;
   const conquistas = await tx<{ atacante_id: string; defensor_id: string }[]>`
     select distinct atacante_id, defensor_id from relatorios
      where temporada_id = ${temporadaId} and conquistou and defensor_id is not null`;
@@ -102,6 +117,7 @@ export async function atualizarPlacar(tx: Transacao): Promise<{ encerrada: boole
     const rivalId = objetivo.tipo === 'derrubar_rival' ? objetivo.rivalId : null;
     const avaliacao = avaliarObjetivo(objetivo, {
       meusTerritorios: meus.map((t) => ({
+        id: t.id,
         regiaoId: t.regiao_id,
         minhasTropas: tropas.find((x) => x.territorio_id === t.id && x.dono_id === jogadorId)?.total ?? 0,
       })),
@@ -112,6 +128,11 @@ export async function atualizarPlacar(tx: Transacao): Promise<{ encerrada: boole
       ),
       totalTerritorios: territorios.length,
       populacao: cidade.estado.populacao,
+      vitoriasContraJogadores: vitoriasContraJogadores.find((v) => v.jogador_id === jogadorId)?.vitorias ?? 0,
+      niveisPredios: Object.values(cidade.estado.predios),
+      cidadesLivres: cidadesLivres.map((c) => ({ minha: c.dono_id === jogadorId, posseDesde: c.posse_desde?.getTime() ?? null })),
+      agora,
+      ouro: cidade.estado.recursos.ouro,
       rival: rivalId
         ? {
             territorios: territorios.filter((t) => t.dono_id === rivalId).length,

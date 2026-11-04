@@ -4,8 +4,8 @@ import { Delaunay } from 'd3-delaunay';
 import { geradorComSemente } from '../aleatorio.ts';
 import { BALANCEAMENTO } from '../balanceamento.ts';
 import { BONUS_DO_TERRENO, distanciasNoGrafo, grafoDeFronteiras } from '../territorios.ts';
-import { TERRENOS, TIPOS_UNIDADE, type Exercito, type Recurso, type Terreno } from '../tipos.ts';
-import { exercito } from '../util.ts';
+import { TERRENOS, TIPOS_UNIDADE, type Exercito, type Recurso, type Terreno, type TipoPovoado } from '../tipos.ts';
+import { exercito, mapearExercito } from '../util.ts';
 import { DIRECOES, NOMES_REGIOES, NOMES_TERRITORIOS } from './nomes.ts';
 
 export type Ponto2 = [number, number];
@@ -37,6 +37,8 @@ export type MapaGerado = {
   fronteiras: [number, number][];
   /** Território inicial de cada jogador, na ordem dos jogadores. */
   iniciais: number[];
+  /** Vilas e cidades livres (no máximo um povoado por território, nunca num inicial). */
+  povoados: { indice: number; tipo: TipoPovoado }[];
 };
 
 export type AvaliacaoMapa = {
@@ -255,6 +257,51 @@ function escolherIniciais(grafo: Map<number, number[]>, total: number, jogadores
   return melhor!.iniciais;
 }
 
+/**
+ * Cidades livres: territórios "no meio", à mesma distância (ou quase) das cidades iniciais e longe de todas.
+ * Tenta primeiro nenhuma vizinha de outra cidade livre; se o mapa não comporta, aceita vizinhas. Nunca fica
+ * colada numa cidade inicial. Determinístico: não usa o sorteio.
+ */
+function escolherCidadesLivres(grafo: Map<number, number[]>, total: number, iniciais: number[]): number[] {
+  const porCidade = iniciais.map((i) => distanciasNoGrafo(grafo, [i]));
+  const candidatos = [];
+  for (let t = 0; t < total; t++) {
+    const distancias = porCidade.map((d) => d.get(t) ?? Infinity);
+    const maisPerto = Math.min(...distancias);
+    if (maisPerto < 2) continue;
+    candidatos.push({ t, desequilibrio: Math.max(...distancias) - maisPerto, maisPerto });
+  }
+  candidatos.sort((a, b) => a.desequilibrio - b.desequilibrio || b.maisPerto - a.maisPerto || a.t - b.t);
+  const escolhidas: number[] = [];
+  for (const aceitaVizinhas of [false, true]) {
+    for (const { t } of candidatos) {
+      if (escolhidas.length >= BALANCEAMENTO.povoados.cidadesLivres) break;
+      if (escolhidas.includes(t) || (!aceitaVizinhas && escolhidas.some((e) => grafo.get(e)?.includes(t)))) continue;
+      escolhidas.push(t);
+    }
+  }
+  return escolhidas;
+}
+
+/** Vilas: sorteadas entre os territórios que sobram, evitando vilas vizinhas quando dá. */
+function escolherVilas(aleatorio: Aleatorio, grafo: Map<number, number[]>, total: number, ocupados: number[]): number[] {
+  const livres = embaralhar(
+    aleatorio,
+    Array.from({ length: total }, (_, t) => t).filter((t) => !ocupados.includes(t)),
+  );
+  const quantas = Math.round(livres.length * BALANCEAMENTO.povoados.fracaoVilas);
+  const vilas: number[] = [];
+  for (const t of livres) {
+    if (vilas.length >= quantas) break;
+    if (!vilas.some((v) => grafo.get(v)?.includes(t))) vilas.push(t);
+  }
+  for (const t of livres) {
+    if (vilas.length >= quantas) break;
+    if (!vilas.includes(t)) vilas.push(t);
+  }
+  return vilas.sort((a, b) => a - b);
+}
+
 function guarnicaoBarbara(aleatorio: Aleatorio, distanciaDaCidadeMaisProxima: number): Exercito {
   const { unidadesBase, unidadesPorDistancia, variacao } = BALANCEAMENTO.barbaros;
   const media = unidadesBase + unidadesPorDistancia * Math.max(0, distanciaDaCidadeMaisProxima - 1);
@@ -322,24 +369,41 @@ export function gerarMapa(entrada: { semente: number; jogadores: number }): Mapa
   const iniciais = escolherIniciais(grafo, total, jogadores);
   const distanciaDasCidades = distanciasNoGrafo(grafo, iniciais);
 
+  const territorios = pontos.map(([x, y], indice) => ({
+    indice,
+    nome: nomesTerritorios[indice]!,
+    regiao: regiaoDe[indice]!,
+    terreno: terrenos[indice]!,
+    bonus: BONUS_DO_TERRENO[terrenos[indice]!],
+    x: arredondar(x),
+    y: arredondar(y),
+    poligono: poligonos[indice]!,
+    guarnicao: iniciais.includes(indice) ? exercito() : guarnicaoBarbara(aleatorio, distanciaDasCidades.get(indice) ?? 1),
+  }));
+
+  // Povoados (depois dos sorteios acima, para não mudar o resto do mapa de uma semente) e a guarda de cada um.
+  const cidadesLivres = escolherCidadesLivres(grafo, total, iniciais);
+  const vilas = escolherVilas(aleatorio, grafo, total, [...iniciais, ...cidadesLivres]);
+  const povoados = [
+    ...cidadesLivres.map((indice) => ({ indice, tipo: 'cidade_livre' as const })),
+    ...vilas.map((indice) => ({ indice, tipo: 'vila' as const })),
+  ].sort((a, b) => a.indice - b.indice);
+  for (const p of povoados) {
+    const t = territorios[p.indice]!;
+    const guarda = p.tipo === 'vila' ? BALANCEAMENTO.povoados.vila.guarda : BALANCEAMENTO.povoados.cidadeLivre.guarda;
+    t.guarnicao = mapearExercito((tipo) => Math.round(t.guarnicao[tipo] * guarda));
+    if (TIPOS_UNIDADE.every((tipo) => t.guarnicao[tipo] === 0)) t.guarnicao.lanceiro = 1;
+  }
+
   return {
     semente,
     largura: config.largura,
     altura: config.altura,
     regioes: terrenoDaRegiao.map((terreno, indice) => ({ indice, nome: nomesRegioes[indice]!, terreno })),
-    territorios: pontos.map(([x, y], indice) => ({
-      indice,
-      nome: nomesTerritorios[indice]!,
-      regiao: regiaoDe[indice]!,
-      terreno: terrenos[indice]!,
-      bonus: BONUS_DO_TERRENO[terrenos[indice]!],
-      x: arredondar(x),
-      y: arredondar(y),
-      poligono: poligonos[indice]!,
-      guarnicao: iniciais.includes(indice) ? exercito() : guarnicaoBarbara(aleatorio, distanciaDasCidades.get(indice) ?? 1),
-    })),
+    territorios,
     fronteiras,
     iniciais,
+    povoados,
   };
 }
 
@@ -347,17 +411,25 @@ export function avaliarMapa(mapa: MapaGerado): AvaliacaoMapa {
   return avaliar(grafoDeFronteiras(mapa.fronteiras), mapa.territorios.length, mapa.iniciais);
 }
 
-/** Gera vários mapas a partir de `sementeBase` e fica com o mais justo: cidades mais afastadas, depois áreas mais parecidas. */
+const cidadesLivresDo = (mapa: MapaGerado) => mapa.povoados.filter((p) => p.tipo === 'cidade_livre').length;
+
+/**
+ * Gera vários mapas a partir de `sementeBase` e fica com o mais justo: todas as cidades livres, depois cidades
+ * iniciais mais afastadas, depois áreas mais parecidas.
+ */
 export function escolherMelhorMapa(entrada: { sementeBase: number; jogadores: number; tentativas?: number }) {
   const { sementeBase, jogadores, tentativas = BALANCEAMENTO.mapa.tentativas } = entrada;
   let melhor: { mapa: MapaGerado; avaliacao: AvaliacaoMapa } | null = null;
   for (let i = 0; i < tentativas; i++) {
     const mapa = gerarMapa({ semente: (sementeBase + i * 7919) >>> 0, jogadores });
     const avaliacao = avaliarMapa(mapa);
+    const livres = cidadesLivresDo(mapa) - (melhor ? cidadesLivresDo(melhor.mapa) : 0);
     if (
       !melhor ||
-      avaliacao.menorDistanciaEntreCidades > melhor.avaliacao.menorDistanciaEntreCidades ||
-      (avaliacao.menorDistanciaEntreCidades === melhor.avaliacao.menorDistanciaEntreCidades &&
+      livres > 0 ||
+      (livres === 0 && avaliacao.menorDistanciaEntreCidades > melhor.avaliacao.menorDistanciaEntreCidades) ||
+      (livres === 0 &&
+        avaliacao.menorDistanciaEntreCidades === melhor.avaliacao.menorDistanciaEntreCidades &&
         avaliacao.desequilibrio < melhor.avaliacao.desequilibrio)
     ) {
       melhor = { mapa, avaliacao };

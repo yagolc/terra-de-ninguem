@@ -1,5 +1,5 @@
 import type { AvaliacaoObjetivo, Objetivo } from '@terra/regras';
-import { descreverObjetivo } from '../lib/textos';
+import { descreverObjetivo, formatarNumero } from '../lib/textos';
 
 type Props = {
   objetivo: Objetivo;
@@ -10,6 +10,20 @@ type Props = {
   dono?: string;
   cumprido?: boolean;
 };
+
+/** Linha abaixo da barra de progresso, para os objetivos que não são só "X de Y". */
+function textoProgresso(objetivo: Objetivo, progresso: AvaliacaoObjetivo): string {
+  const prontos = progresso.partes?.[0];
+  if (objetivo.tipo === 'mestre_construtor' && prontos) {
+    return `${prontos.atual} de ${prontos.alvo} prédios no nível ${objetivo.nivel} · ${progresso.atual} de ${progresso.alvo} níveis`;
+  }
+  if (objetivo.tipo === 'monopolio_comercial' && prontos) {
+    return prontos.atual < prontos.alvo
+      ? `${prontos.atual} de ${prontos.alvo} cidades livres são suas`
+      : `Todas as cidades livres são suas · ${progresso.atual} de ${progresso.alvo} h`;
+  }
+  return `${formatarNumero(progresso.atual)} de ${formatarNumero(progresso.alvo)}`;
+}
 
 /** A carta do objetivo secreto, com a barra de progresso. */
 export default function CartaObjetivo({ objetivo, progresso, nomeRegiao, nomeJogador, dono, cumprido }: Props) {
@@ -44,7 +58,7 @@ export default function CartaObjetivo({ objetivo, progresso, nomeRegiao, nomeJog
                 ? progresso.atual === 0
                   ? 'O rival só tem a cidade principal, mas você precisa ter conquistado um território dele.'
                   : `O rival ainda tem ${progresso.atual} ${progresso.atual === 1 ? 'território' : 'territórios'} além da cidade.`
-                : `${progresso.atual} de ${progresso.alvo}`}
+                : textoProgresso(objetivo, progresso)}
           </p>
         </div>
       )}

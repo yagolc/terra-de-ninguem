@@ -87,6 +87,9 @@ O mapa é dividido em territórios ligados por fronteiras, como no War. Um mapa 
 - **Terreno:** planície (neutro), floresta (bônus para arqueiros na defesa) e montanha (bônus de defesa geral).
 - **Distância:** o tempo de marcha depende da distância e da unidade mais lenta do exército.
 - **Tamanho:** Até 6 jogadores, com cerca de 4 a 5 territórios por jogador (24 a 30 no total).
+- **Povoados:** alguns territórios têm uma vila ou uma cidade livre. Tomado de outro jogador, o povoado só dá bônus depois de 24 h de lealdade (neutro, dá na hora).
+  - **Vilas** (cerca de 6 por mapa, guarda fraca): neutras, têm um estoque que o saque leva inteiro e que volta a encher em 8 h. Conquistadas, viram do dono no nível 1 e dão +5 de população máxima por nível (até 3). Saqueada por outro jogador, a vila volta ao nível 0.
+  - **Cidades livres** (3 no meio do mapa, guarda forte e muralha própria de +30%): dão +60 de ouro por hora. Na primeira conquista, 5 lanceiros de milícia passam a defendê-la para o conquistador, sem ocupar população nem comer. Ter todas por 12 h seguidas é o monopólio comercial.
 
 ## Ataques, defesa e proteções
 
@@ -129,11 +132,15 @@ O gerador de mapa divide os territórios em 5 ou 6 regiões, o equivalente aos c
 | --- | --- | --- |
 | Dominar duas regiões específicas | War (continentes) | Conquiste a Floresta do Norte e as Montanhas de Ferro |
 | Dominar mais da metade do mapa | War (24 territórios) | Cerca de 55% dos territórios |
-| Dominar territórios bem defendidos | War (18 territórios com 2 exércitos) | 12 territórios com guarnição mínima em cada |
+| Dominar territórios bem defendidos | War (18 territórios com 2 exércitos) | 8 territórios com 6 soldados em cada (no total, até metade da população máxima) |
 | Derrubar um rival específico | War (destruir um exército) | Reduza o jogador X a apenas sua cidade principal. Se outro fizer isso antes, o objetivo vira dominar mais da metade do mapa |
 | Alcançar população X | Próprio do jogo | Vitória econômica, para quem prefere crescer a guerrear |
+| Senhor da guerra | Próprio do jogo | Vença 30 batalhas contra outros jogadores, atacando ou defendendo |
+| Mestre construtor | Próprio do jogo | 3 prédios da cidade no nível 10 (cerca de 40 h de obra somadas, contando o Centro) |
+| Tesouro do reino | Próprio do jogo | Junte 7.500 de ouro guardado (só cabe no Armazém nível 10) |
+| Monopólio comercial | Próprio do jogo | Controle todas as cidades livres ao mesmo tempo por 12 h seguidas (só se o mapa tiver cidades livres) |
 
-Se ninguém cumprir o objetivo no prazo, vence quem tiver mais pontos (territórios + população + batalhas vencidas). Os números exatos de cada objetivo ficam para o balanceamento. Um ranking histórico guarda os vencedores de cada temporada.
+Se ninguém cumprir o objetivo no prazo, vence quem tiver mais pontos (territórios + população + batalhas vencidas). Os números de cada objetivo ficam em `BALANCEAMENTO.objetivos`, e um teste garante que todos cabem nos limites do jogo (população, armazém, nível dos prédios). Na temporada 2 o objetivo de duas regiões foi cumprido em 6 dias; os números da temporada 3 foram subidos para mirar em cerca de duas semanas. Um ranking histórico guarda os vencedores de cada temporada.
 
 ## Plataforma e arquitetura técnica
 

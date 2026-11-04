@@ -4,6 +4,7 @@
 //      | { acao: 'enviar_marcha', origem_id, destino_id, tipo: 'saque' | 'conquista' | 'movimento', tropas }
 //      | { acao: 'enviar_reconhecimento', origem_id, destino_id }
 //      | { acao: 'construir_estrutura', territorio_id, tipo: 'torre' | 'palicada' | 'entreposto' }
+//      | { acao: 'melhorar_vila', territorio_id }
 //      | { acao: 'marcar_relatorios_lidos' }
 // Publicar com: npx supabase functions deploy cidade --no-verify-jwt (o token é validado no código).
 import {
@@ -14,6 +15,7 @@ import {
   MENSAGENS_MOVIMENTO,
   MENSAGENS_RECONHECIMENTO,
   MENSAGENS_TREINO,
+  MENSAGENS_VILA,
   TIPOS_ATAQUE,
   TIPOS_ESTRUTURA,
   TIPOS_PREDIO,
@@ -28,12 +30,14 @@ import {
   verificarAtaque,
   verificarEstrutura,
   verificarEvolucao,
+  verificarMelhoriaVila,
   verificarMovimento,
   verificarReconhecimento,
   verificarTreino,
   type Recursos,
   type TipoAtaque,
   type TipoEstrutura,
+  type TipoPovoado,
   type TipoPredio,
   type TipoUnidade,
 } from '../../../packages/regras/src/index.ts';
@@ -224,6 +228,28 @@ async function construirEstrutura(
   return v.prontoEm;
 }
 
+/** Sobe um nível da vila do jogador (mais população máxima na cidade). Devolve o novo nível. */
+async function melhorarVila(tx: Transacao, temporada: Temporada, c: CidadeAvancada, corpo: Record<string, unknown>): Promise<number> {
+  const territorioId = String(corpo.territorio_id ?? '');
+  if (!UUID.test(territorioId)) throw new ErroDoJogo('Território desconhecido.');
+  const [linha] = await tx<{ id: string; tipo: TipoPovoado; nivel: number; dono_id: string | null }[]>`
+    select p.id, p.tipo, p.nivel, t.dono_id
+      from povoados p join territorios t on t.id = p.territorio_id
+     where t.temporada_id = ${temporada.id} and t.id = ${territorioId}
+       for update of p`;
+
+  const v = verificarMelhoriaVila({
+    povoado: linha ?? null,
+    doJogador: linha?.dono_id === c.carregada.jogadorId,
+    recursos: c.estado.recursos,
+  });
+  if (!v.ok) throw new ErroDoJogo(MENSAGENS_VILA[v.motivo]);
+
+  c.estado = { ...c.estado, recursos: subtrairRecursos(c.estado.recursos, v.custo) };
+  await tx`update povoados set nivel = ${v.nivelAlvo} where id = ${linha!.id}`;
+  return v.nivelAlvo;
+}
+
 async function executar(jogadorId: string, corpo: Record<string, unknown>): Promise<Record<string, unknown>> {
   if (corpo.acao === 'entrar') {
     // Funda a cidade (se ainda não houver) e sorteia o objetivo secreto (se ainda não houver).
@@ -280,6 +306,10 @@ async function executar(jogadorId: string, corpo: Record<string, unknown>): Prom
       }
       case 'construir_estrutura': {
         resultado.pronto_em = new Date(await construirEstrutura(tx, temporada, c, corpo, agora)).toISOString();
+        break;
+      }
+      case 'melhorar_vila': {
+        resultado.nivel = await melhorarVila(tx, temporada, c, corpo);
         break;
       }
       case 'enviar_marcha': {

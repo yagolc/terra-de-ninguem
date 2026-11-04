@@ -1,4 +1,4 @@
-import { RECURSOS, TIPOS_UNIDADE, totalUnidades, type Exercito } from '@terra/regras';
+import { BALANCEAMENTO, RECURSOS, TIPOS_UNIDADE, totalUnidades, type Exercito } from '@terra/regras';
 import type { Relatorio } from '../lib/useRelatorios';
 import { RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarNumero } from '../lib/textos';
 
@@ -24,6 +24,7 @@ export default function DetalheRelatorio({ relatorio, nomeDefensor }: { relatori
   if (d.terreno !== 'planicie') bonus.push(`${TERRENOS_INFO[d.terreno].icone} ${TERRENOS_INFO[d.terreno].efeito}`);
   if (d.muralha > 0) bonus.push(`🧱 muralha nível ${d.muralha}`);
   if (d.palicada) bonus.push('🪵 paliçada');
+  if (d.povoado?.tipo === 'cidade_livre') bonus.push('⚖️ muralha da cidade livre');
 
   return (
     <div className="space-y-3 text-sm">
@@ -58,6 +59,14 @@ export default function DetalheRelatorio({ relatorio, nomeDefensor }: { relatori
           {RECURSOS.filter((r) => d.saque[r] > 0)
             .map((r) => `${RECURSOS_INFO[r].icone} ${formatarNumero(d.saque[r])}`)
             .join(' · ')}
+          {d.povoado?.tipo === 'vila' && (d.vilaZerada ? ' · a vila foi saqueada e voltou ao nível 0' : ' · do estoque da vila')}
+        </p>
+      )}
+      {d.vilaZerada && saqueTotal === 0 && <p>🏘️ A vila foi saqueada e voltou ao nível 0.</p>}
+      {d.milicia && (
+        <p>
+          ⚖️ A cidade livre jurou lealdade: {BALANCEAMENTO.povoados.cidadeLivre.milicia} lanceiros de milícia passam a defendê-la para o
+          conquistador, sem ocupar população.
         </p>
       )}
     </div>

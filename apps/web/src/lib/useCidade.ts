@@ -2,6 +2,7 @@ import {
   TIPOS_PREDIO,
   avancarCidade,
   bonusDeTerritorios,
+  bonusDosPovoados,
   exercito,
   mapearExercito,
   soldadosNaConta,
@@ -15,6 +16,7 @@ import {
   type Recurso,
   type Recursos,
   type Terreno,
+  type TipoPovoado,
   type TipoPredio,
   type TipoUnidade,
 } from '@terra/regras';
@@ -53,7 +55,11 @@ type CidadeSalva = {
   /** Território onde fica a cidade (null na temporada de testes, sem mapa). */
   territorio: TerritorioDoJogador | null;
   territorios: number;
+  /** Vilas e cidades livres do jogador: o bônus delas depende da lealdade, então é calculado a cada segundo. */
+  povoados: { tipo: TipoPovoado; nivel: number; lealDesde: number | null }[];
 };
+
+type LinhaPovoado = { territorio_id: string; tipo: TipoPovoado; nivel: number; leal_desde: string | null };
 
 function converter(
   linha: LinhaCidade,
@@ -61,6 +67,7 @@ function converter(
   tropas: LinhaTropas[],
   marchas: LinhaTropas[],
   comEntreposto: Set<string>,
+  povoados: LinhaPovoado[],
 ): CidadeSalva {
   const predios = Object.fromEntries(TIPOS_PREDIO.map((tipo) => [tipo, 0])) as NiveisPredios;
   for (const p of linha.predios) predios[p.tipo] = p.nivel;
@@ -79,6 +86,9 @@ function converter(
       .sort((a, b) => a.prontoEm - b.prontoEm),
     territorio: territorios.find((t) => t.id === linha.territorio_id) ?? null,
     territorios: territorios.length,
+    povoados: povoados
+      .filter((p) => territorios.some((t) => t.id === p.territorio_id))
+      .map((p) => ({ tipo: p.tipo, nivel: p.nivel, lealDesde: p.leal_desde ? Date.parse(p.leal_desde) : null })),
     cidade: {
       recursos: { comida: linha.comida, madeira: linha.madeira, ouro: linha.ouro },
       populacao: linha.populacao,
@@ -106,7 +116,7 @@ async function buscarCidade(jogadorId: string): Promise<CidadeSalva | null> {
   if (error) throw new Error('Não foi possível carregar sua cidade.');
   if (!data) return null;
 
-  const [territorios, tropas, marchas, entrepostos] = await Promise.all([
+  const [territorios, tropas, marchas, entrepostos, povoados] = await Promise.all([
     supabase
       .from('territorios')
       .select('id, nome, terreno, bonus_recurso')
@@ -135,12 +145,17 @@ async function buscarCidade(jogadorId: string): Promise<CidadeSalva | null> {
       .eq('tipo', 'entreposto')
       .lte('pronto_em', new Date().toISOString())
       .returns<{ territorio_id: string }[]>(),
+    supabase
+      .from('povoados')
+      .select('territorio_id, tipo, nivel, leal_desde')
+      .eq('temporada_id', data.temporada_id)
+      .returns<LinhaPovoado[]>(),
   ]);
-  if (!territorios.data || !tropas.data || !marchas.data || !entrepostos.data) {
+  if (!territorios.data || !tropas.data || !marchas.data || !entrepostos.data || !povoados.data) {
     throw new Error('Não foi possível carregar seus territórios e tropas.');
   }
   const comEntreposto = new Set(entrepostos.data.map((e) => e.territorio_id));
-  return converter(data, territorios.data, tropas.data, marchas.data, comEntreposto);
+  return converter(data, territorios.data, tropas.data, marchas.data, comEntreposto, povoados.data);
 }
 
 /**
@@ -176,9 +191,10 @@ export function useCidade(jogadorId: string) {
     return () => clearInterval(relogio);
   }, []);
 
+  const extras = useMemo(() => (salva ? bonusDosPovoados(salva.povoados, agora) : null), [salva, agora]);
   const atual = useMemo(
     () =>
-      salva
+      salva && extras
         ? avancarCidade({
             cidade: salva.cidade,
             tropas: somarExercitos(salva.tropas, salva.emMarcha),
@@ -186,9 +202,11 @@ export function useCidade(jogadorId: string) {
             treinos: salva.fila,
             agora,
             bonusTerritorios: salva.bonus,
+            producaoFixaHora: extras.producaoFixaHora,
+            populacaoExtra: extras.populacaoExtra,
           })
         : null,
-    [salva, agora],
+    [salva, extras, agora],
   );
 
   const comandar = useCallback(
@@ -208,6 +226,8 @@ export function useCidade(jogadorId: string) {
     fila: atual?.treinos ?? [],
     soldados: atual ? soldadosNaConta(totalUnidades(atual.tropas), atual.treinos) : 0,
     bonus: salva?.bonus ?? null,
+    /** Ouro das cidades livres e população a mais das vilas (só as leais). */
+    extras,
     territorio: salva?.territorio ?? null,
     territorios: salva?.territorios ?? 0,
     agora,

@@ -12,6 +12,8 @@ import {
   type Objetivo,
   type SituacaoJogador,
 } from './objetivos.ts';
+import { limitePopulacao, nivelArmazemNecessario } from './predios.ts';
+import { TIPOS_PREDIO } from './tipos.ts';
 import { HORA_MS } from './util.ts';
 
 const REGIOES = [
@@ -31,6 +33,11 @@ function situacao(mudancas: Partial<SituacaoJogador> = {}): SituacaoJogador {
     cidadesAlheiasPorRegiao: new Map(),
     totalTerritorios: TOTAL,
     populacao: 10,
+    vitoriasContraJogadores: 0,
+    niveisPredios: [1, 0, 0, 0, 0, 0, 0, 0],
+    ouro: 0,
+    cidadesLivres: [],
+    agora: 0,
     ...mudancas,
   };
 }
@@ -54,7 +61,7 @@ describe('sortearObjetivo', () => {
       }
       if (o.tipo === 'derrubar_rival') expect(['b', 'c']).toContain(o.rivalId);
     }
-    expect(vistos.size).toBe(5);
+    expect(vistos.size).toBe(8);
   });
 
   it('sem outros jogadores, nunca sorteia "derrubar rival"', () => {
@@ -71,6 +78,9 @@ describe('sortearObjetivo', () => {
       { tipo: 'populacao', populacao: 100 },
       { tipo: 'territorios_defendidos', territorios: 12, guarnicaoMinima: 10 },
       { tipo: 'duas_regioes', regioes: ['r2', 'r3'] },
+      { tipo: 'senhor_da_guerra', vitorias: 30 },
+      { tipo: 'mestre_construtor', predios: 6, nivel: 10 },
+      { tipo: 'tesouro', ouro: 7500 },
     ];
     for (let s = 1; s <= 50; s++) {
       expect(sortearObjetivo({ semente: s, regioes: REGIOES, totalTerritorios: TOTAL, rivais: ['b'], jaSorteados }).tipo).toBe(
@@ -81,7 +91,7 @@ describe('sortearObjetivo', () => {
 });
 
 describe('avaliarObjetivo', () => {
-  const meus = (regioes: string[], tropas = 0) => regioes.map((regiaoId) => ({ regiaoId, minhasTropas: tropas }));
+  const meus = (regioes: string[], tropas = 0) => regioes.map((regiaoId, i) => ({ id: `t${i}`, regiaoId, minhasTropas: tropas }));
 
   it('duas regiões: precisa de todos os territórios das duas', () => {
     const obj: Objetivo = { tipo: 'duas_regioes', regioes: ['r2', 'r4'] };
@@ -135,9 +145,9 @@ describe('avaliarObjetivo', () => {
     const obj: Objetivo = { tipo: 'territorios_defendidos', territorios: 3, guarnicaoMinima: 10 };
     const s = situacao({
       meusTerritorios: [
-        { regiaoId: 'r1', minhasTropas: 10 },
-        { regiaoId: 'r1', minhasTropas: 25 },
-        { regiaoId: 'r1', minhasTropas: 9 },
+        { id: 'a', regiaoId: 'r1', minhasTropas: 10 },
+        { id: 'b', regiaoId: 'r1', minhasTropas: 25 },
+        { id: 'c', regiaoId: 'r1', minhasTropas: 9 },
       ],
     });
     expect(avaliarObjetivo(obj, s)).toMatchObject({ cumprido: false, atual: 2, alvo: 3 });
@@ -163,6 +173,69 @@ describe('avaliarObjetivo', () => {
     const r = avaliarObjetivo({ tipo: 'derrubar_rival', rivalId: 'b' }, situacao({ rival: { territorios: 1, conquisteiDele: false, outrosConquistaramDele: true } }));
     expect(r.cumprido).toBe(false);
     expect(r.viraObjetivo).toEqual(objetivoMetadeDoMapa());
+  });
+
+  it('senhor da guerra e tesouro: contam vitórias contra jogadores e ouro inteiro', () => {
+    const guerra: Objetivo = { tipo: 'senhor_da_guerra', vitorias: 25 };
+    expect(avaliarObjetivo(guerra, situacao({ vitoriasContraJogadores: 24 }))).toMatchObject({ cumprido: false, atual: 24, alvo: 25 });
+    expect(avaliarObjetivo(guerra, situacao({ vitoriasContraJogadores: 25 })).cumprido).toBe(true);
+    const tesouro: Objetivo = { tipo: 'tesouro', ouro: 6000 };
+    expect(avaliarObjetivo(tesouro, situacao({ ouro: 5999.9 })).cumprido).toBe(false);
+    expect(avaliarObjetivo(tesouro, situacao({ ouro: 6000 })).cumprido).toBe(true);
+  });
+
+  it('mestre construtor: conta os prédios que chegaram ao nível pedido', () => {
+    const obj: Objetivo = { tipo: 'mestre_construtor', predios: 6, nivel: 10 };
+    // A barra soma os níveis dos 6 prédios mais altos (até 10 cada): 10+10+10+10+10+9 = 59 de 60.
+    const quase = avaliarObjetivo(obj, situacao({ niveisPredios: [10, 10, 10, 10, 10, 9, 3, 1] }));
+    expect(quase).toMatchObject({ cumprido: false, atual: 59, alvo: 60, partes: [{ atual: 5, alvo: 6 }] });
+    expect(avaliarObjetivo(obj, situacao({ niveisPredios: [10, 10, 10, 10, 10, 10, 0, 0] })).cumprido).toBe(true);
+  });
+
+  it('monopólio comercial: todas as cidades livres pelas horas pedidas, contando da última tomada', () => {
+    const obj: Objetivo = { tipo: 'monopolio_comercial', horas: 12 };
+    const agora = 100 * HORA_MS;
+    const com = (cidadesLivres: { minha: boolean; posseDesde: number | null }[]) => avaliarObjetivo(obj, situacao({ cidadesLivres, agora }));
+    const faltaUma = com([
+      { minha: true, posseDesde: 0 },
+      { minha: true, posseDesde: 0 },
+      { minha: false, posseDesde: 0 },
+    ]);
+    expect(faltaUma).toMatchObject({ cumprido: false, atual: 0, alvo: 12, partes: [{ atual: 2, alvo: 3 }] });
+    const recente = com([
+      { minha: true, posseDesde: 0 },
+      { minha: true, posseDesde: agora - 5 * HORA_MS },
+    ]);
+    expect(recente).toMatchObject({ cumprido: false, atual: 5 });
+    expect(com([{ minha: true, posseDesde: agora - 12 * HORA_MS }]).cumprido).toBe(true);
+    // Mapa sem cidades livres: nunca cumpre.
+    expect(com([]).cumprido).toBe(false);
+  });
+
+  it('monopólio só é sorteado se o mapa tiver cidades livres', () => {
+    let viu = false;
+    for (let s = 1; s <= 200; s++) {
+      const base = { semente: s, regioes: REGIOES, totalTerritorios: TOTAL, rivais: [], jaSorteados: [] };
+      expect(sortearObjetivo(base).tipo).not.toBe('monopolio_comercial');
+      if (sortearObjetivo({ ...base, cidadesLivres: 3 }).tipo === 'monopolio_comercial') viu = true;
+    }
+    expect(viu).toBe(true);
+  });
+});
+
+describe('objetivos cabem nos limites do jogo', () => {
+  const O = BALANCEAMENTO.objetivos;
+  it('soldados de "fronteiras de ferro" são no máximo metade da população máxima', () => {
+    expect(O.territoriosDefendidos * O.guarnicaoMinima).toBeLessThanOrEqual(limitePopulacao(BALANCEAMENTO.predios.casa.nivelMaximo) / 2);
+  });
+  it('população e prédios pedidos existem no jogo', () => {
+    expect(O.populacaoAlvo).toBeLessThanOrEqual(limitePopulacao(BALANCEAMENTO.predios.casa.nivelMaximo));
+    expect(O.mestreConstrutorPredios).toBeLessThanOrEqual(TIPOS_PREDIO.length);
+    const chegamAoNivel = TIPOS_PREDIO.filter((p) => BALANCEAMENTO.predios[p].nivelMaximo >= O.mestreConstrutorNivel);
+    expect(chegamAoNivel.length).toBeGreaterThanOrEqual(O.mestreConstrutorPredios);
+  });
+  it('o tesouro cabe no armazém máximo, mas não no penúltimo', () => {
+    expect(nivelArmazemNecessario(O.ouroGuardado)).toBe(BALANCEAMENTO.predios.armazem.nivelMaximo);
   });
 });
 

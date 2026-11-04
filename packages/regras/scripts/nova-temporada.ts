@@ -99,6 +99,7 @@ function previaSvg(m: MapaGerado): string {
     .map((t) => {
       const jogador = m.iniciais.indexOf(t.indice);
       const tropas = totalUnidades(t.guarnicao);
+      const povoado = m.povoados.find((p) => p.indice === t.indice);
       const cx = t.x * escala;
       const cy = t.y * escala;
       return (
@@ -106,7 +107,7 @@ function previaSvg(m: MapaGerado): string {
         (jogador >= 0
           ? `<circle cx="${cx}" cy="${cy - 6}" r="11" fill="${CORES_JOGADORES[jogador]}" stroke="#f1e6cf" stroke-width="2"/>` +
             `<text x="${cx}" y="${cy + 20}" class="jogador">${participantes[jogador]?.nome ?? `vaga ${jogador + 1}`}</text>`
-          : `<text x="${cx}" y="${cy + 16}" class="tropas">⚔ ${tropas}</text>`) +
+          : `<text x="${cx}" y="${cy + 16}" class="tropas">${povoado ? (povoado.tipo === 'vila' ? '🏘 ' : '⚖ ') : ''}⚔ ${tropas}</text>`) +
         `<text x="${cx}" y="${cy + (jogador >= 0 ? 34 : 2)}" class="nome">${t.nome}</text>`
       );
     })
@@ -119,7 +120,7 @@ function previaSvg(m: MapaGerado): string {
 .nome{font-size:11px}.tropas{font-size:10px;fill:#e8c475}.jogador{font-size:13px;font-weight:bold}</style>
 <rect x="-10" y="-10" width="${largura + 20}" height="${altura + 60}" fill="#1c1410"/>
 ${corpo}<g stroke="#e8c475" stroke-width="3" stroke-linecap="round">${bordasRegiao}</g>
-<text x="${largura / 2}" y="${altura + 32}" style="font-size:14px">Semente ${m.semente} · planície (verde-claro), floresta (verde-escuro), montanha (cinza) · ⚔ = bárbaros</text>
+<text x="${largura / 2}" y="${altura + 32}" style="font-size:14px">Semente ${m.semente} · planície (verde-claro), floresta (verde-escuro), montanha (cinza) · ⚔ = bárbaros · 🏘 vila · ⚖ cidade livre</text>
 </svg>`;
 }
 
@@ -163,6 +164,9 @@ const valoresBarbaros = mapa.territorios
     return `(t, ${texto(idsTerritorios[t.indice]!)}, null, ${g.lanceiro}, ${g.arqueiro}, ${g.cavalaria})`;
   })
   .join(',\n    ');
+const valoresPovoados = mapa.povoados
+  .map((p) => `(t, ${texto(idsTerritorios[p.indice]!)}, ${texto(p.tipo)})`)
+  .join(',\n    ');
 const coresJogadores = participantes
   .map((j, i) => `  update public.jogadores set cor = ${texto(CORES_JOGADORES[i]!)} where id = ${texto(j.id)};`)
   .join('\n');
@@ -183,6 +187,8 @@ begin
     ${valoresFronteiras};
   insert into public.tropas (temporada_id, territorio_id, dono_id, lanceiro, arqueiro, cavalaria) values
     ${valoresBarbaros};
+  insert into public.povoados (temporada_id, territorio_id, tipo) values
+    ${valoresPovoados};
 ${coresJogadores}
 end $$;
 `;

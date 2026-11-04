@@ -188,6 +188,28 @@ export default function Regras() {
         </p>
       </Secao>
 
+      <Secao icone="🏘️" titulo="Vilas e cidades livres">
+        <p>
+          Alguns territórios têm um povoado. Quem é dono do território é dono do povoado. Tomado de outro jogador, ele só passa a dar
+          bônus depois de <b>{B.povoados.lealdadeHoras} h de lealdade</b> (neutro, dá na hora).
+        </p>
+        <p>
+          🏘️ <b>Vila.</b> Neutra, tem um estoque ({custo(B.povoados.vila.estoque)}) que um <b>saque</b> leva inteiro, até a carga das tropas.
+          Depois ela volta a encher em {B.povoados.vila.horasParaEncher} h. Conquistada, vira sua no nível 1 e dá{' '}
+          <b>+{B.povoados.vila.populacaoPorNivel} de população máxima por nível</b> (até o nível {B.povoados.vila.nivelMaximo}; melhorar custa{' '}
+          {custo(B.povoados.vila.custoPorNivel)} vezes o nível). Se outro jogador saquear a sua vila, ela <b>volta ao nível 0</b> e ele leva
+          parte do que foi investido.
+        </p>
+        <p>
+          ⚖️ <b>Cidade livre.</b> Há {B.povoados.cidadesLivres} no meio do mapa, com guarda forte e muralha própria (+
+          {pct(B.povoados.cidadeLivre.bonusDefesa)} de defesa, que depois protege o dono também). Dá{' '}
+          <b>+{B.povoados.cidadeLivre.ouroHora} de ouro por hora</b>. Na primeira conquista, {B.povoados.cidadeLivre.milicia}{' '}
+          lanceiros de milícia passam a defendê-la para quem conquistou: não ocupam população, não comem e não marcham, e se dispersam
+          se a cidade for tomada. Quem tiver todas por {B.objetivos.monopolioHoras} h seguidas tem o{' '}
+          <b>monopólio comercial</b>, que pode ser um objetivo secreto.
+        </p>
+      </Secao>
+
       <Secao icone="🛡️" titulo="Proteções">
         <p>
           <b>Proteção de iniciante:</b> nas primeiras {B.protecoes.inicianteHoras} h da temporada ninguém ataca outro jogador. Os

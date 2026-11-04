@@ -32,17 +32,37 @@ export function vagasTrabalho(predios: NiveisPredios): Recursos {
 /**
  * Produção por hora de cada recurso.
  * @param bonusTerritorios bônus somados dos territórios do jogador (0,1 = +10%).
+ * @param producaoFixaHora produção que não depende de trabalhadores (ouro das cidades livres).
  */
-export function producaoHora(cidade: EstadoCidade, bonusTerritorios: Recursos = recursos()): Recursos {
+export function producaoHora(
+  cidade: EstadoCidade,
+  bonusTerritorios: Recursos = recursos(),
+  producaoFixaHora: Recursos = recursos(),
+): Recursos {
   const { porTrabalhadorHora, bonusPorNivel } = BALANCEAMENTO.producao;
   const vagas = vagasTrabalho(cidade.predios);
 
   return mapearRecursos((r) => {
     const nivel = cidade.predios[PREDIO_PRODUTOR[r]];
-    if (nivel === 0) return 0;
+    if (nivel === 0) return producaoFixaHora[r];
     const trabalhadores = Math.min(cidade.trabalhadores[r], vagas[r]);
-    return porTrabalhadorHora[r] * trabalhadores * (1 + bonusPorNivel * (nivel - 1)) * (1 + bonusTerritorios[r]);
+    return (
+      porTrabalhadorHora[r] * trabalhadores * (1 + bonusPorNivel * (nivel - 1)) * (1 + bonusTerritorios[r]) + producaoFixaHora[r]
+    );
   });
+}
+
+/** Bônus da cidade que vêm de fora dela: territórios (percentual), cidades livres (ouro fixo) e vilas (população). */
+export type BonusExternos = {
+  bonusTerritorios?: Recursos;
+  producaoFixaHora?: Recursos;
+  /** População máxima a mais, além do limite das casas. */
+  populacaoExtra?: number;
+};
+
+/** Limite de população da cidade: casas mais o que as vilas dão. */
+export function limitePopulacaoCidade(cidade: EstadoCidade, populacaoExtra = 0): number {
+  return limitePopulacao(cidade.predios.casa) + populacaoExtra;
 }
 
 export function consumoComidaHora(tropas: Exercito): number {
@@ -71,16 +91,17 @@ export type ResultadoAtualizacao = {
  *
  * @param tropas todas as tropas do jogador (em territórios e em marcha): todas comem.
  */
-export function atualizarCidade(entrada: {
-  cidade: EstadoCidade;
-  tropas: Exercito;
-  agora: number;
-  bonusTerritorios?: Recursos;
-}): ResultadoAtualizacao {
-  const { cidade, tropas, agora, bonusTerritorios } = entrada;
+export function atualizarCidade(
+  entrada: {
+    cidade: EstadoCidade;
+    tropas: Exercito;
+    agora: number;
+  } & BonusExternos,
+): ResultadoAtualizacao {
+  const { cidade, tropas, agora, bonusTerritorios, producaoFixaHora, populacaoExtra } = entrada;
   const horas = Math.max(0, (agora - cidade.atualizadoEm) / HORA_MS);
   const teto = capacidadeArmazem(cidade.predios.armazem);
-  const producao = producaoHora(cidade, bonusTerritorios);
+  const producao = producaoHora(cidade, bonusTerritorios, producaoFixaHora);
   const consumo = consumoComidaHora(tropas);
   const saldoComida = producao.comida - consumo;
 
@@ -105,7 +126,7 @@ export function atualizarCidade(entrada: {
   }
   const desertores = mapearExercito((tipo) => tropas[tipo] - tropasDepois[tipo]);
 
-  const limite = limitePopulacao(cidade.predios.casa);
+  const limite = limitePopulacaoCidade(cidade, populacaoExtra);
   const populacao = Math.max(
     0,
     acumular(cidade.populacao, crescimentoPopulacaoHora(cidade.predios.casa), horas, limite) - totalUnidades(desertores),
@@ -132,21 +153,22 @@ export function atualizarCidade(entrada: {
  * caminho: atualiza até cada evento, aplica (novo nível ou tropas novas, que passam a comer) e segue.
  * É a função que servidor e navegador usam para saber o estado atual da cidade.
  */
-export function avancarCidade<O extends Obra, L extends LoteTreino>(entrada: {
-  cidade: EstadoCidade;
-  tropas: Exercito;
-  obras?: readonly O[];
-  treinos?: readonly L[];
-  agora: number;
-  bonusTerritorios?: Recursos;
-}): ResultadoAtualizacao & {
+export function avancarCidade<O extends Obra, L extends LoteTreino>(
+  entrada: {
+    cidade: EstadoCidade;
+    tropas: Exercito;
+    obras?: readonly O[];
+    treinos?: readonly L[];
+    agora: number;
+  } & BonusExternos,
+): ResultadoAtualizacao & {
   /** Obras ainda na fila (os mesmos objetos recebidos, para o servidor saber os ids). */
   obras: O[];
   obrasConcluidas: O[];
   treinos: L[];
   lotesConcluidos: L[];
 } {
-  const { obras = [], treinos = [], agora, bonusTerritorios } = entrada;
+  const { obras = [], treinos = [], agora, bonusTerritorios, producaoFixaHora, populacaoExtra } = entrada;
   const obrasConcluidas = obras.filter((o) => o.prontoEm <= agora);
   const lotesConcluidos = treinos.filter((l) => l.prontoEm <= agora);
   const eventos = [
@@ -158,7 +180,7 @@ export function avancarCidade<O extends Obra, L extends LoteTreino>(entrada: {
   let tropas = entrada.tropas;
   let desertores = mapearExercito(() => 0);
   const avancarAte = (instante: number) => {
-    const r = atualizarCidade({ cidade, tropas, agora: instante, bonusTerritorios });
+    const r = atualizarCidade({ cidade, tropas, agora: instante, bonusTerritorios, producaoFixaHora, populacaoExtra });
     cidade = r.cidade;
     tropas = r.tropas;
     desertores = mapearExercito((tipo) => desertores[tipo] + r.desertores[tipo]);

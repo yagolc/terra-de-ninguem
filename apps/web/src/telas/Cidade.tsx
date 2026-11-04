@@ -11,7 +11,8 @@ import { PREDIOS, RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarDuracao }
 type Aviso = { tipo: 'erro' | 'ok'; texto: string };
 
 export default function Cidade({ sessao }: { sessao: Session }) {
-  const { cidade, obras, tropas, emMarcha, fila, soldados, bonus, territorio, territorios, agora, erro, comandar } = useCidade(sessao.user.id);
+  const { cidade, obras, tropas, emMarcha, fila, soldados, bonus, extras, territorio, territorios, agora, erro, comandar } =
+    useCidade(sessao.user.id);
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState<Aviso | null>(null);
 
@@ -53,13 +54,15 @@ export default function Cidade({ sessao }: { sessao: Session }) {
     );
   }
 
-  if (!cidade || !bonus) {
+  if (!cidade || !bonus || !extras) {
     return <div className="grid h-full place-items-center text-pergaminho-escuro">Erguendo sua cidade…</div>;
   }
 
-  const bonusAtivos = RECURSOS.filter((r) => bonus[r] > 0)
-    .map((r) => `+${Math.round(bonus[r] * 100)}% ${RECURSOS_INFO[r].nome.toLowerCase()}`)
-    .join(' · ');
+  const bonusAtivos = [
+    ...RECURSOS.filter((r) => bonus[r] > 0).map((r) => `+${Math.round(bonus[r] * 100)}% ${RECURSOS_INFO[r].nome.toLowerCase()}`),
+    ...(extras.producaoFixaHora.ouro > 0 ? [`+${extras.producaoFixaHora.ouro} ouro/h das cidades livres`] : []),
+    ...(extras.populacaoExtra > 0 ? [`+${extras.populacaoExtra} de população das vilas`] : []),
+  ].join(' · ');
 
   return (
     <div>
@@ -84,7 +87,7 @@ export default function Cidade({ sessao }: { sessao: Session }) {
           </p>
         )}
         <div className="md:hidden">
-          <BarraRecursos cidade={cidade} bonus={bonus} tropas={somarExercitos(tropas, emMarcha)} soldados={soldados} />
+          <BarraRecursos cidade={cidade} bonus={bonus} extras={extras} tropas={somarExercitos(tropas, emMarcha)} soldados={soldados} />
         </div>
       </div>
 
@@ -116,7 +119,7 @@ export default function Cidade({ sessao }: { sessao: Session }) {
 
         <aside className="space-y-4 md:sticky md:top-4 md:self-start">
           <div className="hidden md:block">
-            <BarraRecursos cidade={cidade} bonus={bonus} tropas={somarExercitos(tropas, emMarcha)} soldados={soldados} />
+            <BarraRecursos cidade={cidade} bonus={bonus} extras={extras} tropas={somarExercitos(tropas, emMarcha)} soldados={soldados} />
           </div>
           <PainelTrabalhadores cidade={cidade} bonus={bonus} soldados={soldados} ocupado={ocupado} onSalvar={alocar} />
           <PainelQuartel

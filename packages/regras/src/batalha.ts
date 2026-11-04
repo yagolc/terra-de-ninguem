@@ -19,12 +19,20 @@ export function forcaAtaque(atacante: Exercito, defensor: Exercito): number {
 }
 
 /** Força de defesa com triângulo de vantagens, terreno, muralha e paliçada. */
-export function forcaDefesa(defensor: Exercito, atacante: Exercito, terreno: Terreno, nivelMuralha: number, palicada = false): number {
+export function forcaDefesa(
+  defensor: Exercito,
+  atacante: Exercito,
+  terreno: Terreno,
+  nivelMuralha: number,
+  palicada = false,
+  cidadeLivre = false,
+): number {
   const { bonusFlorestaArqueiro, bonusMontanha, bonusMuralhaPorNivel } = BALANCEAMENTO.batalha;
   const bonusGeral =
     (terreno === 'montanha' ? 1 + bonusMontanha : 1) *
     (1 + bonusMuralhaPorNivel * nivelMuralha) *
-    (palicada ? 1 + BALANCEAMENTO.bonusPalicada : 1);
+    (palicada ? 1 + BALANCEAMENTO.bonusPalicada : 1) *
+    (cidadeLivre ? 1 + BALANCEAMENTO.povoados.cidadeLivre.bonusDefesa : 1);
 
   return TIPOS_UNIDADE.reduce((soma, tipo) => {
     const bonusTipo = terreno === 'floresta' && tipo === 'arqueiro' ? 1 + bonusFlorestaArqueiro : 1;
@@ -40,6 +48,8 @@ export type EntradaBatalha = {
   nivelMuralha: number;
   /** Paliçada pronta no território atacado. */
   palicada?: boolean;
+  /** Território com cidade livre (muralha própria, vale para qualquer defensor). */
+  cidadeLivre?: boolean;
   /** Sorte em [-1, 1] (use `sortearSorte`); vira ±`sorteMaxima` na força do atacante. */
   sorte: number;
   /** A cidade principal pode ser saqueada, mas nunca conquistada. */
@@ -77,7 +87,7 @@ export function resolverBatalha(entrada: EntradaBatalha): ResultadoBatalha {
 
   const sorte = Math.max(-1, Math.min(1, entrada.sorte));
   const ataque = forcaAtaque(atacante, defensor) * (1 + sorteMaxima * sorte);
-  const defesa = forcaDefesa(defensor, atacante, terreno, nivelMuralha, entrada.palicada);
+  const defesa = forcaDefesa(defensor, atacante, terreno, nivelMuralha, entrada.palicada, entrada.cidadeLivre);
 
   const atacanteVence = ataque > defesa;
   const maior = Math.max(ataque, defesa);

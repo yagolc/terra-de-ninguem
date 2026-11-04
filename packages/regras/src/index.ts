@@ -7,6 +7,7 @@ export * from './estruturas.ts';
 export * from './marcha.ts';
 export * from './mensagens.ts';
 export * from './objetivos.ts';
+export * from './povoados.ts';
 export * from './predios.ts';
 export * from './producao.ts';
 export * from './reconhecimento.ts';
