@@ -15,7 +15,7 @@ type Props = {
   cidade: EstadoCidade;
   bonus: Recursos;
   /** Ouro das cidades livres e população a mais das vilas. */
-  extras: { producaoFixaHora: Recursos; populacaoExtra: number };
+  extras: { producaoFixaHora: Recursos; populacaoExtra: number; bonusPopulacaoMaxima: number };
   /** Todas as tropas do jogador: comem comida continuamente. */
   tropas: Exercito;
   /** Tropas mais as que estão em treino (ocupam população). */
@@ -27,7 +27,7 @@ export default function BarraRecursos({ cidade, bonus, extras, tropas, soldados 
   const teto = capacidadeArmazem(cidade.predios.armazem);
   const producao = producaoHora(cidade, bonus, extras.producaoFixaHora);
   const saldo: Recursos = { ...producao, comida: producao.comida - consumoComidaHora(tropas) };
-  const limite = limitePopulacaoCidade(cidade, extras.populacaoExtra);
+  const limite = limitePopulacaoCidade(cidade, extras.populacaoExtra, extras.bonusPopulacaoMaxima);
   const livres = habitantesLivres(cidade, soldados);
   const fome = saldo.comida < 0 && cidade.recursos.comida < 1;
 

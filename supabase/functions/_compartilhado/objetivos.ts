@@ -8,8 +8,9 @@ import {
   sortearObjetivo,
   vencedorPorPontos,
   type Objetivo,
+  type Raca,
 } from '../../../packages/regras/src/index.ts';
-import { avancarAteAgora, carregarCidade, salvarCidade } from './cidade.ts';
+import { avancarAteAgora, carregarCidade, herdeiroDoTrono, salvarCidade } from './cidade.ts';
 import type { Transacao } from './db.ts';
 
 /** Sorteia o objetivo do jogador na temporada, se ele ainda não tiver um. */
@@ -24,8 +25,11 @@ export async function garantirObjetivo(tx: Transacao, temporadaId: string, jogad
      where r.temporada_id = ${temporadaId}
      group by r.id order by r.indice`;
   if (regioes.length === 0) return; // temporada sem mapa
-  const rivais = await tx<{ jogador_id: string }[]>`
-    select jogador_id from cidades where temporada_id = ${temporadaId} and jogador_id <> ${jogadorId}`;
+  // "Velha rixa": raças dos outros jogadores diferentes da do jogador.
+  const racas = await tx<{ jogador_id: string; raca: Raca | null }[]>`
+    select jogador_id, raca from cidades where temporada_id = ${temporadaId}`;
+  const minhaRaca = racas.find((r) => r.jogador_id === jogadorId)?.raca ?? null;
+  const racasRivais = racas.flatMap((r) => (r.jogador_id !== jogadorId && r.raca && r.raca !== minhaRaca ? [r.raca] : []));
   const jaSorteados = await tx<{ objetivo: Objetivo }[]>`select objetivo from objetivos where temporada_id = ${temporadaId}`;
   const [livres] = await tx<{ n: number }[]>`
     select count(*)::int as n from povoados where temporada_id = ${temporadaId} and tipo = 'cidade_livre'`;
@@ -34,7 +38,7 @@ export async function garantirObjetivo(tx: Transacao, temporadaId: string, jogad
     semente: sementeDeTexto(`${temporadaId}:${jogadorId}`),
     regioes,
     totalTerritorios: regioes.reduce((soma, r) => soma + r.territorios, 0),
-    rivais: rivais.map((r) => r.jogador_id),
+    racasRivais,
     jaSorteados: jaSorteados.map((o) => o.objetivo),
     cidadesLivres: livres?.n ?? 0,
   });
@@ -84,7 +88,24 @@ export async function atualizarPlacar(tx: Transacao): Promise<{ encerrada: boole
      where temporada_id = ${temporadaId} and conquistou and defensor_id is not null`;
   const objetivos = await tx<{ id: string; jogador_id: string; objetivo: Objetivo }[]>`
     select id, jogador_id, objetivo from objetivos where temporada_id = ${temporadaId}`;
-  const jogadores = await tx<{ jogador_id: string }[]>`select jogador_id from cidades where temporada_id = ${temporadaId} order by jogador_id`;
+  const jogadores = await tx<{ jogador_id: string; raca: Raca | null }[]>`
+    select jogador_id, raca from cidades where temporada_id = ${temporadaId} order by jogador_id`;
+  // Cabeça a prêmio: vitórias contra o herdeiro do trono (atacando ou defendendo) valem pontos a mais.
+  const herdeiro = await herdeiroDoTrono(tx, temporadaId);
+  const contraHerdeiro = herdeiro
+    ? await tx<{ jogador_id: string; vitorias: number }[]>`
+        select jogador_id, count(*)::int as vitorias from (
+          select atacante_id as jogador_id from relatorios
+           where temporada_id = ${temporadaId} and vencedor = 'atacante' and defensor_id = ${herdeiro}
+          union all
+          select defensor_id from relatorios
+           where temporada_id = ${temporadaId} and vencedor = 'defensor' and atacante_id = ${herdeiro} and defensor_id is not null
+        ) v group by jogador_id`
+    : [];
+  // "Velha rixa": territórios diferentes que cada jogador conquistou de cada outro jogador.
+  const territoriosConquistados = await tx<{ atacante_id: string; defensor_id: string; territorio_id: string }[]>`
+    select distinct atacante_id, defensor_id, territorio_id from relatorios
+     where temporada_id = ${temporadaId} and conquistou and defensor_id is not null`;
 
   const placar: { jogadorId: string; territorios: number; populacao: number; vitorias: number; pontos: number }[] = [];
   const cumpriram: string[] = [];
@@ -100,6 +121,7 @@ export async function atualizarPlacar(tx: Transacao): Promise<{ encerrada: boole
       territorios: meus.length,
       populacao: Math.floor(cidade.estado.populacao),
       vitorias: vitorias.find((v) => v.jogador_id === jogadorId)?.vitorias ?? 0,
+      vitoriasContraHerdeiro: contraHerdeiro.find((v) => v.jogador_id === jogadorId)?.vitorias ?? 0,
       pontos: 0,
     };
     linha.pontos = pontuar(linha);
@@ -115,6 +137,8 @@ export async function atualizarPlacar(tx: Transacao): Promise<{ encerrada: boole
       await tx`update objetivos set objetivo = ${tx.json(objetivo)} where id = ${registro.id}`;
     }
     const rivalId = objetivo.tipo === 'derrubar_rival' ? objetivo.rivalId : null;
+    const racaRival = objetivo.tipo === 'velha_rixa' ? objetivo.raca : null;
+    const daRaca = racaRival ? jogadores.filter((j) => j.raca === racaRival).map((j) => j.jogador_id) : [];
     const avaliacao = avaliarObjetivo(objetivo, {
       meusTerritorios: meus.map((t) => ({
         id: t.id,
@@ -133,6 +157,17 @@ export async function atualizarPlacar(tx: Transacao): Promise<{ encerrada: boole
       cidadesLivres: cidadesLivres.map((c) => ({ minha: c.dono_id === jogadorId, posseDesde: c.posse_desde?.getTime() ?? null })),
       agora,
       ouro: cidade.estado.recursos.ouro,
+      rixa: racaRival
+        ? {
+            territoriosConquistados: new Set(
+              territoriosConquistados
+                .filter((c) => c.atacante_id === jogadorId && daRaca.includes(c.defensor_id))
+                .map((c) => c.territorio_id),
+            ).size,
+            jogadoresDaRaca: daRaca.length,
+            todosSoNaCidade: daRaca.every((id) => territorios.filter((t) => t.dono_id === id).length <= 1),
+          }
+        : undefined,
       rival: rivalId
         ? {
             territorios: territorios.filter((t) => t.dono_id === rivalId).length,

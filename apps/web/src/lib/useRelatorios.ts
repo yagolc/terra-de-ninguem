@@ -1,4 +1,4 @@
-import type { Especialidade, Exercito, Recursos, Terreno } from '@terra/regras';
+import type { Especialidade, Exercito, Raca, Recursos, Terreno } from '@terra/regras';
 import { useCallback, useEffect, useState } from 'react';
 import { chamarFuncao } from './funcoes';
 import { buscarReconhecimentos, type Reconhecimento } from './useMapa';
@@ -22,6 +22,10 @@ export type DadosBatalha = {
   /** Heróis de cada lado (ausentes antes dos heróis); `ferido` = perdeu a batalha. */
   heroiAtacante?: HeroiNoRelatorio | null;
   heroiDefensor?: HeroiNoRelatorio | null;
+  /** Raças de cada lado e a Guarda Real que defendia (ausentes antes das raças). */
+  racaAtacante?: Raca | null;
+  racaDefensor?: Raca | null;
+  guardaReal?: number;
   forcaAtaque: number;
   forcaDefesa: number;
   margem: number | null;

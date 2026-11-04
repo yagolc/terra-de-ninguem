@@ -4,6 +4,7 @@ import {
   bonusDeTerritorios,
   bonusDosPovoados,
   bonusIntendente,
+  efeitosRaca,
   exercito,
   mapearExercito,
   soldadosNaConta,
@@ -14,6 +15,7 @@ import {
   type Especialidade,
   type Exercito,
   type Heroi,
+  type Raca,
   type LoteTreino,
   type NiveisPredios,
   type Obra,
@@ -39,6 +41,8 @@ type LinhaCidade = {
   trabalhadores_madeira: number;
   trabalhadores_ouro: number;
   atualizado_em: string;
+  raca: Raca | null;
+  guarda_real: number;
   predios: { tipo: TipoPredio; nivel: number }[];
   obras: { tipo: TipoPredio; pronto_em: string }[];
   filas_treino: { tipo_unidade: TipoUnidade; quantidade: number; pronto_em: string }[];
@@ -64,6 +68,9 @@ type CidadeSalva = {
   /** Todos os territórios do jogador (o intendente fora da cidade usa o recurso de um deles). */
   meusTerritorios: TerritorioDoJogador[];
   heroi: Heroi | null;
+  raca: Raca | null;
+  /** Lanceiros da Guarda Real (só o herdeiro do trono tem). */
+  guardaReal: number;
 };
 
 type LinhaHeroi = {
@@ -107,6 +114,8 @@ function converter(
     territorio: territorios.find((t) => t.id === linha.territorio_id) ?? null,
     territorios: territorios.length,
     meusTerritorios: territorios,
+    raca: linha.raca,
+    guardaReal: linha.guarda_real,
     heroi: heroi && {
       nome: heroi.nome,
       especialidade: heroi.especialidade,
@@ -138,7 +147,7 @@ async function buscarCidade(jogadorId: string): Promise<CidadeSalva | null> {
   const { data, error } = await supabase
     .from('cidades')
     .select(
-      'temporada_id, territorio_id, comida, madeira, ouro, populacao, trabalhadores_comida, trabalhadores_madeira, trabalhadores_ouro, atualizado_em, predios(tipo, nivel), obras(tipo, pronto_em), filas_treino(tipo_unidade, quantidade, pronto_em), temporadas!inner(status)',
+      'temporada_id, territorio_id, comida, madeira, ouro, populacao, trabalhadores_comida, trabalhadores_madeira, trabalhadores_ouro, atualizado_em, raca, guarda_real, predios(tipo, nivel), obras(tipo, pronto_em), filas_treino(tipo_unidade, quantidade, pronto_em), temporadas!inner(status)',
     )
     .eq('jogador_id', jogadorId)
     .eq('temporadas.status', 'ativa')
@@ -205,14 +214,10 @@ export function useCidade(jogadorId: string) {
 
   const carregar = useCallback(async () => {
     try {
-      let dados = await buscarCidade(jogadorId);
-      if (!dados) {
-        // Primeira visita na temporada: o servidor funda a cidade.
-        await chamarFuncao('cidade', { acao: 'entrar' });
-        dados = await buscarCidade(jogadorId);
-      }
+      // A cidade é fundada na tela de Fundação (nome e raça); aqui ela já existe.
+      const dados = await buscarCidade(jogadorId);
       setSalva(dados);
-      setErro(dados ? null : 'Não foi possível criar sua cidade.');
+      setErro(dados ? null : 'Você ainda não fundou sua cidade nesta temporada.');
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Erro ao carregar a cidade.');
     }
@@ -227,7 +232,12 @@ export function useCidade(jogadorId: string) {
     return () => clearInterval(relogio);
   }, []);
 
-  const extras = useMemo(() => (salva ? bonusDosPovoados(salva.povoados, agora) : null), [salva, agora]);
+  // Povoados (ouro e população das vilas) e o limite a mais da raça (humano).
+  const extras = useMemo(
+    () =>
+      salva ? { ...bonusDosPovoados(salva.povoados, agora), bonusPopulacaoMaxima: efeitosRaca(salva.raca).populacaoMaxima } : null,
+    [salva, agora],
+  );
   // Herói intendente: soma ao bônus dos territórios e, na cidade, ao crescimento da população.
   const intendente = useMemo(
     () =>
@@ -250,10 +260,11 @@ export function useCidade(jogadorId: string) {
             obras: salva.obras,
             treinos: salva.fila,
             agora,
-            bonusTerritorios: somarRecursos(salva.bonus, intendente.bonusTerritorios),
+            bonusTerritorios: somarRecursos(salva.bonus, intendente.bonusTerritorios, efeitosRaca(salva.raca).producao),
             producaoFixaHora: extras.producaoFixaHora,
             populacaoExtra: extras.populacaoExtra,
-            bonusCrescimento: intendente.bonusCrescimento,
+            bonusPopulacaoMaxima: extras.bonusPopulacaoMaxima,
+            bonusCrescimento: intendente.bonusCrescimento + efeitosRaca(salva.raca).crescimento,
           })
         : null,
     [salva, extras, intendente, agora],
@@ -276,13 +287,15 @@ export function useCidade(jogadorId: string) {
     fila: atual?.treinos ?? [],
     // O herói também é um habitante: conta como soldado na população.
     soldados: atual ? soldadosNaConta(totalUnidades(atual.tropas), atual.treinos) + (salva?.heroi ? 1 : 0) : 0,
-    bonus: salva && intendente ? somarRecursos(salva.bonus, intendente.bonusTerritorios) : null,
+    bonus: salva && intendente ? somarRecursos(salva.bonus, intendente.bonusTerritorios, efeitosRaca(salva.raca).producao) : null,
     /** Ouro das cidades livres e população a mais das vilas (só as leais). */
     extras,
     territorio: salva?.territorio ?? null,
     territorios: salva?.territorios ?? 0,
     meusTerritorios: salva?.meusTerritorios ?? [],
     heroi: salva?.heroi ?? null,
+    raca: salva?.raca ?? null,
+    guardaReal: salva?.guardaReal ?? 0,
     agora,
     erro,
     comandar,

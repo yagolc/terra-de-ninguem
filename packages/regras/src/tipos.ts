@@ -24,6 +24,10 @@ export type TipoPovoado = (typeof TIPOS_POVOADO)[number];
 export const TIPOS_ESPECIALIDADE = ['comandante', 'castelao', 'desbravador', 'saqueador', 'intendente'] as const;
 export type Especialidade = (typeof TIPOS_ESPECIALIDADE)[number];
 
+/** Raças dos jogadores (escolhidas ao fundar a cidade, a cada temporada). */
+export const TIPOS_RACA = ['humano', 'elfo', 'orc', 'anao'] as const;
+export type Raca = (typeof TIPOS_RACA)[number];
+
 export const TERRENOS = ['planicie', 'floresta', 'montanha'] as const;
 export type Terreno = (typeof TERRENOS)[number];
 

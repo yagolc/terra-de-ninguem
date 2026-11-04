@@ -13,7 +13,7 @@ import {
   verificarMelhoriaVila,
   vilaCheiaEm,
 } from './povoados.ts';
-import { atualizarCidade, cidadeInicial } from './producao.ts';
+import { atualizarCidade, cidadeInicial, limitePopulacaoCidade } from './producao.ts';
 import { limitePopulacao } from './predios.ts';
 import { capacidadeCarga } from './saque.ts';
 import { RECURSOS } from './tipos.ts';
@@ -128,6 +128,12 @@ describe('lealdade e bônus', () => {
     });
     expect(r.cidade.populacao).toBe(limitePopulacao(0) + 10);
     expect(r.cidade.recursos.ouro).toBe(cidade.recursos.ouro + 10 * ouroHora);
+  });
+
+  it('o limite das casas cresce com o bônus da raça, e as vilas somam por cima', () => {
+    const cidade = { ...cidadeInicial(0), predios: { ...cidadeInicial(0).predios, casa: 10 } };
+    expect(limitePopulacaoCidade(cidade, 0, 0.1)).toBe(Math.floor(limitePopulacao(10) * 1.1));
+    expect(limitePopulacaoCidade(cidade, 5, 0.1)).toBe(Math.floor(limitePopulacao(10) * 1.1) + 5);
   });
 
   it('a muralha da cidade livre aumenta a defesa', () => {

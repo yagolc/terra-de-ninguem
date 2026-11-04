@@ -1,6 +1,6 @@
-import { BALANCEAMENTO, RECURSOS, TIPOS_UNIDADE, totalUnidades, type Exercito } from '@terra/regras';
+import { BALANCEAMENTO, RECURSOS, TIPOS_UNIDADE, bonusDefesaRaca, totalUnidades, type Exercito } from '@terra/regras';
 import type { HeroiNoRelatorio, Relatorio } from '../lib/useRelatorios';
-import { ESPECIALIDADES_INFO, RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarNumero } from '../lib/textos';
+import { ESPECIALIDADES_INFO, RACAS_INFO, RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarNumero } from '../lib/textos';
 
 function LinhaExercito({ rotulo, exercito, perdas }: { rotulo: string; exercito: Exercito; perdas: Exercito }) {
   return (
@@ -34,6 +34,10 @@ export default function DetalheRelatorio({ relatorio, nomeDefensor }: { relatori
   if (d.muralha > 0) bonus.push(`🧱 muralha nível ${d.muralha}`);
   if (d.palicada) bonus.push('🪵 paliçada');
   if (d.povoado?.tipo === 'cidade_livre') bonus.push('⚖️ muralha da cidade livre');
+  if (d.guardaReal) bonus.push(`👑 ${d.guardaReal} da Guarda Real`);
+  if (d.racaDefensor && bonusDefesaRaca(d.racaDefensor, d.terreno) !== 0) {
+    bonus.push(`${RACAS_INFO[d.racaDefensor].icone} defesa ${RACAS_INFO[d.racaDefensor].nome.toLowerCase()}`);
+  }
 
   return (
     <div className="space-y-3 text-sm">

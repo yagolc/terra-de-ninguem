@@ -17,7 +17,7 @@ import PainelHeroi from '../componentes/PainelHeroi';
 import PainelQuartel from '../componentes/PainelQuartel';
 import PainelTrabalhadores from '../componentes/PainelTrabalhadores';
 import { useCidade } from '../lib/useCidade';
-import { ESPECIALIDADES_INFO, PREDIOS, RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarDuracao } from '../lib/textos';
+import { ESPECIALIDADES_INFO, PREDIOS, RACAS_INFO, RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarDuracao } from '../lib/textos';
 
 type Aviso = { tipo: 'erro' | 'ok'; texto: string };
 
@@ -35,6 +35,8 @@ export default function Cidade({ sessao }: { sessao: Session }) {
     territorios,
     meusTerritorios,
     heroi,
+    raca,
+    guardaReal,
     agora,
     erro,
     comandar,
@@ -112,6 +114,13 @@ export default function Cidade({ sessao }: { sessao: Session }) {
       <div className="mx-auto max-w-6xl px-4 pt-4">
         {territorio && (
           <p className="mb-3 text-sm text-pergaminho-escuro">
+            {raca && (
+              <span className="text-pergaminho">
+                {RACAS_INFO[raca].icone} {RACAS_INFO[raca].nome}
+                {' · '}
+              </span>
+            )}
+            {guardaReal > 0 && <span className="text-ouro-claro">👑 Guarda Real: {guardaReal} lanceiros · </span>}
             📍 <span className="text-pergaminho">{territorio.nome}</span> ({TERRENOS_INFO[territorio.terreno].nome.toLowerCase()})
             {' · '}
             {territorios} {territorios === 1 ? 'território' : 'territórios'}

@@ -1,13 +1,16 @@
 // Carregar, avançar e salvar a cidade de um jogador. Usado pela função `cidade` (comandos do jogador)
 // e pela `resolver-marchas` (batalhas). Tudo dentro da transação de quem chama.
 import {
+  BALANCEAMENTO,
   TIPOS_PREDIO,
+  TIPOS_RACA,
   avancarCidade,
   bonusDeTerritorios,
   bonusDosPovoados,
   bonusIntendente,
   cidadeInicial,
   distribuirPerdas,
+  efeitosRaca,
   escolherCor,
   escolherTerritorioLivre,
   exercito,
@@ -21,6 +24,7 @@ import {
   type Exercito,
   type LoteTreino,
   type Obra,
+  type Raca,
   type Recurso,
   type Recursos,
   type TipoPovoado,
@@ -66,20 +70,41 @@ async function territorioInicial(tx: Transacao, temporadaId: string, jogadorId: 
   return livre;
 }
 
-/** Funda a cidade do jogador na temporada ativa, se ele ainda não tiver uma. */
-export async function criarCidade(tx: Transacao, jogadorId: string): Promise<void> {
+/** O vencedor da última temporada encerrada (o herdeiro do trono caído), ou null. */
+export async function herdeiroDoTrono(tx: Transacao, temporadaId: string): Promise<string | null> {
+  const [linha] = await tx<{ vencedor_id: string | null }[]>`
+    select vencedor_id from temporadas
+     where status = 'encerrada' and numero < (select numero from temporadas where id = ${temporadaId})
+     order by numero desc limit 1`;
+  return linha?.vencedor_id ?? null;
+}
+
+/**
+ * Funda a cidade do jogador na temporada ativa, se ele ainda não tiver uma. Fundar exige escolher a raça
+ * (e pode trocar o nome do jogador). O herdeiro do trono recebe a Guarda Real.
+ */
+export async function criarCidade(tx: Transacao, jogadorId: string, escolha: { raca?: unknown; nome?: unknown } = {}): Promise<void> {
   const { id: temporadaId } = await temporadaAtiva(tx);
   // Dois jogadores chegando juntos não podem pegar o mesmo território livre.
   await tx`select pg_advisory_xact_lock(hashtext(${temporadaId}))`;
   const [existente] = await tx`select 1 from cidades where temporada_id = ${temporadaId} and jogador_id = ${jogadorId}`;
   if (existente) return;
 
+  const raca = TIPOS_RACA.find((r) => r === escolha.raca);
+  if (!raca) throw new ErroDoJogo('Escolha sua raça para fundar a cidade.');
+  if (escolha.nome !== undefined) {
+    const nome = String(escolha.nome).trim();
+    if (nome.length < 1 || nome.length > 24) throw new ErroDoJogo('O nome deve ter de 1 a 24 caracteres.');
+    await tx`update jogadores set nome = ${nome} where id = ${jogadorId}`;
+  }
+  const guardaReal = (await herdeiroDoTrono(tx, temporadaId)) === jogadorId ? BALANCEAMENTO.herdeiro.guardaReal : 0;
+
   const territorioId = await territorioInicial(tx, temporadaId, jogadorId);
   const inicial = cidadeInicial(Date.now());
   const [criada] = await tx<{ id: string }[]>`
-    insert into cidades (temporada_id, jogador_id, territorio_id, comida, madeira, ouro, populacao, atualizado_em)
+    insert into cidades (temporada_id, jogador_id, territorio_id, comida, madeira, ouro, populacao, atualizado_em, raca, guarda_real)
     values (${temporadaId}, ${jogadorId}, ${territorioId}, ${inicial.recursos.comida}, ${inicial.recursos.madeira},
-            ${inicial.recursos.ouro}, ${inicial.populacao}, ${new Date(inicial.atualizadoEm)})
+            ${inicial.recursos.ouro}, ${inicial.populacao}, ${new Date(inicial.atualizadoEm)}, ${raca}, ${guardaReal})
     returning id`;
 
   const predios = TIPOS_PREDIO.map((tipo) => ({ cidade_id: criada!.id, tipo, nivel: inicial.predios[tipo] }));
@@ -118,10 +143,16 @@ export type CidadeCarregada = {
   /** Ouro das cidades livres e população a mais das vilas (só povoados leais). */
   producaoFixaHora: Recursos;
   populacaoExtra: number;
-  /** Crescimento da população a mais (herói intendente na cidade). */
+  /** Crescimento da população a mais (herói intendente na cidade, raça). */
   bonusCrescimento: number;
+  /** Limite das casas a mais (raça humana). */
+  bonusPopulacaoMaxima: number;
   /** O herói do jogador (travado), se ele já recrutou um. Ocupa 1 de população. */
   heroi: HeroiSalvo | null;
+  /** Raça da temporada (null nas cidades de temporadas antigas). */
+  raca: Raca | null;
+  /** Lanceiros da Guarda Real que defendem a cidade (só o herdeiro do trono tem). */
+  guardaReal: number;
   /** Tropas paradas, uma entrada por território. */
   grupos: GrupoTropas[];
   /** Tropas em marcha: comem e ocupam população, mas não desertam. */
@@ -142,10 +173,12 @@ export async function carregarCidade(tx: Transacao, temporadaId: string, jogador
       trabalhadores_madeira: number;
       trabalhadores_ouro: number;
       atualizado_em: Date;
+      raca: Raca | null;
+      guarda_real: number;
     }[]
   >`
     select id, territorio_id, comida, madeira, ouro, populacao,
-           trabalhadores_comida, trabalhadores_madeira, trabalhadores_ouro, atualizado_em
+           trabalhadores_comida, trabalhadores_madeira, trabalhadores_ouro, atualizado_em, raca, guarda_real
       from cidades
      where temporada_id = ${temporadaId} and jogador_id = ${jogadorId}
        for update`;
@@ -206,11 +239,15 @@ export async function carregarCidade(tx: Transacao, temporadaId: string, jogador
         territorios.filter((t) => t.entreposto).map((t) => t.bonus_recurso),
       ),
       intendente.bonusTerritorios,
+      efeitosRaca(linha.raca).producao,
     ),
     producaoFixaHora: bonusPovoados.producaoFixaHora,
     populacaoExtra: bonusPovoados.populacaoExtra,
-    bonusCrescimento: intendente.bonusCrescimento,
+    bonusCrescimento: intendente.bonusCrescimento + efeitosRaca(linha.raca).crescimento,
+    bonusPopulacaoMaxima: efeitosRaca(linha.raca).populacaoMaxima,
     heroi,
+    raca: linha.raca,
+    guardaReal: linha.guarda_real,
     grupos: linhasTropas.map((t) => ({
       id: t.id,
       territorioId: t.territorio_id,
@@ -260,6 +297,7 @@ export function avancarAteAgora(c: CidadeCarregada, agora: number): CidadeAvanca
     producaoFixaHora: c.producaoFixaHora,
     populacaoExtra: c.populacaoExtra,
     bonusCrescimento: c.bonusCrescimento,
+    bonusPopulacaoMaxima: c.bonusPopulacaoMaxima,
   });
 
   const resultado: CidadeAvancada = {

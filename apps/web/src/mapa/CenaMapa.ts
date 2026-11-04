@@ -178,6 +178,10 @@ export class CenaMapa extends Phaser.Scene {
       // Cidade: castelo com a bandeira do dono ao lado.
       this.rotulos.push(this.add.text(x + 9, y - 16, '🏰', { ...estilo, fontSize: '20px' }).setOrigin(0.5));
       if (dono) this.desenharBandeira(x - 14, y - 14, corDoJogador(dono));
+      // Coroa sobre a bandeira do herdeiro do trono caído (vencedor da temporada anterior).
+      if (dono && dono.id === this.opcoes.dados.herdeiroId) {
+        this.rotulos.push(this.add.text(x - 3, y - 40, '👑', { ...estilo, fontSize: '16px', strokeThickness: 0 }).setOrigin(0.5));
+      }
     } else if (dono) {
       // Território conquistado: a bandeira do dono no lugar do ícone de terreno.
       this.desenharBandeira(x - 5, y - 14, corDoJogador(dono));

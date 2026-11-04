@@ -4,6 +4,7 @@ import {
   TIPOS_UNIDADE,
   bonusHeroi,
   duracaoMarchaMs,
+  efeitosRaca,
   exercito,
   fimProtecaoIniciante,
   mapearExercito,
@@ -68,7 +69,9 @@ export default function PainelAtaque({ dados, alvoId, meuId, agora, onVoltar, on
   });
   const heroi = dados.heroi;
   const comHeroi = levarHeroi && heroi?.territorioId === origemId;
-  const bonusVelocidade = comHeroi && heroi.especialidade === 'desbravador' ? bonusHeroi(heroi.nivel) : 0;
+  // Raça (o anão anda mais devagar) mais o herói desbravador.
+  const bonusVelocidade =
+    efeitosRaca(dados.racas.get(meuId)).velocidade + (comHeroi && heroi.especialidade === 'desbravador' ? bonusHeroi(heroi.nivel) : 0);
   const duracao = origem && totalUnidades(enviar) > 0 ? duracaoMarchaMs(origem, alvo, enviar, bonusVelocidade) : null;
 
   async function confirmar() {
@@ -112,6 +115,7 @@ export default function PainelAtaque({ dados, alvoId, meuId, agora, onVoltar, on
           agora={agora}
           nomeDono={dono ? dono.nome : 'Bárbaros'}
           cidadeLivre={dados.povoados.get(alvoId)?.tipo === 'cidade_livre'}
+          racaDono={alvo.dono_id ? dados.racas.get(alvo.dono_id) : undefined}
         />
       )}
       {estruturaDesconhecida && (

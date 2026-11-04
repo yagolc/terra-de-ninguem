@@ -1,5 +1,5 @@
 import type { Session } from '@supabase/supabase-js';
-import { Suspense, lazy, useEffect, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import IndicadorEscudo from '../componentes/IndicadorEscudo';
 import NavegacaoInferior, { ABAS, type Aba } from '../componentes/NavegacaoInferior';
 import { supabase } from '../lib/supabase';
@@ -7,6 +7,7 @@ import { buscarMarchasVistas } from '../lib/useMapa';
 import { contarNaoLidos } from '../lib/useRelatorios';
 import Cidade from './Cidade';
 import FimDeTemporada from './FimDeTemporada';
+import Fundacao from './Fundacao';
 import Objetivo from './Objetivo';
 import Regras from './Regras';
 import Relatorios from './Relatorios';
@@ -29,6 +30,10 @@ export default function Jogo({ sessao }: { sessao: Session }) {
   // undefined = carregando; null = nenhuma temporada ativa (mostra o fim da última).
   const [temporada, setTemporada] = useState<number | null | undefined>(undefined);
   const [temporadaId, setTemporadaId] = useState<string | null>(null);
+  // undefined = carregando; false = ainda não fundou a cidade nesta temporada (mostra a crônica e a fundação).
+  const [fundada, setFundada] = useState<boolean | undefined>(undefined);
+  // Vencedor da temporada anterior: o herdeiro do trono caído.
+  const [herdeiroId, setHerdeiroId] = useState<string | null>(null);
   // Fim do escudo do próprio jogador (null = sem escudo).
   const [escudoAte, setEscudoAte] = useState<number | null>(null);
   const [naoLidos, setNaoLidos] = useState(0);
@@ -77,23 +82,39 @@ export default function Jogo({ sessao }: { sessao: Session }) {
     return () => removeEventListener('hashchange', aoMudarEndereco);
   }, []);
 
-  useEffect(() => {
-    supabase
-      ?.from('jogadores')
-      .select('nome')
-      .eq('id', sessao.user.id)
-      .maybeSingle<{ nome: string }>()
-      .then(({ data }) => setNome(data?.nome ?? null));
-    supabase
-      ?.from('temporadas')
-      .select('id, numero')
-      .eq('status', 'ativa')
-      .maybeSingle<{ id: string; numero: number }>()
-      .then(({ data }) => {
-        setTemporada(data?.numero ?? null);
-        setTemporadaId(data?.id ?? null);
-      });
+  const carregarEntrada = useCallback(async () => {
+    if (!supabase) return;
+    const [jogador, ativa, encerradas] = await Promise.all([
+      supabase.from('jogadores').select('nome').eq('id', sessao.user.id).maybeSingle<{ nome: string }>(),
+      supabase.from('temporadas').select('id, numero').eq('status', 'ativa').maybeSingle<{ id: string; numero: number }>(),
+      supabase
+        .from('temporadas')
+        .select('vencedor_id')
+        .eq('status', 'encerrada')
+        .order('numero', { ascending: false })
+        .limit(1)
+        .returns<{ vencedor_id: string | null }[]>(),
+    ]);
+    setNome(jogador.data?.nome ?? null);
+    setHerdeiroId(encerradas.data?.[0]?.vencedor_id ?? null);
+    const t = ativa.data;
+    if (t) {
+      // O RLS devolve só a própria cidade.
+      const { data: cidade } = await supabase
+        .from('cidades')
+        .select('id')
+        .eq('temporada_id', t.id)
+        .eq('jogador_id', sessao.user.id)
+        .maybeSingle<{ id: string }>();
+      setFundada(!!cidade);
+    }
+    setTemporada(t?.numero ?? null);
+    setTemporadaId(t?.id ?? null);
   }, [sessao.user.id]);
+
+  useEffect(() => {
+    void carregarEntrada();
+  }, [carregarEntrada]);
 
   function irPara(nova: Aba) {
     location.hash = nova;
@@ -114,7 +135,7 @@ export default function Jogo({ sessao }: { sessao: Session }) {
               </p>
             </div>
           </div>
-          <nav className={`gap-1 ${temporada === null ? 'hidden' : 'hidden md:flex'}`}>
+          <nav className={`gap-1 ${temporada === null || !fundada ? 'hidden' : 'hidden md:flex'}`}>
             {ABAS.map((item) => (
               <button
                 key={item.id}
@@ -154,6 +175,13 @@ export default function Jogo({ sessao }: { sessao: Session }) {
           <Regras />
         ) : temporada === undefined ? null : temporada === null ? (
           <FimDeTemporada sessao={sessao} />
+        ) : fundada === undefined ? null : !fundada ? (
+          <Fundacao
+            temporada={temporada}
+            nomeAtual={nome ?? ''}
+            herdeiro={herdeiroId === sessao.user.id}
+            onFundada={() => void carregarEntrada()}
+          />
         ) : aba === 'cidade' ? (
           <Cidade sessao={sessao} />
         ) : aba === 'objetivo' ? (
@@ -167,7 +195,7 @@ export default function Jogo({ sessao }: { sessao: Session }) {
         )}
       </main>
 
-      {temporada !== null && <NavegacaoInferior aba={aba} onMudar={irPara} naoLidos={naoLidos} ameacas={ameacas} />}
+      {temporada !== null && fundada && <NavegacaoInferior aba={aba} onMudar={irPara} naoLidos={naoLidos} ameacas={ameacas} />}
     </div>
   );
 }

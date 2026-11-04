@@ -3,6 +3,7 @@ import {
   BONUS_DO_TERRENO,
   TIPOS_ESPECIALIDADE,
   TIPOS_ESTRUTURA,
+  TIPOS_RACA,
   TIPOS_UNIDADE,
   capacidadeArmazem,
   custoTreinoHeroi,
@@ -10,7 +11,8 @@ import {
   protecaoArmazem,
 } from '@terra/regras';
 import type { ReactNode } from 'react';
-import { ESPECIALIDADES_INFO, ESTRUTURAS_INFO, PREDIOS, RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO } from '../lib/textos';
+import { CRONICAS } from '../lib/cronicas';
+import { ESPECIALIDADES_INFO, ESTRUTURAS_INFO, PREDIOS, RACAS_INFO, RECURSOS_INFO, TERRENOS_INFO, TITULO_HERDEIRO, UNIDADES_INFO } from '../lib/textos';
 
 const B = BALANCEAMENTO;
 const pct = (fracao: number) => `${Math.round(fracao * 100)}%`;
@@ -32,6 +34,8 @@ export default function Regras() {
           Toque num assunto para abrir. Os números são os desta temporada e podem mudar com o balanceamento.
         </p>
       </header>
+
+      <Cronicas />
 
       <Secao icone="🎯" titulo="O objetivo" aberta>
         <p>
@@ -190,6 +194,36 @@ export default function Regras() {
         </p>
       </Secao>
 
+      <Secao icone="🧝" titulo="Raças">
+        <p>
+          Ao fundar a cidade, cada jogador escolhe a raça do seu povo. Ela vale a temporada toda (na próxima, escolhe de novo) e todos
+          veem a raça dos outros no mapa e no placar. Os bônus da raça somam com os do herói.
+        </p>
+        <ul className="space-y-1">
+          {TIPOS_RACA.map((r) => (
+            <li key={r}>
+              {RACAS_INFO[r].icone} <b>{RACAS_INFO[r].nome}:</b> {RACAS_INFO[r].vantagem} <span className="text-pergaminho-escuro">{RACAS_INFO[r].desvantagem}</span>
+            </li>
+          ))}
+        </ul>
+        <p>
+          O objetivo secreto <b>⚔️ Velha rixa</b> pede {B.objetivos.rixaTerritorios} territórios diferentes conquistados de jogadores de
+          uma raça (cada território conta uma vez só), ou deixar todos eles só com a cidade principal.
+        </p>
+      </Secao>
+
+      <Secao icone="👑" titulo="O herdeiro do trono">
+        <p>
+          Quem venceu a temporada anterior entra como <b>{TITULO_HERDEIRO}</b>, com coroa na bandeira. A cidade dele começa com a{' '}
+          <b>Guarda Real</b>: {B.herdeiro.guardaReal} lanceiros que defendem a cidade sem ocupar população nem comer, não marcham e não
+          voltam se morrerem.
+        </p>
+        <p>
+          Em troca, ele tem a <b>cabeça a prêmio</b>: cada batalha vencida contra o herdeiro (atacando ou defendendo) vale{' '}
+          <b>+{B.herdeiro.pontosPorVitoria} pontos</b> a mais no placar.
+        </p>
+      </Secao>
+
       <Secao icone="🎖️" titulo="Herói">
         <p>
           Com o Quartel construído, recrute <b>um herói</b> por temporada ({custo(B.herois.custoRecrutar)}): você escolhe o nome e a
@@ -254,6 +288,28 @@ export default function Regras() {
         </p>
       </Secao>
     </div>
+  );
+}
+
+function Cronicas() {
+  const temporadas = Object.keys(CRONICAS)
+    .map(Number)
+    .sort((a, b) => a - b);
+  return (
+    <Secao icone="📜" titulo="Crônicas do Reino">
+      {temporadas.map((n) => (
+        <div key={n} className="space-y-2">
+          <h3 className="font-titulo text-ouro">
+            Temporada {n}: {CRONICAS[n]!.titulo}
+          </h3>
+          {CRONICAS[n]!.paginas.map((p) => (
+            <p key={p.titulo}>
+              <b>{p.titulo}.</b> {p.texto}
+            </p>
+          ))}
+        </div>
+      ))}
+    </Secao>
   );
 }
 

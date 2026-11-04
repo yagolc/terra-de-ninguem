@@ -3,6 +3,7 @@ import {
   TIPOS_UNIDADE,
   bonusHeroi,
   duracaoMarchaMs,
+  efeitosRaca,
   exercito,
   ligadosPorTerritoriosProprios,
   mapearExercito,
@@ -55,7 +56,9 @@ export default function PainelMovimento({ dados, origemId, meuId, agora, onVolta
   });
   const heroi = dados.heroi;
   const comHeroi = levarHeroi && heroi?.territorioId === origemId;
-  const bonusVelocidade = comHeroi && heroi.especialidade === 'desbravador' ? bonusHeroi(heroi.nivel) : 0;
+  // Raça (o anão anda mais devagar) mais o herói desbravador.
+  const bonusVelocidade =
+    efeitosRaca(dados.racas.get(meuId)).velocidade + (comHeroi && heroi.especialidade === 'desbravador' ? bonusHeroi(heroi.nivel) : 0);
   const duracao = destino && totalUnidades(enviar) > 0 ? duracaoMarchaMs(origem, destino, enviar, bonusVelocidade) : null;
 
   async function confirmar() {

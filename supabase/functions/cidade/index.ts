@@ -1,5 +1,5 @@
 // Edge Function `cidade`: comandos do jogador, validados com o pacote de regras.
-// Corpo: { acao: 'entrar' } (funda a cidade e sorteia o objetivo) | { acao: 'evoluir_predio', tipo } | { acao: 'alocar_trabalhadores', alocacao }
+// Corpo: { acao: 'entrar', raca, nome? } (funda a cidade, se ainda não houver, e sorteia o objetivo) | { acao: 'evoluir_predio', tipo } | { acao: 'alocar_trabalhadores', alocacao }
 //      | { acao: 'treinar_tropas', tipo, quantidade }
 //      | { acao: 'enviar_marcha', origem_id, destino_id, tipo: 'saque' | 'conquista' | 'movimento', tropas }
 //      | { acao: 'enviar_reconhecimento', origem_id, destino_id }
@@ -26,6 +26,7 @@ import {
   TIPOS_UNIDADE,
   bonusHeroi,
   duracaoMarchaMs,
+  efeitosRaca,
   duracaoReconhecimentoMs,
   grafoDeFronteiras,
   habitantesLivres,
@@ -77,15 +78,16 @@ type TerritorioMarcha = { id: string; dono_id: string | null; cidade_principal: 
 
 /**
  * Herói que vai na marcha, se o jogador pediu (`com_heroi`): precisa estar livre no território de origem.
- * Devolve o id e o bônus de velocidade (desbravador).
+ * Devolve o id e o bônus de velocidade (desbravador mais a raça; o anão anda mais devagar).
  */
 function heroiDaMarcha(c: CidadeAvancada, corpo: Record<string, unknown>, origemId: string, agora: number) {
-  if (corpo.com_heroi !== true) return { heroiId: null, bonusVelocidade: 0 };
+  const raca = efeitosRaca(c.carregada.raca).velocidade;
+  if (corpo.com_heroi !== true) return { heroiId: null, bonusVelocidade: raca };
   const heroi = c.carregada.heroi;
   if (!heroi || heroi.territorioId !== origemId || !heroiDisponivel(heroi, agora)) {
     throw new ErroDoJogo('O herói precisa estar livre (sem treino e sem ferimento) no território de onde a marcha sai.');
   }
-  return { heroiId: heroi.id, bonusVelocidade: heroi.especialidade === 'desbravador' ? bonusHeroi(heroi.nivel) : 0 };
+  return { heroiId: heroi.id, bonusVelocidade: raca + (heroi.especialidade === 'desbravador' ? bonusHeroi(heroi.nivel) : 0) };
 }
 
 /** O herói sai do território e passa a viajar com a marcha recém-criada. */
@@ -315,7 +317,7 @@ async function executar(jogadorId: string, corpo: Record<string, unknown>): Prom
   if (corpo.acao === 'entrar') {
     // Funda a cidade (se ainda não houver) e sorteia o objetivo secreto (se ainda não houver).
     await sql.begin(async (tx) => {
-      await criarCidade(tx, jogadorId);
+      await criarCidade(tx, jogadorId, { raca: corpo.raca, nome: corpo.nome });
       await garantirObjetivo(tx, (await temporadaAtiva(tx)).id, jogadorId);
     });
     return { ok: true };

@@ -1,6 +1,19 @@
 // TODOS os números de balanceamento do jogo ficam aqui. Valores provisórios até o playtest (Épico 8).
 // Tempos em minutos/segundos e taxas "por hora" para facilitar a leitura; as funções convertem para ms.
-import type { Recursos, TipoEstrutura, TipoPredio, TipoUnidade } from './tipos.ts';
+import type { Raca, Recursos, Terreno, TipoEstrutura, TipoPredio, TipoUnidade } from './tipos.ts';
+
+/** Efeitos de uma raça (frações: 0,1 = +10%, −0,1 = −10%). O que não aparece é zero. */
+type ConfigRaca = {
+  producao?: Partial<Recursos>;
+  crescimento?: number;
+  /** Limite de população das casas a mais (0,1 = +10%). */
+  populacaoMaxima?: number;
+  ataque?: number;
+  defesa?: number;
+  defesaPorTerreno?: Partial<Record<Terreno, number>>;
+  velocidade?: number;
+  carga?: number;
+};
 
 type ConfigPredio = {
   /** Custo para construir o nível 1. Os níveis seguintes multiplicam por `crescimentoCusto`. */
@@ -143,6 +156,8 @@ export const BALANCEAMENTO = {
     ouroGuardado: 7500,
     /** "Monopólio comercial": horas seguidas com todas as cidades livres. */
     monopolioHoras: 12,
+    /** "Velha rixa": territórios diferentes conquistados de jogadores da raça rival. */
+    rixaTerritorios: 8,
   },
 
   pontos: {
@@ -222,6 +237,22 @@ export const BALANCEAMENTO = {
     multiplicadorIntendenteTerritorio: 2,
     nomeMinimo: 2,
     nomeMaximo: 20,
+  },
+
+  /** Raças: vantagem e desvantagem pequenas; somam com o herói. */
+  racas: {
+    humano: { crescimento: 0.2, populacaoMaxima: 0.1 },
+    elfo: { producao: { madeira: 0.1 }, defesaPorTerreno: { floresta: 0.2 }, crescimento: -0.1 },
+    orc: { ataque: 0.1, carga: 0.1, defesa: -0.1 },
+    anao: { producao: { ouro: 0.15 }, defesaPorTerreno: { montanha: 0.2 }, velocidade: -0.15 },
+  } satisfies Record<Raca, ConfigRaca>,
+
+  /** Herdeiro do trono: o vencedor da temporada anterior começa protegido, mas vira alvo. */
+  herdeiro: {
+    /** Lanceiros na cidade dele, fora da população: não comem, não marcham e não voltam se morrerem. */
+    guardaReal: 10,
+    /** Pontos a mais no placar por batalha vencida contra o herdeiro (a vitória normal já vale `pontos.porVitoria`). */
+    pontosPorVitoria: 10,
   },
 
   reconhecimento: {

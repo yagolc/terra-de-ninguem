@@ -5,6 +5,7 @@ import {
   type Especialidade,
   type Exercito,
   type Heroi,
+  type Raca,
   type Recurso,
   type Recursos,
   type Terreno,
@@ -128,6 +129,10 @@ export type DadosMapa = {
   povoados: Map<string, PovoadoMapa>;
   /** O herói do próprio jogador (o dos outros é secreto). */
   heroi: Heroi | null;
+  /** Raça de cada jogador da temporada (pública). */
+  racas: Map<string, Raca>;
+  /** Vencedor da temporada anterior: o herdeiro do trono caído (coroa no mapa, cabeça a prêmio). */
+  herdeiroId: string | null;
 };
 
 export const COR_NEUTRA = '#6b5a48';
@@ -248,6 +253,8 @@ async function buscarMapa(): Promise<DadosMapa | null> {
     marchasVistas,
     povoados,
     heroi,
+    racas,
+    anterior,
   ] = await Promise.all([
     supabase.from('regioes').select('id, indice, nome, terreno').eq('temporada_id', temporada.id).returns<RegiaoMapa[]>(),
     supabase
@@ -310,6 +317,14 @@ async function buscarMapa(): Promise<DadosMapa | null> {
         treino_pronto_em: string | null;
         ferido_ate: string | null;
       }>(),
+    supabase.rpc('racas_na_temporada', { p_temporada: temporada.id }),
+    supabase
+      .from('temporadas')
+      .select('vencedor_id')
+      .eq('status', 'encerrada')
+      .order('numero', { ascending: false })
+      .limit(1)
+      .returns<{ vencedor_id: string | null }[]>(),
   ]);
   if (
     !regioes.data ||
@@ -389,6 +404,12 @@ async function buscarMapa(): Promise<DadosMapa | null> {
         },
       ]),
     ),
+    racas: new Map(
+      ((racas.data ?? []) as { jogador_id: string; raca: Raca | null }[]).flatMap((r): [string, Raca][] =>
+        r.raca ? [[r.jogador_id, r.raca]] : [],
+      ),
+    ),
+    herdeiroId: anterior.data?.[0]?.vencedor_id ?? null,
     heroi: heroi.data && {
       nome: heroi.data.nome,
       especialidade: heroi.data.especialidade,

@@ -1,6 +1,7 @@
 // Objetivos secretos e pontuação (GDD: "Temporadas e condições de vitória").
 import { geradorComSemente } from './aleatorio.ts';
 import { BALANCEAMENTO } from './balanceamento.ts';
+import type { Raca } from './tipos.ts';
 import { HORA_MS } from './util.ts';
 
 export type Objetivo =
@@ -8,7 +9,10 @@ export type Objetivo =
   /** A meta é calculada na hora, sobre os territórios conquistáveis (ver `metaMetadeDoMapa`). */
   | { tipo: 'metade_do_mapa' }
   | { tipo: 'territorios_defendidos'; territorios: number; guarnicaoMinima: number }
+  /** Não é mais sorteado (virou "velha rixa"); fica para as cartas das temporadas antigas. */
   | { tipo: 'derrubar_rival'; rivalId: string }
+  /** Conquistar `territorios` diferentes de jogadores da `raca` (ou deixar todos eles só com a cidade). */
+  | { tipo: 'velha_rixa'; raca: Raca; territorios: number }
   | { tipo: 'populacao'; populacao: number }
   | { tipo: 'senhor_da_guerra'; vitorias: number }
   | { tipo: 'mestre_construtor'; predios: number; nivel: number }
@@ -31,22 +35,22 @@ export function metaMetadeDoMapa(totalTerritorios: number, cidadesAlheias: numbe
 }
 
 /**
- * Sorteia o objetivo de um jogador. Prefere tipos que ninguém tirou ainda, para variar; "derrubar
- * rival" só sai se já houver outro jogador; a dupla de regiões tem tamanho parecido com as outras metas.
+ * Sorteia o objetivo de um jogador. Prefere tipos que ninguém tirou ainda, para variar; "velha rixa" só sai
+ * se outro jogador tiver uma raça diferente da sua; a dupla de regiões tem tamanho parecido com as outras metas.
  */
 export function sortearObjetivo(entrada: {
   semente: number;
   /** Regiões do mapa e quantos territórios cada uma tem. */
   regioes: { id: string; territorios: number }[];
   totalTerritorios: number;
-  /** Outros jogadores que já têm cidade nesta temporada. */
-  rivais: string[];
+  /** Raças dos outros jogadores desta temporada que são diferentes da do jogador (alvos da "velha rixa"). */
+  racasRivais?: Raca[];
   /** Objetivos já sorteados para outros jogadores. */
   jaSorteados: Objetivo[];
   /** Cidades livres no mapa ("monopólio comercial" só sai se houver). */
   cidadesLivres?: number;
 }): Objetivo {
-  const { regioes, totalTerritorios, rivais, jaSorteados, cidadesLivres = 0 } = entrada;
+  const { regioes, totalTerritorios, jaSorteados, cidadesLivres = 0 } = entrada;
   const aleatorio = geradorComSemente(entrada.semente);
   const escolher = <T>(lista: T[]): T => lista[Math.floor(aleatorio() * lista.length)]!;
   const config = BALANCEAMENTO.objetivos;
@@ -62,10 +66,12 @@ export function sortearObjetivo(entrada: {
   }
   const duplasUsadas = new Set(jaSorteados.flatMap((o) => (o.tipo === 'duas_regioes' ? [[...o.regioes].sort().join('|')] : [])));
   const duplasLivres = duplas.filter((d) => !duplasUsadas.has([...d].sort().join('|')));
-  const alvosUsados = new Set(jaSorteados.flatMap((o) => (o.tipo === 'derrubar_rival' ? [o.rivalId] : [])));
-  const rivaisLivres = rivais.filter((r) => !alvosUsados.has(r));
+  const racasUsadas = new Set(jaSorteados.flatMap((o) => (o.tipo === 'velha_rixa' ? [o.raca] : [])));
+  const racasRivais = [...new Set(entrada.racasRivais ?? [])].sort();
+  const racasLivres = racasRivais.filter((r) => !racasUsadas.has(r));
+  const racasAlvo = racasLivres.length > 0 ? racasLivres : racasRivais;
 
-  const possiveis: TipoObjetivo[] = [
+  const possiveis: Exclude<TipoObjetivo, 'derrubar_rival'>[] = [
     'metade_do_mapa',
     'territorios_defendidos',
     'populacao',
@@ -74,7 +80,7 @@ export function sortearObjetivo(entrada: {
     'tesouro',
   ];
   if (duplasLivres.length > 0) possiveis.push('duas_regioes');
-  if (rivaisLivres.length > 0) possiveis.push('derrubar_rival');
+  if (racasAlvo.length > 0) possiveis.push('velha_rixa');
   if (cidadesLivres > 0) possiveis.push('monopolio_comercial');
   const tiposUsados = new Set(jaSorteados.map((o) => o.tipo));
   const novos = possiveis.filter((t) => !tiposUsados.has(t));
@@ -82,8 +88,8 @@ export function sortearObjetivo(entrada: {
   switch (escolher(novos.length > 0 ? novos : possiveis)) {
     case 'duas_regioes':
       return { tipo: 'duas_regioes', regioes: escolher(duplasLivres) };
-    case 'derrubar_rival':
-      return { tipo: 'derrubar_rival', rivalId: escolher(rivaisLivres) };
+    case 'velha_rixa':
+      return { tipo: 'velha_rixa', raca: escolher(racasAlvo), territorios: config.rixaTerritorios };
     case 'territorios_defendidos':
       return {
         tipo: 'territorios_defendidos',
@@ -124,6 +130,11 @@ export type SituacaoJogador = {
   /** Cidades livres do mapa: se são do jogador e desde quando o dono atual as tem (ms). */
   cidadesLivres: readonly { minha: boolean; posseDesde: number | null }[];
   agora: number;
+  /**
+   * Só para "velha rixa": territórios diferentes que o jogador já conquistou de jogadores da raça, quantos
+   * jogadores dela existem e se todos estão só com a cidade principal.
+   */
+  rixa?: { territoriosConquistados: number; jogadoresDaRaca: number; todosSoNaCidade: boolean };
   /** Só para "derrubar rival". */
   rival?: { territorios: number; conquisteiDele: boolean; outrosConquistaramDele: boolean };
 };
@@ -213,6 +224,14 @@ export function avaliarObjetivo(objetivo: Objetivo, s: SituacaoJogador): Avaliac
         partes: [{ atual: minhas.length, alvo: s.cidadesLivres.length }],
       };
     }
+    case 'velha_rixa': {
+      const rixa = s.rixa ?? { territoriosConquistados: 0, jogadoresDaRaca: 1, todosSoNaCidade: false };
+      const atual = Math.min(rixa.territoriosConquistados, objetivo.territorios);
+      // Raça que sumiu do mapa (contas apagadas): vira "metade do mapa", como o antigo "derrubar rival".
+      if (rixa.jogadoresDaRaca === 0) return { cumprido: false, atual, alvo: objetivo.territorios, viraObjetivo: objetivoMetadeDoMapa() };
+      const derrubados = rixa.todosSoNaCidade && rixa.territoriosConquistados > 0;
+      return { cumprido: atual >= objetivo.territorios || derrubados, atual, alvo: objetivo.territorios };
+    }
     case 'derrubar_rival': {
       const rival = s.rival ?? { territorios: 1, conquisteiDele: false, outrosConquistaramDele: false };
       // Progresso: territórios que o rival ainda tem além da cidade principal (zero = derrubado).
@@ -227,9 +246,15 @@ export function avaliarObjetivo(objetivo: Objetivo, s: SituacaoJogador): Avaliac
   }
 }
 
-export function pontuar(entrada: { territorios: number; populacao: number; vitorias: number }): number {
+/** Pontos do placar. `vitoriasContraHerdeiro` (cabeça a prêmio) já estão contadas em `vitorias` e valem a mais. */
+export function pontuar(entrada: { territorios: number; populacao: number; vitorias: number; vitoriasContraHerdeiro?: number }): number {
   const { porTerritorio, porHabitante, porVitoria } = BALANCEAMENTO.pontos;
-  return entrada.territorios * porTerritorio + Math.floor(entrada.populacao) * porHabitante + entrada.vitorias * porVitoria;
+  return (
+    entrada.territorios * porTerritorio +
+    Math.floor(entrada.populacao) * porHabitante +
+    entrada.vitorias * porVitoria +
+    (entrada.vitoriasContraHerdeiro ?? 0) * BALANCEAMENTO.herdeiro.pontosPorVitoria
+  );
 }
 
 /** Prazo da temporada (ms). */

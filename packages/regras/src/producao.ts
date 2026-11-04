@@ -60,11 +60,13 @@ export type BonusExternos = {
   populacaoExtra?: number;
   /** Crescimento da população a mais (herói intendente na cidade; 0,2 = +20%). */
   bonusCrescimento?: number;
+  /** Limite das casas a mais (raça humana; 0,1 = +10%). */
+  bonusPopulacaoMaxima?: number;
 };
 
-/** Limite de população da cidade: casas mais o que as vilas dão. */
-export function limitePopulacaoCidade(cidade: EstadoCidade, populacaoExtra = 0): number {
-  return limitePopulacao(cidade.predios.casa) + populacaoExtra;
+/** Limite de população da cidade: casas (com o bônus da raça) mais o que as vilas dão. */
+export function limitePopulacaoCidade(cidade: EstadoCidade, populacaoExtra = 0, bonusPopulacaoMaxima = 0): number {
+  return Math.floor(limitePopulacao(cidade.predios.casa) * (1 + bonusPopulacaoMaxima)) + populacaoExtra;
 }
 
 export function consumoComidaHora(tropas: Exercito): number {
@@ -100,7 +102,7 @@ export function atualizarCidade(
     agora: number;
   } & BonusExternos,
 ): ResultadoAtualizacao {
-  const { cidade, tropas, agora, bonusTerritorios, producaoFixaHora, populacaoExtra, bonusCrescimento = 0 } = entrada;
+  const { cidade, tropas, agora, bonusTerritorios, producaoFixaHora, populacaoExtra, bonusCrescimento = 0, bonusPopulacaoMaxima } = entrada;
   const horas = Math.max(0, (agora - cidade.atualizadoEm) / HORA_MS);
   const teto = capacidadeArmazem(cidade.predios.armazem);
   const producao = producaoHora(cidade, bonusTerritorios, producaoFixaHora);
@@ -128,7 +130,7 @@ export function atualizarCidade(
   }
   const desertores = mapearExercito((tipo) => tropas[tipo] - tropasDepois[tipo]);
 
-  const limite = limitePopulacaoCidade(cidade, populacaoExtra);
+  const limite = limitePopulacaoCidade(cidade, populacaoExtra, bonusPopulacaoMaxima);
   const populacao = Math.max(
     0,
     acumular(cidade.populacao, crescimentoPopulacaoHora(cidade.predios.casa) * (1 + bonusCrescimento), horas, limite) -
@@ -171,7 +173,8 @@ export function avancarCidade<O extends Obra, L extends LoteTreino>(
   treinos: L[];
   lotesConcluidos: L[];
 } {
-  const { obras = [], treinos = [], agora, bonusTerritorios, producaoFixaHora, populacaoExtra, bonusCrescimento } = entrada;
+  const { obras = [], treinos = [], agora, bonusTerritorios, producaoFixaHora, populacaoExtra, bonusCrescimento, bonusPopulacaoMaxima } =
+    entrada;
   const obrasConcluidas = obras.filter((o) => o.prontoEm <= agora);
   const lotesConcluidos = treinos.filter((l) => l.prontoEm <= agora);
   const eventos = [
@@ -183,7 +186,16 @@ export function avancarCidade<O extends Obra, L extends LoteTreino>(
   let tropas = entrada.tropas;
   let desertores = mapearExercito(() => 0);
   const avancarAte = (instante: number) => {
-    const r = atualizarCidade({ cidade, tropas, agora: instante, bonusTerritorios, producaoFixaHora, populacaoExtra, bonusCrescimento });
+    const r = atualizarCidade({
+      cidade,
+      tropas,
+      agora: instante,
+      bonusTerritorios,
+      producaoFixaHora,
+      populacaoExtra,
+      bonusCrescimento,
+      bonusPopulacaoMaxima,
+    });
     cidade = r.cidade;
     tropas = r.tropas;
     desertores = mapearExercito((tipo) => desertores[tipo] + r.desertores[tipo]);

@@ -44,14 +44,14 @@ function situacao(mudancas: Partial<SituacaoJogador> = {}): SituacaoJogador {
 
 describe('sortearObjetivo', () => {
   it('a mesma semente sorteia o mesmo objetivo', () => {
-    const entrada = { semente: 42, regioes: REGIOES, totalTerritorios: TOTAL, rivais: ['b'], jaSorteados: [] };
+    const entrada = { semente: 42, regioes: REGIOES, totalTerritorios: TOTAL, racasRivais: ['orc' as const], jaSorteados: [] };
     expect(sortearObjetivo(entrada)).toEqual(sortearObjetivo(entrada));
   });
 
   it('sorteia objetivos válidos e variados (300 sorteios)', () => {
     const vistos = new Set<string>();
     for (let s = 1; s <= 300; s++) {
-      const o = sortearObjetivo({ semente: s, regioes: REGIOES, totalTerritorios: TOTAL, rivais: ['b', 'c'], jaSorteados: [] });
+      const o = sortearObjetivo({ semente: s, regioes: REGIOES, totalTerritorios: TOTAL, racasRivais: ['orc', 'anao'], jaSorteados: [] });
       vistos.add(o.tipo);
       if (o.tipo === 'duas_regioes') {
         const soma = o.regioes.reduce((t, id) => t + REGIOES.find((r) => r.id === id)!.territorios, 0);
@@ -59,15 +59,19 @@ describe('sortearObjetivo', () => {
         expect(soma).toBeGreaterThanOrEqual(TOTAL * BALANCEAMENTO.objetivos.duplaDeRegioesMin);
         expect(soma).toBeLessThanOrEqual(TOTAL * BALANCEAMENTO.objetivos.duplaDeRegioesMax);
       }
-      if (o.tipo === 'derrubar_rival') expect(['b', 'c']).toContain(o.rivalId);
+      if (o.tipo === 'velha_rixa') {
+        expect(['orc', 'anao']).toContain(o.raca);
+        expect(o.territorios).toBe(BALANCEAMENTO.objetivos.rixaTerritorios);
+      }
+      expect(o.tipo).not.toBe('derrubar_rival');
     }
     expect(vistos.size).toBe(8);
   });
 
-  it('sem outros jogadores, nunca sorteia "derrubar rival"', () => {
+  it('sem outra raça no mapa, nunca sorteia "velha rixa"', () => {
     for (let s = 1; s <= 100; s++) {
-      expect(sortearObjetivo({ semente: s, regioes: REGIOES, totalTerritorios: TOTAL, rivais: [], jaSorteados: [] }).tipo).not.toBe(
-        'derrubar_rival',
+      expect(sortearObjetivo({ semente: s, regioes: REGIOES, totalTerritorios: TOTAL, racasRivais: [], jaSorteados: [] }).tipo).not.toBe(
+        'velha_rixa',
       );
     }
   });
@@ -83,8 +87,8 @@ describe('sortearObjetivo', () => {
       { tipo: 'tesouro', ouro: 7500 },
     ];
     for (let s = 1; s <= 50; s++) {
-      expect(sortearObjetivo({ semente: s, regioes: REGIOES, totalTerritorios: TOTAL, rivais: ['b'], jaSorteados }).tipo).toBe(
-        'derrubar_rival',
+      expect(sortearObjetivo({ semente: s, regioes: REGIOES, totalTerritorios: TOTAL, racasRivais: ['elfo'], jaSorteados }).tipo).toBe(
+        'velha_rixa',
       );
     }
   });
@@ -192,6 +196,19 @@ describe('avaliarObjetivo', () => {
     expect(avaliarObjetivo(obj, situacao({ niveisPredios: [10, 10, 10, 10, 10, 10, 0, 0] })).cumprido).toBe(true);
   });
 
+  it('velha rixa: territórios diferentes conquistados, ou a raça toda só com as cidades', () => {
+    const obj: Objetivo = { tipo: 'velha_rixa', raca: 'orc', territorios: 8 };
+    const rixa = (territoriosConquistados: number, todosSoNaCidade = false, jogadoresDaRaca = 1) =>
+      avaliarObjetivo(obj, situacao({ rixa: { territoriosConquistados, jogadoresDaRaca, todosSoNaCidade } }));
+    expect(rixa(7)).toMatchObject({ cumprido: false, atual: 7, alvo: 8 });
+    expect(rixa(8).cumprido).toBe(true);
+    // Atalho: a raça inteira só com as cidades, com pelo menos uma conquista do jogador.
+    expect(rixa(2, true).cumprido).toBe(true);
+    expect(rixa(0, true).cumprido).toBe(false);
+    // A raça sumiu do mapa: vira "metade do mapa".
+    expect(rixa(3, true, 0).viraObjetivo).toEqual(objetivoMetadeDoMapa());
+  });
+
   it('monopólio comercial: todas as cidades livres pelas horas pedidas, contando da última tomada', () => {
     const obj: Objetivo = { tipo: 'monopolio_comercial', horas: 12 };
     const agora = 100 * HORA_MS;
@@ -215,7 +232,7 @@ describe('avaliarObjetivo', () => {
   it('monopólio só é sorteado se o mapa tiver cidades livres', () => {
     let viu = false;
     for (let s = 1; s <= 200; s++) {
-      const base = { semente: s, regioes: REGIOES, totalTerritorios: TOTAL, rivais: [], jaSorteados: [] };
+      const base = { semente: s, regioes: REGIOES, totalTerritorios: TOTAL, jaSorteados: [] };
       expect(sortearObjetivo(base).tipo).not.toBe('monopolio_comercial');
       if (sortearObjetivo({ ...base, cidadesLivres: 3 }).tipo === 'monopolio_comercial') viu = true;
     }
@@ -243,6 +260,11 @@ describe('pontos e prazo', () => {
   it('pontua territórios, habitantes e vitórias', () => {
     const { porTerritorio, porHabitante, porVitoria } = BALANCEAMENTO.pontos;
     expect(pontuar({ territorios: 3, populacao: 40.7, vitorias: 2 })).toBe(3 * porTerritorio + 40 * porHabitante + 2 * porVitoria);
+  });
+
+  it('cabeça a prêmio: vitórias contra o herdeiro valem pontos a mais', () => {
+    const sem = pontuar({ territorios: 3, populacao: 40, vitorias: 2 });
+    expect(pontuar({ territorios: 3, populacao: 40, vitorias: 2, vitoriasContraHerdeiro: 1 })).toBe(sem + BALANCEAMENTO.herdeiro.pontosPorVitoria);
   });
 
   it('o prazo é o início mais a duração da temporada', () => {

@@ -6,12 +6,14 @@
 // Exige o cabeçalho x-segredo-cron igual à variável SEGREDO_CRON (npx supabase secrets set).
 import {
   BALANCEAMENTO,
+  bonusDefesaRaca,
   bonusHeroi,
   bonusSeDisponivel,
   calcularSaque,
   distribuirPerdas,
   duracaoMarchaMs,
   duracaoReconhecimentoMs,
+  efeitosRaca,
   escudoAte,
   exercito,
   feridoAte,
@@ -81,13 +83,15 @@ async function mandarDeVolta(
   agora: number,
   heroi: HeroiSalvo | null = null,
   cidadeTerritorioId: string | null = null,
+  /** Velocidade da raça do jogador (o anão anda mais devagar). */
+  velocidadeRaca = 0,
 ) {
   if (totalUnidades(sobreviventes) === 0) {
     if (heroi) await posicionarHeroi(tx, heroi.id, { territorioId: cidadeTerritorioId, marchaId: null });
     return;
   }
   const [casa] = await tx<{ x: number; y: number }[]>`select x, y from territorios where id = ${m.origem_id}`;
-  const bonusVelocidade = heroi?.especialidade === 'desbravador' ? bonusHeroi(heroi.nivel) : 0;
+  const bonusVelocidade = velocidadeRaca + (heroi?.especialidade === 'desbravador' ? bonusHeroi(heroi.nivel) : 0);
   const chegada = agora + duracaoMarchaMs(de, casa!, sobreviventes, bonusVelocidade);
   const [volta] = await tx<{ id: string }[]>`
     insert into marchas (temporada_id, jogador_id, origem_id, destino_id, tipo, lanceiro, arqueiro, cavalaria,
@@ -122,8 +126,10 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
   const defensor = destino.dono_id ? cidades.get(destino.dono_id)! : null;
   // Herói do dono parado no território atacado (castelão defende mais, se estiver livre).
   const heroiDefensor = defensor?.carregada.heroi?.territorioId === destino.id ? defensor.carregada.heroi : null;
-  const bonusAtaque = heroiAtacante?.especialidade === 'comandante' ? bonusHeroi(heroiAtacante.nivel) : 0;
-  const bonusCarga = heroiAtacante?.especialidade === 'saqueador' ? bonusHeroi(heroiAtacante.nivel) : 0;
+  // Bônus somados: herói (comandante, saqueador, castelão) e raça de cada lado (orc ataca e carrega mais...).
+  const racaAtacante = efeitosRaca(atacante.carregada.raca);
+  const bonusAtaque = racaAtacante.ataque + (heroiAtacante?.especialidade === 'comandante' ? bonusHeroi(heroiAtacante.nivel) : 0);
+  const bonusCarga = racaAtacante.carga + (heroiAtacante?.especialidade === 'saqueador' ? bonusHeroi(heroiAtacante.nivel) : 0);
 
   // Exército que defende: as tropas do dono no território, ou os bárbaros.
   const [barbaros] = defensor
@@ -139,7 +145,9 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
     { id: string; tipo: TipoPovoado; nivel: number; saqueada_em: Date | null; milicia: number; milicia_entregue: boolean }[]
   >`select id, tipo, nivel, saqueada_em, milicia, milicia_entregue from povoados where territorio_id = ${destino.id} for update`;
   const cidadeLivre = povoado?.tipo === 'cidade_livre';
-  const miliciaDefendendo = exercito({ lanceiro: defensor && cidadeLivre ? povoado.milicia : 0 });
+  // Lanceiros extras do dono, fora da população: a milícia da cidade livre ou a Guarda Real na cidade do herdeiro.
+  const guardaReal = defensor && destino.cidade_principal ? defensor.carregada.guardaReal : 0;
+  const miliciaDefendendo = exercito({ lanceiro: (defensor && cidadeLivre ? povoado.milicia : 0) + guardaReal });
   const exercitoDefensor = grupoDefensor ? somarExercitos(grupoDefensor.tropas, miliciaDefendendo) : exercito(barbaros);
 
   // Paliçada pronta no território atacado (só jogadores constroem; bárbaros não têm).
@@ -158,7 +166,7 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
     palicada,
     cidadeLivre,
     bonusAtaque,
-    bonusDefesa: bonusSeDisponivel(heroiDefensor, 'castelao', agora),
+    bonusDefesa: bonusSeDisponivel(heroiDefensor, 'castelao', agora) + (defensor ? bonusDefesaRaca(defensor.carregada.raca, destino.terreno) : 0),
     sorte: sortearSorte(geradorComSemente(sementeDeTexto(m.id))),
     alvoCidadePrincipal: destino.cidade_principal,
   });
@@ -234,8 +242,11 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
   } else {
     if (grupoDefensor) {
       grupoDefensor.tropas = sobreviventesDono;
-      if (povoado && miliciaDepois !== miliciaDefendendo.lanceiro) {
+      if (povoado && cidadeLivre && miliciaDepois !== miliciaDefendendo.lanceiro) {
         await tx`update povoados set milicia = ${miliciaDepois} where id = ${povoado.id}`;
+      }
+      if (guardaReal > 0 && miliciaDepois !== guardaReal) {
+        await tx`update cidades set guarda_real = ${miliciaDepois} where id = ${defensor!.carregada.id}`;
       }
     } else if (barbaros) {
       const s = batalha.sobreviventesDefensor;
@@ -252,6 +263,7 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
       agora,
       atacanteVenceu ? heroiAtacante : null,
       atacante.carregada.territorioId,
+      racaAtacante.velocidade,
     );
   }
 
@@ -298,6 +310,9 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
               vilaZerada,
               milicia,
               heroiAtacante: heroiAtacante ? heroiNoRelatorio(heroiAtacante, !atacanteVenceu) : null,
+              racaAtacante: atacante.carregada.raca,
+              racaDefensor: defensor?.carregada.raca ?? null,
+              guardaReal,
               heroiDefensor: heroiDefensor ? heroiNoRelatorio(heroiDefensor, atacanteVenceu) : null,
               forcaAtaque: batalha.forcaAtaque,
               forcaDefesa: batalha.forcaDefesa,
@@ -332,6 +347,8 @@ async function resolverReconhecimento(tx: Transacao, m: Marcha, agora: number) {
     select tipo, pronto_em <= ${new Date(agora)} as pronta from estruturas where territorio_id = ${m.destino_id}`;
   // A milícia da cidade livre também defende: o batedor a conta junto com os lanceiros.
   const [povoado] = await tx<{ milicia: number }[]>`select milicia from povoados where territorio_id = ${m.destino_id}`;
+  // A Guarda Real do herdeiro também defende a cidade dele.
+  const [guarda] = await tx<{ guarda_real: number }[]>`select guarda_real from cidades where territorio_id = ${m.destino_id}`;
   // Herói parado no território: o batedor descobre nome, especialidade e nível.
   const heroi = await heroiNoTerritorio(tx, m.destino_id);
   const volta = duracaoReconhecimentoMs(destino!, casa!);
@@ -340,7 +357,7 @@ async function resolverReconhecimento(tx: Transacao, m: Marcha, agora: number) {
     insert into reconhecimentos (temporada_id, jogador_id, territorio_id, dono_id, terreno, muralha,
                                  lanceiro, arqueiro, cavalaria, estrutura, estrutura_pronta, heroi, observado_em, disponivel_em)
     values (${m.temporada_id}, ${m.jogador_id}, ${destino!.id}, ${destino!.dono_id}, ${destino!.terreno}, ${muralha?.nivel ?? 0},
-            ${vistas!.lanceiro + (destino!.dono_id ? (povoado?.milicia ?? 0) : 0)}, ${vistas!.arqueiro}, ${vistas!.cavalaria},
+            ${vistas!.lanceiro + (destino!.dono_id ? (povoado?.milicia ?? 0) + (guarda?.guarda_real ?? 0) : 0)}, ${vistas!.arqueiro}, ${vistas!.cavalaria},
             ${estrutura?.tipo ?? null}, ${estrutura?.pronta ?? false},
             ${heroi ? tx.json({ nome: heroi.nome, especialidade: heroi.especialidade, nivel: heroi.nivel }) : null},
             ${new Date(agora)}, ${new Date(agora + volta)})`;

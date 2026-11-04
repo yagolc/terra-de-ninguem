@@ -1,4 +1,5 @@
 import { BALANCEAMENTO } from '@terra/regras';
+import { RACAS_INFO, TITULO_HERDEIRO } from '../lib/textos';
 import { corDoJogador } from '../lib/useMapa';
 import type { LinhaPlacar } from '../lib/useTemporada';
 
@@ -26,8 +27,14 @@ export default function TabelaPlacar({ placar, meuId, vencedorId }: { placar: Li
               <td className="py-2 tabular-nums">{i + 1}</td>
               <td className="py-2">
                 <span className="mr-1.5 inline-block size-2.5 rounded-full" style={{ background: corDoJogador({ id: linha.jogadorId, cor: linha.cor }) }} />
+                {linha.raca && <span title={RACAS_INFO[linha.raca].nome}>{RACAS_INFO[linha.raca].icone} </span>}
                 {linha.nome}
                 {linha.jogadorId === vencedorId && ' 👑'}
+                {linha.herdeiro && (
+                  <span className="block text-[11px] text-ouro-claro" title="Cada batalha vencida contra ele vale pontos a mais">
+                    {TITULO_HERDEIRO} · 🎯 cabeça a prêmio
+                  </span>
+                )}
               </td>
               <td className="px-1 py-2 text-center tabular-nums">{linha.territorios}</td>
               <td className="px-1 py-2 text-center tabular-nums">{linha.populacao}</td>
@@ -38,7 +45,8 @@ export default function TabelaPlacar({ placar, meuId, vencedorId }: { placar: Li
         </tbody>
       </table>
       <p className="mt-2 text-xs text-pergaminho-escuro/80">
-        {porTerritorio} por território · {porHabitante} por habitante · {porVitoria} por batalha vencida. Atualizado a cada minuto.
+        {porTerritorio} por território · {porHabitante} por habitante · {porVitoria} por batalha vencida (+
+        {BALANCEAMENTO.herdeiro.pontosPorVitoria} contra o herdeiro do trono). Atualizado a cada minuto.
       </p>
     </div>
   );

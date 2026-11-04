@@ -1,6 +1,6 @@
-import { BALANCEAMENTO, TIPOS_UNIDADE, analisarDefesa, bonusHeroi, totalUnidades } from '@terra/regras';
+import { BALANCEAMENTO, TIPOS_UNIDADE, analisarDefesa, bonusDefesaRaca, bonusHeroi, totalUnidades, type Raca } from '@terra/regras';
 import type { Reconhecimento } from '../lib/useMapa';
-import { ESPECIALIDADES_INFO, ESTRUTURAS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarDuracao } from '../lib/textos';
+import { ESPECIALIDADES_INFO, ESTRUTURAS_INFO, RACAS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarDuracao } from '../lib/textos';
 
 type Props = {
   reconhecimento: Reconhecimento;
@@ -8,21 +8,27 @@ type Props = {
   nomeDono: string;
   /** O território tem cidade livre (muralha própria, +defesa para qualquer defensor). */
   cidadeLivre?: boolean;
+  /** Raça do dono do território (elfo na floresta e anão na montanha defendem mais; orc defende menos). */
+  racaDono?: Raca;
 };
 
 /** O que o batedor viu: tropas, terreno, muralha, estrutura e quanto mandar para conquistar com folga. */
-export default function InfoReconhecimento({ reconhecimento, agora, nomeDono, cidadeLivre = false }: Props) {
+export default function InfoReconhecimento({ reconhecimento, agora, nomeDono, cidadeLivre = false, racaDono }: Props) {
   const { tropas, terreno, muralha, estrutura, estruturaPronta } = reconhecimento;
   const palicada = estrutura === 'palicada' && estruturaPronta;
   const heroi = reconhecimento.heroi;
   // Castelão visto pelo batedor: conta como se estivesse livre (pode estar ferido, mas é melhor sobrar tropa).
   const bonusDefesa = heroi?.especialidade === 'castelao' ? bonusHeroi(heroi.nivel) : 0;
-  const analise = analisarDefesa({ defensor: tropas, terreno, nivelMuralha: muralha, palicada, cidadeLivre, bonusDefesa });
+  const defesaRaca = bonusDefesaRaca(racaDono, terreno);
+  const analise = analisarDefesa({ defensor: tropas, terreno, nivelMuralha: muralha, palicada, cidadeLivre, bonusDefesa: bonusDefesa + defesaRaca });
   const efeitos: string[] = [];
   if (terreno === 'floresta') efeitos.push(`🌲 floresta: arqueiros defendem +${Math.round(BALANCEAMENTO.batalha.bonusFlorestaArqueiro * 100)}%`);
   if (terreno === 'montanha') efeitos.push(`⛰️ montanha: defesa +${Math.round(BALANCEAMENTO.batalha.bonusMontanha * 100)}%`);
   if (muralha > 0) efeitos.push(`🧱 muralha nível ${muralha}: defesa +${Math.round(BALANCEAMENTO.batalha.bonusMuralhaPorNivel * muralha * 100)}%`);
   if (palicada) efeitos.push(`🪵 paliçada: defesa +${Math.round(BALANCEAMENTO.bonusPalicada * 100)}%`);
+  if (racaDono && defesaRaca !== 0) {
+    efeitos.push(`${RACAS_INFO[racaDono].icone} ${RACAS_INFO[racaDono].nome.toLowerCase()}: defesa ${defesaRaca > 0 ? '+' : '−'}${Math.round(Math.abs(defesaRaca) * 100)}%`);
+  }
   if (bonusDefesa > 0) efeitos.push(`🛡️ herói castelão: defesa +${Math.round(bonusDefesa * 100)}%`);
   if (cidadeLivre) efeitos.push(`⚖️ cidade livre: defesa +${Math.round(BALANCEAMENTO.povoados.cidadeLivre.bonusDefesa * 100)}%`);
   const idade = agora - reconhecimento.observadoEm;

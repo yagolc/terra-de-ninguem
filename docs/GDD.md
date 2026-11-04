@@ -91,6 +91,21 @@ O mapa é dividido em territórios ligados por fronteiras, como no War. Um mapa 
   - **Vilas** (cerca de 6 por mapa, guarda fraca): neutras, têm um estoque que o saque leva inteiro e que volta a encher em 8 h. Conquistadas, viram do dono no nível 1 e dão +5 de população máxima por nível (até 3). Saqueada por outro jogador, a vila volta ao nível 0.
   - **Cidades livres** (3 no meio do mapa, guarda forte e muralha própria de +30%): dão +60 de ouro por hora. Na primeira conquista, 5 lanceiros de milícia passam a defendê-la para o conquistador, sem ocupar população nem comer. Ter todas por 12 h seguidas é o monopólio comercial.
 
+## Raças, crônica e herdeiro do trono
+
+**Raças** (desde a temporada 3): ao fundar a cidade, cada jogador escolhe nome e raça, que vale a temporada toda e é pública. Cada uma tem vantagem e desvantagem pequenas, que somam com o herói:
+
+| Raça | Vantagem | Desvantagem |
+| --- | --- | --- |
+| Humano | +20% de crescimento da população, +10% no limite das casas | nenhuma |
+| Elfo | +20% de defesa em floresta, +10% de madeira | população cresce 10% mais devagar |
+| Orc | +10% de ataque, +10% de carga de saque | −10% de defesa |
+| Anão | +20% de defesa em montanha, +15% de ouro | marchas 15% mais lentas |
+
+**Crônica:** cada temporada abre com um capítulo da lore (na primeira entrada, com "Pular"), que fica para reler em Regras. A temporada 3 conta a queda da Casa de Eduardo, vencedor da temporada 2, e a chegada de elfos, anões e orcs.
+
+**Herdeiro do trono:** o vencedor da temporada anterior entra com título e coroa no mapa, e a cidade dele começa com a Guarda Real (10 lanceiros fora da população, que não comem nem marcham e não voltam se morrerem). Em troca, tem a cabeça a prêmio: cada batalha vencida contra ele vale +10 pontos a mais.
+
 ## Heróis
 
 Com o Quartel construído, cada jogador recruta **um herói** por temporada (300 de ouro), com nome e uma especialidade que não muda. Ele ocupa 1 de população, não come e nunca morre. O bônus é de +2% por nível, até +20% no nível 10.
@@ -147,7 +162,7 @@ O gerador de mapa divide os territórios em 5 ou 6 regiões, o equivalente aos c
 | Dominar duas regiões específicas | War (continentes) | Conquiste a Floresta do Norte e as Montanhas de Ferro |
 | Dominar mais da metade do mapa | War (24 territórios) | Cerca de 55% dos territórios |
 | Dominar territórios bem defendidos | War (18 territórios com 2 exércitos) | 8 territórios com 6 soldados em cada (no total, até metade da população máxima) |
-| Derrubar um rival específico | War (destruir um exército) | Reduza o jogador X a apenas sua cidade principal. Se outro fizer isso antes, o objetivo vira dominar mais da metade do mapa |
+| Velha rixa (substitui "derrubar um rival" desde a temporada 3) | War (destruir um exército) | Conquiste 8 territórios diferentes de jogadores de uma raça, ou deixe todos eles só com a cidade principal |
 | Alcançar população X | Próprio do jogo | Vitória econômica, para quem prefere crescer a guerrear |
 | Senhor da guerra | Próprio do jogo | Vença 30 batalhas contra outros jogadores, atacando ou defendendo |
 | Mestre construtor | Próprio do jogo | 3 prédios da cidade no nível 10 (cerca de 40 h de obra somadas, contando o Centro) |

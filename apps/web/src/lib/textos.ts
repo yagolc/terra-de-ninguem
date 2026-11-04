@@ -2,6 +2,7 @@ import {
   BALANCEAMENTO,
   type Especialidade,
   type Objetivo,
+  type Raca,
   type Recurso,
   type Terreno,
   type TipoEstrutura,
@@ -62,6 +63,41 @@ export const ESPECIALIDADES_INFO: Record<Especialidade, { nome: string; icone: s
     descricao: `Na cidade: mais produção de tudo e mais crescimento da população. Noutro território seu: ${BALANCEAMENTO.herois.multiplicadorIntendenteTerritorio}× o bônus, só no recurso daquele território.`,
   },
 };
+
+/** Raças: nome, plural (para "os orcs") e o resumo da vantagem e da desvantagem. */
+export const RACAS_INFO: Record<Raca, { nome: string; plural: string; icone: string; vantagem: string; desvantagem: string }> = {
+  humano: {
+    nome: 'Humano',
+    plural: 'humanos',
+    icone: '🧑',
+    vantagem: '+20% de crescimento da população e +10% no limite de população das casas.',
+    desvantagem: 'Nenhuma: é o povo equilibrado.',
+  },
+  elfo: {
+    nome: 'Elfo',
+    plural: 'elfos',
+    icone: '🧝',
+    vantagem: '+20% de defesa em floresta e +10% de madeira.',
+    desvantagem: 'A população cresce 10% mais devagar.',
+  },
+  orc: {
+    nome: 'Orc',
+    plural: 'orcs',
+    icone: '🪓',
+    vantagem: '+10% de força de ataque e +10% de carga de saque.',
+    desvantagem: '−10% de defesa.',
+  },
+  anao: {
+    nome: 'Anão',
+    plural: 'anões',
+    icone: '⛏️',
+    vantagem: '+20% de defesa em montanha e +15% de ouro.',
+    desvantagem: 'Marchas 15% mais lentas.',
+  },
+};
+
+/** Título do vencedor da temporada anterior, mostrado junto do nome. */
+export const TITULO_HERDEIRO = 'Herdeiro do Trono Caído';
 
 export const RECURSOS_INFO: Record<Recurso, { nome: string; icone: string }> = {
   comida: { nome: 'Comida', icone: '🌾' },
@@ -140,6 +176,12 @@ export function descreverObjetivo(
         icone: '💰',
         titulo: 'Tesouro do reino',
         texto: `Junte ${formatarNumero(objetivo.ouro)} de ouro guardado na sua cidade. Só cabe no Armazém nível máximo, e o ouro atrai saqueadores.`,
+      };
+    case 'velha_rixa':
+      return {
+        icone: '⚔️',
+        titulo: 'Velha rixa',
+        texto: `Os ${RACAS_INFO[objetivo.raca].plural} nunca pagaram pelo que fizeram ao seu povo. Conquiste ${objetivo.territorios} territórios diferentes de jogadores ${RACAS_INFO[objetivo.raca].plural}, ou deixe todos eles só com a cidade principal.`,
       };
     case 'monopolio_comercial':
       return {

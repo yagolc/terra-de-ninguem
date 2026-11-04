@@ -1,6 +1,6 @@
 import { BALANCEAMENTO, TIPOS_UNIDADE, estruturaAtiva, totalUnidades } from '@terra/regras';
 import { COR_NEUTRA, corDoJogador, type DadosMapa } from '../lib/useMapa';
-import { ESTRUTURAS_INFO, RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarDuracao } from '../lib/textos';
+import { ESTRUTURAS_INFO, RACAS_INFO, RECURSOS_INFO, TERRENOS_INFO, TITULO_HERDEIRO, UNIDADES_INFO, formatarDuracao } from '../lib/textos';
 import { useState } from 'react';
 import { chamarFuncao } from '../lib/funcoes';
 import InfoReconhecimento from './InfoReconhecimento';
@@ -54,6 +54,7 @@ export default function PainelTerritorio({
   const batedorACaminho = dados.marchas.some((m) => m.tipo === 'reconhecimento' && m.destinoId === t.id);
   const estrutura = dados.estruturas.get(t.id);
   const povoado = dados.povoados.get(t.id);
+  const racaDono = t.dono_id ? dados.racas.get(t.dono_id) : undefined;
   const torre = meu && estruturaAtiva(estrutura, 'torre', agora);
   const vindo = torre ? dados.marchasVistas.filter((m) => m.destinoId === t.id) : [];
 
@@ -95,7 +96,16 @@ export default function PainelTerritorio({
         <dt className="text-pergaminho-escuro">Dono</dt>
         <dd className="flex items-center gap-2">
           <span className="size-3 rounded-full" style={{ background: dono ? corDoJogador(dono) : COR_NEUTRA }} />
-          {dono ? `${dono.nome}${meu ? ' (você)' : ''}` : 'Neutro, guardado por bárbaros'}
+          <span>
+            {dono ? `${dono.nome}${meu ? ' (você)' : ''}` : 'Neutro, guardado por bárbaros'}
+            {dono && racaDono && (
+              <span className="text-pergaminho-escuro">
+                {' '}
+                · {RACAS_INFO[racaDono].icone} {RACAS_INFO[racaDono].nome}
+              </span>
+            )}
+            {dono && dono.id === dados.herdeiroId && <span className="block text-xs text-ouro-claro">👑 {TITULO_HERDEIRO}</span>}
+          </span>
         </dd>
         {(t.cidade_principal || reservadoPara) && (
           <>
@@ -209,6 +219,7 @@ export default function PainelTerritorio({
           agora={agora}
           nomeDono={reconhecimento.donoId ? (dados.jogadores.get(reconhecimento.donoId)?.nome ?? 'Defensor') : 'Bárbaros'}
           cidadeLivre={povoado?.tipo === 'cidade_livre'}
+          racaDono={reconhecimento.donoId ? dados.racas.get(reconhecimento.donoId) : undefined}
         />
       )}
 

@@ -1,4 +1,4 @@
-import { avaliarObjetivo, cidadesAlheiasPorRegiao, type AvaliacaoObjetivo, type Objetivo } from '@terra/regras';
+import { avaliarObjetivo, cidadesAlheiasPorRegiao, type AvaliacaoObjetivo, type Objetivo, type Raca } from '@terra/regras';
 import { useCallback, useEffect, useState } from 'react';
 import { chamarFuncao } from './funcoes';
 import { supabase } from './supabase';
@@ -11,6 +11,9 @@ export type LinhaPlacar = {
   populacao: number;
   vitorias: number;
   pontos: number;
+  raca: Raca | null;
+  /** Herdeiro do trono caído (vencedor da temporada anterior): cabeça a prêmio. */
+  herdeiro: boolean;
 };
 
 export type TemporadaInfo = {
@@ -72,7 +75,7 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
   if (!linha) return null;
   const temporada = converterTemporada(linha);
 
-  const [jogadores, regioes, placar, objetivos, territorios, tropas, batalhas, cidade, cidadesLivres] = await Promise.all([
+  const [jogadores, regioes, placar, objetivos, territorios, tropas, batalhas, cidade, cidadesLivres, racas] = await Promise.all([
     supabase.from('jogadores').select('id, nome, cor').returns<{ id: string; nome: string; cor: string | null }[]>(),
     supabase.from('regioes').select('id, nome').eq('temporada_id', temporada.id).returns<{ id: string; nome: string }[]>(),
     supabase
@@ -101,9 +104,11 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
     // O RLS devolve só as batalhas em que o jogador lutou.
     supabase
       .from('relatorios')
-      .select('atacante_id, defensor_id, vencedor, conquistou')
+      .select('atacante_id, defensor_id, territorio_id, vencedor, conquistou')
       .eq('temporada_id', temporada.id)
-      .returns<{ atacante_id: string; defensor_id: string | null; vencedor: 'atacante' | 'defensor'; conquistou: boolean }[]>(),
+      .returns<
+        { atacante_id: string; defensor_id: string | null; territorio_id: string; vencedor: 'atacante' | 'defensor'; conquistou: boolean }[]
+      >(),
     supabase
       .from('cidades')
       .select('ouro, predios(nivel)')
@@ -116,6 +121,7 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
       .eq('temporada_id', temporada.id)
       .eq('tipo', 'cidade_livre')
       .returns<{ territorio_id: string; posse_desde: string | null }[]>(),
+    supabase.rpc('racas_na_temporada', { p_temporada: temporada.id }),
   ]);
   if (!jogadores.data || !regioes.data || !placar.data || !objetivos.data || !territorios.data || !tropas.data || !batalhas.data || !cidadesLivres.data) {
     throw new Error('Não foi possível carregar o placar.');
@@ -125,12 +131,16 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
   const nomesRegioes = new Map(regioes.data.map((r) => [r.id, r.nome]));
   const nomeJogador = (id: string) => nomesJogadores.get(id)?.nome ?? 'um jogador';
   const meuObjetivo = objetivos.data.find((o) => o.jogador_id === jogadorId)?.objetivo ?? null;
+  const racaDe = new Map(((racas.data ?? []) as { jogador_id: string; raca: Raca | null }[]).map((r) => [r.jogador_id, r.raca]));
+  const herdeiroId = temporadas.find((t) => t.status === 'encerrada' && t.numero < temporada.numero)?.vencedor_id ?? null;
 
   let progresso: AvaliacaoObjetivo | null = null;
   if (meuObjetivo) {
     const territoriosPorRegiao = new Map<string, number>();
     for (const t of territorios.data) territoriosPorRegiao.set(t.regiao_id, (territoriosPorRegiao.get(t.regiao_id) ?? 0) + 1);
     const rivalId = meuObjetivo.tipo === 'derrubar_rival' ? meuObjetivo.rivalId : null;
+    // "Velha rixa": jogadores da raça e os territórios diferentes que eu já conquistei deles.
+    const daRaca = meuObjetivo.tipo === 'velha_rixa' ? [...racaDe].filter(([, r]) => r === meuObjetivo.raca).map(([id]) => id) : [];
     progresso = avaliarObjetivo(meuObjetivo, {
       meusTerritorios: territorios.data
         .filter((t) => t.dono_id === jogadorId)
@@ -155,6 +165,18 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
       ),
       totalTerritorios: territorios.data.length,
       populacao: placar.data.find((p) => p.jogador_id === jogadorId)?.populacao ?? 0,
+      rixa:
+        meuObjetivo.tipo === 'velha_rixa'
+          ? {
+              territoriosConquistados: new Set(
+                batalhas.data
+                  .filter((b) => b.atacante_id === jogadorId && b.conquistou && b.defensor_id && daRaca.includes(b.defensor_id))
+                  .map((b) => b.territorio_id),
+              ).size,
+              jogadoresDaRaca: daRaca.length,
+              todosSoNaCidade: daRaca.every((id) => territorios.data.filter((t) => t.dono_id === id).length <= 1),
+            }
+          : undefined,
       rival: rivalId
         ? {
             territorios: territorios.data.filter((t) => t.dono_id === rivalId).length,
@@ -181,6 +203,8 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
       populacao: p.populacao,
       vitorias: p.vitorias,
       pontos: p.pontos,
+      raca: racaDe.get(p.jogador_id) ?? null,
+      herdeiro: p.jogador_id === herdeiroId,
     })),
     nomeRegiao: (id) => nomesRegioes.get(id) ?? 'uma região',
     nomeJogador,
