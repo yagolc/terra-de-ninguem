@@ -101,14 +101,21 @@ export function useRelatorios() {
   return { estado, erro, recarregar: carregar };
 }
 
-/** Quantos relatórios o jogador ainda não leu (para o aviso na aba). */
+/**
+ * Quantos relatórios da temporada ativa o jogador ainda não leu (para o aviso na aba). Só a ativa, como a tela:
+ * relatórios que ficaram sem abrir numa temporada encerrada não contam.
+ */
 export async function contarNaoLidos(jogadorId: string): Promise<number> {
   if (!supabase) return 0;
+  const { data: temporada } = await supabase.from('temporadas').select('id').eq('status', 'ativa').maybeSingle<{ id: string }>();
+  if (!temporada) return 0;
+  const naTemporada = (tabela: 'relatorios' | 'reconhecimentos') =>
+    supabase!.from(tabela).select('id', { count: 'exact', head: true }).eq('temporada_id', temporada.id);
   const [comoAtacante, comoDefensor, batedores] = await Promise.all([
-    supabase.from('relatorios').select('id', { count: 'exact', head: true }).eq('atacante_id', jogadorId).eq('lido_atacante', false),
-    supabase.from('relatorios').select('id', { count: 'exact', head: true }).eq('defensor_id', jogadorId).eq('lido_defensor', false),
+    naTemporada('relatorios').eq('atacante_id', jogadorId).eq('lido_atacante', false),
+    naTemporada('relatorios').eq('defensor_id', jogadorId).eq('lido_defensor', false),
     // O RLS só conta batedores que já voltaram.
-    supabase.from('reconhecimentos').select('id', { count: 'exact', head: true }).eq('jogador_id', jogadorId).eq('lido', false),
+    naTemporada('reconhecimentos').eq('jogador_id', jogadorId).eq('lido', false),
   ]);
   return (comoAtacante.count ?? 0) + (comoDefensor.count ?? 0) + (batedores.count ?? 0);
 }
