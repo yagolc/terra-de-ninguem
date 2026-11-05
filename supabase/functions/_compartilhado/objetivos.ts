@@ -2,6 +2,7 @@
 import {
   avaliarObjetivo,
   cidadesAlheiasPorRegiao,
+  monopolioComercial,
   objetivoMetadeDoMapa,
   pontuar,
   sementeDeTexto,
@@ -18,36 +19,39 @@ export async function garantirObjetivo(tx: Transacao, temporadaId: string, jogad
   await tx`select pg_advisory_xact_lock(hashtext(${'objetivos:' + temporadaId}))`;
   const [existente] = await tx`select 1 from objetivos where temporada_id = ${temporadaId} and jogador_id = ${jogadorId}`;
   if (existente) return;
+  const objetivo = await sortearPara(tx, temporadaId, jogadorId);
+  if (!objetivo) return; // temporada sem mapa
+  await tx`insert into objetivos (temporada_id, jogador_id, objetivo) values (${temporadaId}, ${jogadorId}, ${tx.json(objetivo)})`;
+}
 
+/** Sorteia um objetivo para o jogador, variando em relação aos dos outros. Null se a temporada não tem mapa. */
+async function sortearPara(tx: Transacao, temporadaId: string, jogadorId: string): Promise<Objetivo | null> {
   const regioes = await tx<{ id: string; territorios: number }[]>`
     select r.id, count(t.id)::int as territorios
       from regioes r join territorios t on t.regiao_id = r.id
      where r.temporada_id = ${temporadaId}
      group by r.id order by r.indice`;
-  if (regioes.length === 0) return; // temporada sem mapa
+  if (regioes.length === 0) return null;
   // "Velha rixa": raças dos outros jogadores diferentes da do jogador.
   const racas = await tx<{ jogador_id: string; raca: Raca | null }[]>`
     select jogador_id, raca from cidades where temporada_id = ${temporadaId}`;
   const minhaRaca = racas.find((r) => r.jogador_id === jogadorId)?.raca ?? null;
   const racasRivais = racas.flatMap((r) => (r.jogador_id !== jogadorId && r.raca && r.raca !== minhaRaca ? [r.raca] : []));
-  const jaSorteados = await tx<{ objetivo: Objetivo }[]>`select objetivo from objetivos where temporada_id = ${temporadaId}`;
-  const [livres] = await tx<{ n: number }[]>`
-    select count(*)::int as n from povoados where temporada_id = ${temporadaId} and tipo = 'cidade_livre'`;
+  const jaSorteados = await tx<{ objetivo: Objetivo }[]>`
+    select objetivo from objetivos where temporada_id = ${temporadaId} and jogador_id <> ${jogadorId}`;
 
-  const objetivo = sortearObjetivo({
+  return sortearObjetivo({
     semente: sementeDeTexto(`${temporadaId}:${jogadorId}`),
     regioes,
     totalTerritorios: regioes.reduce((soma, r) => soma + r.territorios, 0),
     racasRivais,
     jaSorteados: jaSorteados.map((o) => o.objetivo),
-    cidadesLivres: livres?.n ?? 0,
   });
-  await tx`insert into objetivos (temporada_id, jogador_id, objetivo) values (${temporadaId}, ${jogadorId}, ${tx.json(objetivo)})`;
 }
 
 /**
- * Atualiza a cidade de todos (gravando o que ficou pronto), recalcula o placar, confere os objetivos e encerra a temporada se alguém cumpriu o seu
- * (ou se o prazo acabou: aí vence quem tem mais pontos). Chamado a cada minuto pelo resolver-marchas.
+ * Atualiza a cidade de todos (gravando o que ficou pronto), recalcula o placar, confere os objetivos e encerra a temporada se alguém cumpriu o seu,
+ * se alguém fez o monopólio comercial (aberto a todos) ou se o prazo acabou (aí vence quem tem mais pontos). Chamado a cada minuto pelo resolver-marchas.
  */
 export async function atualizarPlacar(tx: Transacao): Promise<{ encerrada: boolean }> {
   const [temporada] = await tx<{ id: string; fim_previsto: Date | null }[]>`
@@ -79,7 +83,7 @@ export async function atualizarPlacar(tx: Transacao): Promise<{ encerrada: boole
       union all
       select defensor_id from relatorios where temporada_id = ${temporadaId} and vencedor = 'defensor' and defensor_id is not null
     ) v group by jogador_id`;
-  // Para o "monopólio comercial": dono atual de cada cidade livre e desde quando.
+  // Monopólio comercial (aberto a todos): dono atual de cada cidade livre e desde quando.
   const cidadesLivres = await tx<{ dono_id: string | null; posse_desde: Date | null }[]>`
     select t.dono_id, p.posse_desde from povoados p join territorios t on t.id = p.territorio_id
      where p.temporada_id = ${temporadaId} and p.tipo = 'cidade_livre'`;
@@ -130,6 +134,14 @@ export async function atualizarPlacar(tx: Transacao): Promise<{ encerrada: boole
     const registro = objetivos.find((o) => o.jogador_id === jogadorId);
     if (!registro) continue;
     let objetivo = registro.objetivo;
+    // O monopólio deixou de ser objetivo secreto: quem o tinha recebe outro, sorteado entre os que sobram.
+    if (objetivo.tipo === 'monopolio_comercial') {
+      const novo = await sortearPara(tx, temporadaId, jogadorId);
+      if (novo) {
+        objetivo = novo;
+        await tx`update objetivos set objetivo = ${tx.json(objetivo)}, sorteado_em = now() where id = ${registro.id}`;
+      }
+    }
     // Rival que saiu do jogo (conta apagada): o objetivo vira "metade do mapa", como quando outro o derruba antes.
     const alvo = objetivo.tipo === 'derrubar_rival' ? objetivo.rivalId : null;
     if (alvo && !jogadores.some((j) => j.jogador_id === alvo)) {
@@ -191,19 +203,24 @@ export async function atualizarPlacar(tx: Transacao): Promise<{ encerrada: boole
             pontos = excluded.pontos, atualizado_em = now()`;
   }
 
-  // Se mais de um cumpriu no mesmo minuto, vence quem tem mais pontos entre eles.
-  const porObjetivo = vencedorPorPontos(placar.filter((p) => cumpriram.includes(p.jogadorId)));
+  const monopolio = monopolioComercial(
+    cidadesLivres.map((c) => ({ donoId: c.dono_id, posseDesde: c.posse_desde?.getTime() ?? null })),
+    agora,
+  );
+  const fezMonopolio = monopolio?.cumprido ? monopolio.donoId : null;
+  // Se mais de um venceu no mesmo minuto (objetivo ou monopólio), vence quem tem mais pontos entre eles.
+  const porObjetivo = vencedorPorPontos(placar.filter((p) => cumpriram.includes(p.jogadorId) || p.jogadorId === fezMonopolio));
   const prazoAcabou = temporada.fim_previsto !== null && agora >= temporada.fim_previsto.getTime();
   const vencedor = porObjetivo ?? (prazoAcabou ? vencedorPorPontos(placar) : null);
   if (!porObjetivo && !prazoAcabou) return { encerrada: false };
 
-  if (porObjetivo) {
+  const motivo = !porObjetivo ? 'prazo' : cumpriram.includes(porObjetivo.jogadorId) ? 'objetivo' : 'monopolio';
+  if (porObjetivo && motivo === 'objetivo') {
     await tx`update objetivos set cumprido_em = now() where temporada_id = ${temporadaId} and jogador_id = ${porObjetivo.jogadorId}`;
   }
   await tx`
     update temporadas
-       set status = 'encerrada', vencedor_id = ${vencedor?.jogadorId ?? null}, encerrada_em = now(),
-           motivo_fim = ${porObjetivo ? 'objetivo' : 'prazo'}
+       set status = 'encerrada', vencedor_id = ${vencedor?.jogadorId ?? null}, encerrada_em = now(), motivo_fim = ${motivo}
      where id = ${temporadaId}`;
   return { encerrada: true };
 }

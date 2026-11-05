@@ -5,6 +5,7 @@ import {
   cidadesAlheiasPorRegiao,
   fimDaTemporada,
   metaMetadeDoMapa,
+  monopolioComercial,
   objetivoMetadeDoMapa,
   pontuar,
   sortearObjetivo,
@@ -229,14 +230,38 @@ describe('avaliarObjetivo', () => {
     expect(com([]).cumprido).toBe(false);
   });
 
-  it('monopólio só é sorteado se o mapa tiver cidades livres', () => {
-    let viu = false;
+  it('monopólio não é mais sorteado: virou a vitória aberta a todos', () => {
     for (let s = 1; s <= 200; s++) {
       const base = { semente: s, regioes: REGIOES, totalTerritorios: TOTAL, jaSorteados: [] };
       expect(sortearObjetivo(base).tipo).not.toBe('monopolio_comercial');
-      if (sortearObjetivo({ ...base, cidadesLivres: 3 }).tipo === 'monopolio_comercial') viu = true;
     }
-    expect(viu).toBe(true);
+  });
+
+  it('monopólio comercial aberto: um dono com todas as cidades livres, contando da última tomada', () => {
+    const agora = 100 * HORA_MS;
+    const horas = BALANCEAMENTO.objetivos.monopolioHoras;
+    expect(monopolioComercial([], agora)).toBeNull();
+    expect(monopolioComercial([{ donoId: null, posseDesde: null }], agora)).toBeNull();
+    expect(
+      monopolioComercial(
+        [
+          { donoId: 'a', posseDesde: 0 },
+          { donoId: 'b', posseDesde: 0 },
+        ],
+        agora,
+      ),
+    ).toBeNull();
+    const desde = agora - 5 * HORA_MS;
+    expect(
+      monopolioComercial(
+        [
+          { donoId: 'a', posseDesde: 0 },
+          { donoId: 'a', posseDesde: desde },
+        ],
+        agora,
+      ),
+    ).toEqual({ donoId: 'a', desde, venceEm: desde + horas * HORA_MS, cumprido: false });
+    expect(monopolioComercial([{ donoId: 'a', posseDesde: agora - horas * HORA_MS }], agora)?.cumprido).toBe(true);
   });
 });
 

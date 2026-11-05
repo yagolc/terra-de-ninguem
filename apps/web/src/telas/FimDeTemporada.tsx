@@ -27,7 +27,9 @@ export default function FimDeTemporada({ sessao }: { sessao: Session }) {
           {venci ? 'Você venceu! ' : ''}
           {temporada.motivoFim === 'objetivo'
             ? `${vencedor} cumpriu o objetivo secreto primeiro.`
-            : 'O prazo acabou e venceu quem tinha mais pontos.'}
+            : temporada.motivoFim === 'monopolio'
+              ? `${vencedor} controlou todas as cidades livres e fez o monopólio comercial.`
+              : 'O prazo acabou e venceu quem tinha mais pontos.'}
         </p>
         <p className="mt-3 text-sm text-pergaminho-escuro">
           O reino descansa até a próxima temporada começar, com um mapa novo e todos do zero.

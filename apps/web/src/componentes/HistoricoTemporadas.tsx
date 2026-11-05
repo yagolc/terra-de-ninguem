@@ -14,7 +14,7 @@ export default function HistoricoTemporadas({ historico }: { historico: DadosTem
             Temporada {h.numero}: <span className="text-ouro">👑 {h.vencedor}</span>
           </span>
           <span className="text-xs text-pergaminho-escuro">
-            {h.motivoFim === 'objetivo' ? 'cumpriu o objetivo' : 'por pontos'}
+            {h.motivoFim === 'objetivo' ? 'cumpriu o objetivo' : h.motivoFim === 'monopolio' ? 'monopólio comercial' : 'por pontos'}
             {h.encerradaEm && ` · ${data.format(new Date(h.encerradaEm))}`}
           </span>
         </li>

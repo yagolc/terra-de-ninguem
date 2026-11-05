@@ -17,7 +17,10 @@ export type Objetivo =
   | { tipo: 'senhor_da_guerra'; vitorias: number }
   | { tipo: 'mestre_construtor'; predios: number; nivel: number }
   | { tipo: 'tesouro'; ouro: number }
-  /** Todas as cidades livres do mapa, ao mesmo tempo, por `horas` seguidas. */
+  /**
+   * Não é mais sorteado: virou a vitória aberta a todos (`monopolioComercial`). Fica para as cartas antigas e para
+   * quem o tinha tirado na temporada 3 até o servidor sortear outro.
+   */
   | { tipo: 'monopolio_comercial'; horas: number };
 
 export type TipoObjetivo = Objetivo['tipo'];
@@ -47,10 +50,8 @@ export function sortearObjetivo(entrada: {
   racasRivais?: Raca[];
   /** Objetivos já sorteados para outros jogadores. */
   jaSorteados: Objetivo[];
-  /** Cidades livres no mapa ("monopólio comercial" só sai se houver). */
-  cidadesLivres?: number;
 }): Objetivo {
-  const { regioes, totalTerritorios, jaSorteados, cidadesLivres = 0 } = entrada;
+  const { regioes, totalTerritorios, jaSorteados } = entrada;
   const aleatorio = geradorComSemente(entrada.semente);
   const escolher = <T>(lista: T[]): T => lista[Math.floor(aleatorio() * lista.length)]!;
   const config = BALANCEAMENTO.objetivos;
@@ -71,7 +72,7 @@ export function sortearObjetivo(entrada: {
   const racasLivres = racasRivais.filter((r) => !racasUsadas.has(r));
   const racasAlvo = racasLivres.length > 0 ? racasLivres : racasRivais;
 
-  const possiveis: Exclude<TipoObjetivo, 'derrubar_rival'>[] = [
+  const possiveis: Exclude<TipoObjetivo, 'derrubar_rival' | 'monopolio_comercial'>[] = [
     'metade_do_mapa',
     'territorios_defendidos',
     'populacao',
@@ -81,7 +82,6 @@ export function sortearObjetivo(entrada: {
   ];
   if (duplasLivres.length > 0) possiveis.push('duas_regioes');
   if (racasAlvo.length > 0) possiveis.push('velha_rixa');
-  if (cidadesLivres > 0) possiveis.push('monopolio_comercial');
   const tiposUsados = new Set(jaSorteados.map((o) => o.tipo));
   const novos = possiveis.filter((t) => !tiposUsados.has(t));
 
@@ -104,8 +104,6 @@ export function sortearObjetivo(entrada: {
       return { tipo: 'mestre_construtor', predios: config.mestreConstrutorPredios, nivel: config.mestreConstrutorNivel };
     case 'tesouro':
       return { tipo: 'tesouro', ouro: config.ouroGuardado };
-    case 'monopolio_comercial':
-      return { tipo: 'monopolio_comercial', horas: config.monopolioHoras };
     case 'metade_do_mapa':
       return objetivoMetadeDoMapa();
   }
@@ -244,6 +242,25 @@ export function avaliarObjetivo(objetivo: Objetivo, s: SituacaoJogador): Avaliac
       return { cumprido: false, atual, alvo: 0 };
     }
   }
+}
+
+/** Situação do monopólio comercial: quem tem todas as cidades livres, desde quando e quando vence. */
+export type Monopolio = { donoId: string; desde: number; venceEm: number; cumprido: boolean };
+
+/**
+ * Monopólio comercial, a vitória aberta a todos: quem controlar todas as cidades livres do mapa ao mesmo tempo
+ * por `monopolioHoras` seguidas vence a temporada. O relógio começa quando a última delas passou para o dono
+ * (`posseDesde`) e zera se ele perder qualquer uma. Null se ninguém tem todas.
+ */
+export function monopolioComercial(
+  cidadesLivres: readonly { donoId: string | null; posseDesde: number | null }[],
+  agora: number,
+): Monopolio | null {
+  const donoId = cidadesLivres[0]?.donoId ?? null;
+  if (donoId === null || cidadesLivres.some((c) => c.donoId !== donoId)) return null;
+  const desde = Math.max(...cidadesLivres.map((c) => c.posseDesde ?? agora));
+  const venceEm = desde + BALANCEAMENTO.objetivos.monopolioHoras * HORA_MS;
+  return { donoId, desde, venceEm, cumprido: agora >= venceEm };
 }
 
 /** Pontos do placar. `vitoriasContraHerdeiro` (cabeça a prêmio) já estão contadas em `vitorias` e valem a mais. */

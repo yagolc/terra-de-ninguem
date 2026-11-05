@@ -265,8 +265,9 @@ export default function Regras() {
           {pct(B.povoados.cidadeLivre.bonusDefesa)} de defesa, que depois protege o dono também). Dá{' '}
           <b>+{B.povoados.cidadeLivre.ouroHora} de ouro por hora</b>. Na primeira conquista, {B.povoados.cidadeLivre.milicia}{' '}
           lanceiros de milícia passam a defendê-la para quem conquistou: não ocupam população, não comem e não marcham, e se dispersam
-          se a cidade for tomada. Quem tiver todas por {B.objetivos.monopolioHoras} h seguidas tem o{' '}
-          <b>monopólio comercial</b>, que pode ser um objetivo secreto.
+          se a cidade for tomada. Quem tiver todas por {B.objetivos.monopolioHoras} h seguidas faz o{' '}
+          <b>monopólio comercial e vence a temporada</b>. Vale para todos, e o relógio aparece no mapa para todo mundo: tome uma
+          delas e ele zera.
         </p>
       </Secao>
 

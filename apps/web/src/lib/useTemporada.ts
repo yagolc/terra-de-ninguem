@@ -1,4 +1,12 @@
-import { avaliarObjetivo, cidadesAlheiasPorRegiao, type AvaliacaoObjetivo, type Objetivo, type Raca } from '@terra/regras';
+import {
+  avaliarObjetivo,
+  cidadesAlheiasPorRegiao,
+  monopolioComercial,
+  type AvaliacaoObjetivo,
+  type Monopolio,
+  type Objetivo,
+  type Raca,
+} from '@terra/regras';
 import { useCallback, useEffect, useState } from 'react';
 import { chamarFuncao } from './funcoes';
 import { supabase } from './supabase';
@@ -23,9 +31,11 @@ export type TemporadaInfo = {
   fimPrevisto: number | null;
   status: 'ativa' | 'encerrada';
   vencedorId: string | null;
-  motivoFim: 'objetivo' | 'prazo' | null;
+  motivoFim: MotivoFim | null;
   encerradaEm: number | null;
 };
+
+export type MotivoFim = 'objetivo' | 'prazo' | 'monopolio';
 
 export type DadosTemporada = {
   temporada: TemporadaInfo;
@@ -37,7 +47,9 @@ export type DadosTemporada = {
   placar: LinhaPlacar[];
   nomeRegiao: (id: string) => string;
   nomeJogador: (id: string) => string;
-  historico: { numero: number; vencedor: string | null; motivoFim: 'objetivo' | 'prazo' | null; encerradaEm: number | null }[];
+  historico: { numero: number; vencedor: string | null; motivoFim: MotivoFim | null; encerradaEm: number | null }[];
+  /** Monopólio comercial (aberto a todos): dono de cada cidade livre e quem tem todas, se alguém tiver. */
+  monopolio: { donos: (string | null)[]; situacao: Monopolio | null };
 };
 
 type LinhaTemporada = {
@@ -47,7 +59,7 @@ type LinhaTemporada = {
   fim_previsto: string | null;
   status: 'ativa' | 'encerrada';
   vencedor_id: string | null;
-  motivo_fim: 'objetivo' | 'prazo' | null;
+  motivo_fim: MotivoFim | null;
   encerrada_em: string | null;
 };
 
@@ -134,6 +146,12 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
   const racaDe = new Map(((racas.data ?? []) as { jogador_id: string; raca: Raca | null }[]).map((r) => [r.jogador_id, r.raca]));
   const herdeiroId = temporadas.find((t) => t.status === 'encerrada' && t.numero < temporada.numero)?.vencedor_id ?? null;
 
+  const donoDe = (territorioId: string) => territorios.data.find((t) => t.id === territorioId)?.dono_id ?? null;
+  const livres = cidadesLivres.data.map((c) => ({
+    donoId: donoDe(c.territorio_id),
+    posseDesde: c.posse_desde ? Date.parse(c.posse_desde) : null,
+  }));
+
   let progresso: AvaliacaoObjetivo | null = null;
   if (meuObjetivo) {
     const territoriosPorRegiao = new Map<string, number>();
@@ -216,6 +234,7 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
         motivoFim: t.motivo_fim,
         encerradaEm: t.encerrada_em ? Date.parse(t.encerrada_em) : null,
       })),
+    monopolio: { donos: livres.map((c) => c.donoId), situacao: monopolioComercial(livres, Date.now()) },
   };
 }
 

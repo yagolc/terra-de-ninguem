@@ -1,4 +1,4 @@
-import { TIPOS_UNIDADE, totalUnidades } from '@terra/regras';
+import { TIPOS_UNIDADE, monopolioComercial, totalUnidades } from '@terra/regras';
 import type { Session } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 import PainelAtaque from '../componentes/PainelAtaque';
@@ -43,6 +43,13 @@ export default function Mapa({ sessao }: { sessao: Session }) {
   const proximaChegada = Math.min(...dados.marchas.map((m) => m.chegadaEm));
   const alternar = (qual: Etiqueta) => setAberto((atual) => (atual === qual ? null : qual));
   const ameacas = dados.marchasVistas;
+  // Monopólio comercial (aberto a todos): todo mundo vê quem tem todas as cidades livres e quando vence.
+  const monopolio = monopolioComercial(
+    [...dados.povoados.values()]
+      .filter((p) => p.tipo === 'cidade_livre')
+      .map((p) => ({ donoId: dados.territorios.find((t) => t.id === p.territorioId)?.dono_id ?? null, posseDesde: p.posseDesde })),
+    agora,
+  );
 
   function selecionar(id: string | null) {
     setSelecionado(id);
@@ -55,6 +62,16 @@ export default function Mapa({ sessao }: { sessao: Session }) {
       <CanvasMapa dados={dados} meuId={meuId} selecionado={selecionado} onSelecionar={selecionar} />
 
       <div className="pointer-events-none absolute left-3 top-3 max-w-[calc(100%-1.5rem)] space-y-2 md:max-w-[60%]">
+        {monopolio && (
+          <p
+            role="status"
+            className={`rounded-lg border px-3 py-1.5 text-xs font-semibold backdrop-blur ${monopolio.donoId === meuId ? 'border-ouro bg-noite/90 text-ouro' : 'border-sangue bg-sangue/85 text-pergaminho'}`}
+          >
+            ⚖️ {monopolio.donoId === meuId ? 'Você tem' : `${dados.jogadores.get(monopolio.donoId)?.nome ?? 'Alguém'} tem`} todas as cidades
+            livres: vence em{' '}
+            <span className="tabular-nums">{monopolio.venceEm > agora ? formatarDuracao(monopolio.venceEm - agora) : 'instantes'}</span>
+          </p>
+        )}
         <div className="pointer-events-auto flex flex-wrap gap-2 md:hidden">
           {ameacas.length > 0 && (
             <button

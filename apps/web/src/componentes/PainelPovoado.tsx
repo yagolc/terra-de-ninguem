@@ -63,7 +63,10 @@ export default function PainelPovoado({ povoado, donoId, meuId, onMelhorado, ago
             não comem e não marcham; se dispersam se ela for tomada).
           </p>
         )}
-        <p className="text-xs text-pergaminho-escuro">Quem tiver todas as cidades livres por {BALANCEAMENTO.objetivos.monopolioHoras} h tem o monopólio comercial.</p>
+        <p className="text-xs text-pergaminho-escuro">
+          ⚖️ Monopólio comercial: quem tiver todas as cidades livres por {BALANCEAMENTO.objetivos.monopolioHoras} h seguidas vence a
+          temporada.
+        </p>
         {lealdade}
       </section>
     );
