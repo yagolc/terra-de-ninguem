@@ -18,6 +18,7 @@ import {
   type Recursos,
   type TipoPredio,
 } from '@terra/regras';
+import { imagemDoPredio } from '../lib/arte';
 import { PREDIOS, RECURSOS_INFO, formatarDuracao, formatarNumero, formatarTaxa } from '../lib/textos';
 
 /** Uma linha curta com o efeito atual do prédio. */
@@ -80,15 +81,30 @@ export default function CartaoPredio({ tipo, cidade, bonus, obras, agora, ocupad
     maiorCusto > capacidadeArmazem(projetados.armazem) ? nivelArmazemNecessario(maiorCusto) : null;
   const textoEfeito = efeito(tipo, cidade, bonus);
   const naFila = obras.length > 0;
+  // Imagem da fase do nível atual; ainda não construído, a primeira fase apagada.
+  const imagem = imagemDoPredio(tipo, nivel);
 
   return (
     <article
       className={`flex flex-col gap-3 rounded-xl border bg-carvao/90 p-4 ${minhasObras.length > 0 ? 'border-ouro/70' : nivel === 0 ? 'border-couro/60 opacity-90' : 'border-couro'}`}
     >
+      {imagem && (
+        <img
+          src={imagem}
+          alt=""
+          width={512}
+          height={512}
+          loading="lazy"
+          decoding="async"
+          className={`mx-auto -my-1 aspect-square w-full max-w-40 object-contain [mask-image:radial-gradient(closest-side,black_85%,transparent)] ${nivel === 0 ? 'opacity-40 grayscale' : ''}`}
+        />
+      )}
       <header className="flex items-start gap-3">
-        <span className="text-3xl leading-none" aria-hidden>
-          {info.icone}
-        </span>
+        {!imagem && (
+          <span className="text-3xl leading-none" aria-hidden>
+            {info.icone}
+          </span>
+        )}
         <div className="min-w-0 flex-1">
           <h3 className="font-titulo text-base text-ouro">{info.nome}</h3>
           <p className="text-xs text-pergaminho-escuro">{nivel === 0 ? 'Não construído' : `Nível ${nivel}`}</p>
