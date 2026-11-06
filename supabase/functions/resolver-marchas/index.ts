@@ -17,6 +17,7 @@ import {
   escudoAte,
   exercito,
   feridoAte,
+  fimProtecaoIniciante,
   geradorComSemente,
   lealDesdeNaConquista,
   mapearExercito,
@@ -64,6 +65,18 @@ const tropasDa = (m: Marcha): Exercito => exercito({ lanceiro: m.lanceiro, arque
 async function territorio(tx: Transacao, id: string): Promise<Territorio> {
   const [t] = await tx<Territorio[]>`select id, dono_id, cidade_principal, terreno, x, y from territorios where id = ${id} for update`;
   return t!;
+}
+
+/**
+ * O dono do alvo está protegido agora (proteção de iniciante ou escudo)? O envio já confere isso, mas o
+ * alvo pode mudar de dono enquanto a marcha anda (ex.: outro jogador toma o território neutro antes).
+ */
+async function alvoProtegido(tx: Transacao, temporadaId: string, donoId: string, agora: number): Promise<boolean> {
+  const [temporada] = await tx<{ inicio: Date }[]>`select inicio from temporadas where id = ${temporadaId}`;
+  if (agora < fimProtecaoIniciante(temporada!.inicio.getTime())) return true;
+  const [escudo] = await tx<{ ate: Date }[]>`
+    select ate from protecoes where temporada_id = ${temporadaId} and jogador_id = ${donoId} and tipo = 'escudo'`;
+  return !!escudo && agora < escudo.ate.getTime();
 }
 
 async function concluir(tx: Transacao, marchaId: string) {
@@ -120,6 +133,22 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
     grupoEm(atacante, destino.id).tropas = somarExercitos(grupoEm(atacante, destino.id).tropas, atacanteDaMarcha);
     if (heroiAtacante) await posicionarHeroi(tx, heroiAtacante.id, { territorioId: destino.id, marchaId: null });
     await salvarCidade(tx, atacante);
+    await concluir(tx, m.id);
+    return;
+  }
+  // Se o alvo virou de um jogador protegido enquanto a marcha andava, não há batalha: as tropas voltam para casa.
+  if (destino.dono_id && (await alvoProtegido(tx, m.temporada_id, destino.dono_id, agora))) {
+    await mandarDeVolta(
+      tx,
+      m,
+      destino,
+      atacanteDaMarcha,
+      recursos(),
+      agora,
+      heroiAtacante,
+      atacante.carregada.territorioId,
+      efeitosRaca(atacante.carregada.raca).velocidade,
+    );
     await concluir(tx, m.id);
     return;
   }
