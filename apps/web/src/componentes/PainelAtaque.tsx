@@ -36,15 +36,39 @@ export function origensPossiveis(dados: DadosMapa, alvoId: string, meuId: string
     .filter((t) => t && t.dono_id === meuId && totalUnidades(dados.minhasTropas.get(t.id) ?? exercito()) > 0);
 }
 
+/** Um dos dois botões de envio (saquear ou conquistar), com o que ele faz logo abaixo do rótulo. */
+function BotaoAtaque(props: {
+  icone: string;
+  rotulo: string;
+  explicacao: string;
+  enviando: boolean;
+  disabled: boolean;
+  onClick: () => void;
+  className: string;
+}) {
+  return (
+    <button
+      onClick={props.onClick}
+      disabled={props.disabled}
+      className={`flex flex-col items-center gap-1 rounded-lg px-2 py-2.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:brightness-100 ${props.className}`}
+    >
+      <span aria-hidden className="text-xl leading-none">
+        {props.icone}
+      </span>
+      <span className="font-semibold">{props.enviando ? 'Enviando…' : props.rotulo}</span>
+      <span className="text-[11px] leading-tight opacity-80">{props.explicacao}</span>
+    </button>
+  );
+}
+
 const horario = new Intl.DateTimeFormat('pt-BR', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
 
 export default function PainelAtaque({ dados, alvoId, meuId, agora, onVoltar, onEnviado }: Props) {
   const alvo = dados.territorios.find((t) => t.id === alvoId)!;
   const origens = origensPossiveis(dados, alvoId, meuId);
   const [origemId, setOrigemId] = useState(origens[0]?.id ?? '');
-  const [tipo, setTipo] = useState<TipoAtaque>(alvo.cidade_principal ? 'saque' : 'conquista');
   const [enviar, setEnviar] = useState<Exercito>(exercito());
-  const [enviando, setEnviando] = useState(false);
+  const [enviando, setEnviando] = useState<TipoAtaque | null>(null);
   const [levarHeroi, setLevarHeroi] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -55,8 +79,9 @@ export default function PainelAtaque({ dados, alvoId, meuId, agora, onVoltar, on
   const estruturaDesconhecida = !!dados.estruturas.get(alvoId) && !dados.reconhecimentos.get(alvoId)?.estrutura;
   const fimMeuEscudo = dados.escudos.get(meuId);
   const meuEscudo = fimMeuEscudo !== undefined && fimMeuEscudo > agora ? fimMeuEscudo : null;
+  // Saque e conquista têm as mesmas regras, menos a cidade principal (só saque): a de saque vale para os dois botões.
   const verificacao = verificarAtaque({
-    tipo,
+    tipo: 'saque',
     enviar,
     disponiveis,
     origemDoJogador: origem?.dono_id === meuId,
@@ -74,8 +99,18 @@ export default function PainelAtaque({ dados, alvoId, meuId, agora, onVoltar, on
     efeitosRaca(dados.racas.get(meuId)).velocidade + (comHeroi && heroi.especialidade === 'desbravador' ? bonusHeroi(heroi.nivel) : 0);
   const duracao = origem && totalUnidades(enviar) > 0 ? duracaoMarchaMs(origem, alvo, enviar, bonusVelocidade) : null;
 
-  async function confirmar() {
-    setEnviando(true);
+  const povoado = dados.povoados.get(alvoId);
+  const textoSaque = alvo.cidade_principal
+    ? 'Leva até 30% do estoque desprotegido da cidade, até o que as tropas carregam.'
+    : povoado?.tipo === 'vila'
+      ? alvo.dono_id
+        ? 'Leva parte do que foi investido na vila e a derruba ao nível 0.'
+        : 'Leva o estoque da vila, até o que as tropas carregam.'
+      : 'Aqui não há o que levar: só derrota os defensores.';
+  const soldados = totalUnidades(enviar);
+
+  async function confirmar(tipo: TipoAtaque) {
+    setEnviando(tipo);
     setErro(null);
     try {
       await chamarFuncao('cidade', {
@@ -86,11 +121,13 @@ export default function PainelAtaque({ dados, alvoId, meuId, agora, onVoltar, on
         tropas: enviar,
         com_heroi: comHeroi,
       });
-      onEnviado(`Tropas a caminho de ${alvo.nome}. O relatório chega quando a batalha acontecer.`);
+      onEnviado(
+        `${tipo === 'saque' ? '💰 Saque' : '🚩 Conquista'}: tropas a caminho de ${alvo.nome}. O relatório chega quando a batalha acontecer.`,
+      );
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível enviar o ataque.');
     } finally {
-      setEnviando(false);
+      setEnviando(null);
     }
   }
 
@@ -148,33 +185,6 @@ export default function PainelAtaque({ dados, alvoId, meuId, agora, onVoltar, on
               ))}
             </select>
           </label>
-
-          <div role="radiogroup" className="grid grid-cols-2 gap-1 rounded-lg bg-noite/70 p-1">
-            {(
-              [
-                ['saque', '💰 Saque', 'Leva recursos se vencer; as tropas voltam para casa.'],
-                ['conquista', '🚩 Conquista', 'Toma o território se vencer com folga (1,5×).'],
-              ] as const
-            ).map(([valor, rotulo]) => (
-              <button
-                key={valor}
-                role="radio"
-                aria-checked={tipo === valor}
-                disabled={valor === 'conquista' && alvo.cidade_principal}
-                onClick={() => setTipo(valor)}
-                className={`rounded-md px-2 py-1.5 text-sm font-medium disabled:opacity-40 ${tipo === valor ? 'bg-couro text-ouro' : 'text-pergaminho-escuro hover:text-pergaminho'}`}
-              >
-                {rotulo}
-              </button>
-            ))}
-          </div>
-          <p className="text-xs text-pergaminho-escuro">
-            {tipo === 'saque'
-              ? alvo.cidade_principal
-                ? 'Leva até 30% do estoque desprotegido, limitado ao que as tropas carregam.'
-                : 'Território sem cidade não tem o que saquear: só mata defensores e volta.'
-              : 'Sem folga suficiente, você só derrota os defensores e as tropas voltam.'}
-          </p>
 
           <ul className="space-y-2">
             {TIPOS_UNIDADE.map((t) => (
@@ -242,13 +252,33 @@ export default function PainelAtaque({ dados, alvoId, meuId, agora, onVoltar, on
             </p>
           )}
 
-          <button
-            onClick={() => void confirmar()}
-            disabled={!verificacao.ok || enviando}
-            className="w-full rounded-lg bg-sangue px-3 py-2.5 font-semibold text-pergaminho hover:brightness-110 disabled:cursor-not-allowed disabled:bg-couro disabled:text-pergaminho-escuro"
-          >
-            {enviando ? 'Enviando…' : `⚔️ Enviar ${totalUnidades(enviar)} ${totalUnidades(enviar) === 1 ? 'soldado' : 'soldados'}`}
-          </button>
+          <p className="text-xs text-pergaminho-escuro">
+            Mandando {soldados} {soldados === 1 ? 'soldado' : 'soldados'}. Escolha o que eles vão fazer:
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <BotaoAtaque
+              icone="💰"
+              rotulo="Saquear"
+              explicacao={`${textoSaque} As tropas voltam para casa.`}
+              enviando={enviando === 'saque'}
+              disabled={!verificacao.ok || enviando !== null}
+              onClick={() => void confirmar('saque')}
+              className="bg-couro text-ouro-claro"
+            />
+            <BotaoAtaque
+              icone="🚩"
+              rotulo="Conquistar"
+              explicacao={
+                alvo.cidade_principal
+                  ? 'Cidade principal nunca é conquistada.'
+                  : 'Toma o território se vencer com folga (1,5×). Sem folga, só derrota os defensores e volta.'
+              }
+              enviando={enviando === 'conquista'}
+              disabled={!verificacao.ok || enviando !== null || alvo.cidade_principal}
+              onClick={() => void confirmar('conquista')}
+              className="bg-sangue text-pergaminho"
+            />
+          </div>
         </>
       )}
     </div>
