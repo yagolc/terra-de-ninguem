@@ -1,4 +1,13 @@
-import { BALANCEAMENTO, TIPOS_UNIDADE, analisarDefesa, bonusDefesaRaca, bonusHeroi, totalUnidades, type Raca } from '@terra/regras';
+import {
+  BALANCEAMENTO,
+  TIPOS_UNIDADE,
+  analisarDefesa,
+  bonusDefesaRaca,
+  bonusHeroi,
+  totalUnidades,
+  type Raca,
+  type TipoUnidade,
+} from '@terra/regras';
 import type { Reconhecimento } from '../lib/useMapa';
 import { ESPECIALIDADES_INFO, ESTRUTURAS_INFO, RACAS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarDuracao } from '../lib/textos';
 
@@ -12,6 +21,22 @@ type Props = {
   racaDono?: Raca;
 };
 
+/** Alternativas de ataque, só de um tipo cada: "10 🐎 · ou 13 🏹 · ou 18 🔱". */
+function Opcoes({ quantidades, ordem, melhor }: { quantidades: Record<TipoUnidade, number>; ordem: TipoUnidade[]; melhor: TipoUnidade | null }) {
+  return (
+    <span className="tabular-nums">
+      {ordem.map((t, i) => (
+        <span key={t}>
+          {i > 0 && <span className="text-pergaminho-escuro"> · ou </span>}
+          <span className={t === melhor ? 'font-semibold text-ouro' : ''}>
+            {quantidades[t]} {UNIDADES_INFO[t].icone}
+          </span>
+        </span>
+      ))}
+    </span>
+  );
+}
+
 /** O que o batedor viu: tropas, terreno, muralha, estrutura e quanto mandar para conquistar com folga. */
 export default function InfoReconhecimento({ reconhecimento, agora, nomeDono, cidadeLivre = false, racaDono }: Props) {
   const { tropas, terreno, muralha, estrutura, estruturaPronta } = reconhecimento;
@@ -21,6 +46,8 @@ export default function InfoReconhecimento({ reconhecimento, agora, nomeDono, ci
   const bonusDefesa = heroi?.especialidade === 'castelao' ? bonusHeroi(heroi.nivel) : 0;
   const defesaRaca = bonusDefesaRaca(racaDono, terreno);
   const analise = analisarDefesa({ defensor: tropas, terreno, nivelMuralha: muralha, palicada, cidadeLivre, bonusDefesa: bonusDefesa + defesaRaca });
+  // Da melhor opção para a pior.
+  const ordem = [...TIPOS_UNIDADE].sort((a, b) => analise.necessariosParaConquistar[a] - analise.necessariosParaConquistar[b]);
   const efeitos: string[] = [];
   if (terreno === 'floresta') efeitos.push(`🌲 floresta: arqueiros defendem +${Math.round(BALANCEAMENTO.batalha.bonusFlorestaArqueiro * 100)}%`);
   if (terreno === 'montanha') efeitos.push(`⛰️ montanha: defesa +${Math.round(BALANCEAMENTO.batalha.bonusMontanha * 100)}%`);
@@ -63,20 +90,22 @@ export default function InfoReconhecimento({ reconhecimento, agora, nomeDono, ci
         </p>
       )}
       {totalUnidades(tropas) > 0 && (
-        <p className="text-xs">
-          <span className="text-pergaminho-escuro">Para conquistar com folga (mesmo com azar), mande cerca de: </span>
-          {TIPOS_UNIDADE.map((t) => (
-            <span key={t} className={t === analise.melhorTipo ? 'font-semibold text-ouro' : ''}>
-              {' '}
-              {UNIDADES_INFO[t].icone} {analise.necessariosParaConquistar[t]}
-            </span>
-          ))}
+        <div className="space-y-0.5 text-xs">
+          <p className="text-pergaminho-escuro">Mande uma destas opções (só de um tipo), contando o azar máximo:</p>
+          <p>
+            <span className="text-pergaminho-escuro">🚩 Conquistar: </span>
+            <Opcoes quantidades={analise.necessariosParaConquistar} ordem={ordem} melhor={analise.melhorTipo} />
+          </p>
+          <p>
+            <span className="text-pergaminho-escuro">💰 Só vencer e saquear: </span>
+            <Opcoes quantidades={analise.necessariosParaVencer} ordem={ordem} melhor={analise.melhorTipo} />
+          </p>
           {analise.melhorTipo && (
-            <span className="block text-pergaminho-escuro">
-              Melhor escolha: {UNIDADES_INFO[analise.melhorTipo].plural.toLowerCase()} (vantagem contra essa defesa).
-            </span>
+            <p className="text-pergaminho-escuro">
+              Em dourado, a melhor: {UNIDADES_INFO[analise.melhorTipo].plural.toLowerCase()} têm vantagem contra essa defesa.
+            </p>
           )}
-        </p>
+        </div>
       )}
     </div>
   );

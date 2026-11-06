@@ -33,6 +33,8 @@ export function duracaoReconhecimentoMs(origem: Ponto, destino: Ponto): number {
 export type AnaliseDefesa = {
   /** Para cada tipo: quantas unidades só desse tipo vencem com a folga de conquista, mesmo com o azar máximo. */
   necessariosParaConquistar: Record<TipoUnidade, number>;
+  /** Para cada tipo: quantas unidades só desse tipo vencem (e saqueiam) mesmo com o azar máximo, sem a folga de conquista. */
+  necessariosParaVencer: Record<TipoUnidade, number>;
   /** Tipo que precisa de menos unidades (o melhor contra essa defesa). */
   melhorTipo: TipoUnidade | null;
 };
@@ -53,9 +55,13 @@ export function analisarDefesa(entrada: {
   const { defensor, terreno, nivelMuralha, palicada, cidadeLivre, bonusDefesa = 0 } = entrada;
   const { margemConquista, sorteMaxima } = BALANCEAMENTO.batalha;
   const necessarios = exercito();
+  const paraVencer = exercito();
   if (totalUnidades(defensor) === 0) {
-    for (const tipo of TIPOS_UNIDADE) necessarios[tipo] = 1;
-    return { necessariosParaConquistar: necessarios, melhorTipo: null };
+    for (const tipo of TIPOS_UNIDADE) {
+      necessarios[tipo] = 1;
+      paraVencer[tipo] = 1;
+    }
+    return { necessariosParaConquistar: necessarios, necessariosParaVencer: paraVencer, melhorTipo: null };
   }
   const total = totalUnidades(defensor);
   for (const tipo of TIPOS_UNIDADE) {
@@ -64,7 +70,9 @@ export function analisarDefesa(entrada: {
     const vantagem = TIPOS_UNIDADE.reduce((soma, alvo) => soma + (defensor[alvo] / total) * multiplicadorVantagem(tipo, alvo), 0);
     const ataquePorUnidade = BALANCEAMENTO.unidades[tipo].ataque * vantagem * (1 - sorteMaxima);
     necessarios[tipo] = Math.max(1, Math.ceil((defesa * margemConquista) / ataquePorUnidade));
+    // Vencer exige ataque maior que a defesa (no empate, vence o defensor).
+    paraVencer[tipo] = Math.max(1, Math.floor(defesa / ataquePorUnidade) + 1);
   }
   const melhorTipo = [...TIPOS_UNIDADE].sort((a, b) => necessarios[a] - necessarios[b])[0]!;
-  return { necessariosParaConquistar: necessarios, melhorTipo };
+  return { necessariosParaConquistar: necessarios, necessariosParaVencer: paraVencer, melhorTipo };
 }

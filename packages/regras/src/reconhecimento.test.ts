@@ -33,6 +33,7 @@ describe('analisarDefesa', () => {
   it('território vazio cai com uma unidade de qualquer tipo', () => {
     expect(analisarDefesa({ defensor: exercito(), terreno: 'planicie', nivelMuralha: 0 })).toEqual({
       necessariosParaConquistar: exercito({ lanceiro: 1, arqueiro: 1, cavalaria: 1 }),
+      necessariosParaVencer: exercito({ lanceiro: 1, arqueiro: 1, cavalaria: 1 }),
       melhorTipo: null,
     });
   });
@@ -70,6 +71,27 @@ describe('analisarDefesa', () => {
           alvoCidadePrincipal: false,
         });
         expect(batalha.permiteConquista).toBe(true);
+      }
+    }
+  });
+
+  it('o mínimo para vencer vence com o azar máximo, e um a menos não garante (300 defesas aleatórias)', () => {
+    const gerador = geradorComSemente(12);
+    for (let i = 0; i < 300; i++) {
+      const defensor = exercito({
+        lanceiro: 1 + Math.floor(gerador() * 40),
+        arqueiro: Math.floor(gerador() * 40),
+        cavalaria: Math.floor(gerador() * 20),
+      });
+      const terreno = TERRENOS[Math.floor(gerador() * TERRENOS.length)]!;
+      const nivelMuralha = Math.floor(gerador() * 5);
+      const { necessariosParaVencer, necessariosParaConquistar } = analisarDefesa({ defensor, terreno, nivelMuralha });
+      for (const tipo of TIPOS_UNIDADE) {
+        const lutar = (n: number) =>
+          resolverBatalha({ atacante: exercito({ [tipo]: n }), defensor, terreno, nivelMuralha, sorte: -1, alvoCidadePrincipal: false });
+        expect(necessariosParaVencer[tipo]).toBeLessThanOrEqual(necessariosParaConquistar[tipo]);
+        expect(lutar(necessariosParaVencer[tipo]).vencedor).toBe('atacante');
+        if (necessariosParaVencer[tipo] > 1) expect(lutar(necessariosParaVencer[tipo] - 1).vencedor).toBe('defensor');
       }
     }
   });
