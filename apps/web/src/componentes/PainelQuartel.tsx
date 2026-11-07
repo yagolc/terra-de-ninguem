@@ -15,6 +15,7 @@ import {
   type TipoUnidade,
 } from '@terra/regras';
 import { useState } from 'react';
+import { imagemDoTreino } from '../lib/arte';
 import { RECURSOS_INFO, UNIDADES_INFO, formatarDuracao, formatarNumero, formatarTaxa } from '../lib/textos';
 
 type Props = {
@@ -53,6 +54,7 @@ export default function PainelQuartel({ cidade, tropas, emMarcha, fila, soldados
   const verificacao = verificarTreino({ cidade, tipo, quantidade, soldados, fila, agora });
   const custo = custoTreino(tipo, quantidade);
   const atributos = BALANCEAMENTO.unidades[tipo];
+  const imagem = imagemDoTreino(tipo);
 
   return (
     <section className="rounded-xl border border-couro bg-carvao/90 p-4">
@@ -93,11 +95,26 @@ export default function PainelQuartel({ cidade, tropas, emMarcha, fila, soldados
         ))}
       </div>
 
-      <p className="mt-2 text-xs text-pergaminho-escuro">{UNIDADES_INFO[tipo].descricao}</p>
-      <p className="mt-1 text-xs tabular-nums text-pergaminho-escuro">
-        ⚔ {atributos.ataque} · 🛡 {atributos.defesa} · velocidade {atributos.velocidade} léguas/h · carrega {atributos.carga} ·
-        come {atributos.consumoComidaHora}/h
-      </p>
+      <div className="mt-2 flex items-center gap-3">
+        {imagem && (
+          <img
+            src={imagem}
+            alt=""
+            width={512}
+            height={512}
+            loading="lazy"
+            decoding="async"
+            className="size-24 shrink-0 object-contain [mask-image:radial-gradient(closest-side,black_85%,transparent)]"
+          />
+        )}
+        <div>
+          <p className="text-xs text-pergaminho-escuro">{UNIDADES_INFO[tipo].descricao}</p>
+          <p className="mt-1 text-xs tabular-nums text-pergaminho-escuro">
+            ⚔ {atributos.ataque} · 🛡 {atributos.defesa} · velocidade {atributos.velocidade} léguas/h · carrega {atributos.carga} ·
+            come {atributos.consumoComidaHora}/h
+          </p>
+        </div>
+      </div>
 
       <div className="mt-3 flex items-center gap-2">
         <button

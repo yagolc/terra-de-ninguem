@@ -1,4 +1,4 @@
-import type { TipoPredio } from '@terra/regras';
+import type { TipoPredio, TipoUnidade } from '@terra/regras';
 
 // Imagens geradas para o jogo (WebP em src/assets/arte, criadas por `npm run arte` a partir de docs/arte/originais).
 // O Vite só inclui as que existem; o que faltar continua com o emoji.
@@ -20,4 +20,9 @@ export function imagemDoPredio(tipo: TipoPredio, nivel: number): string | null {
     if (url) return url;
   }
   return null;
+}
+
+/** Cena de treino da unidade no quartel (treino-<tipo>), se já existir. */
+export function imagemDoTreino(tipo: TipoUnidade): string | null {
+  return ARTE[`treino-${tipo}`] ?? null;
 }
