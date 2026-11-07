@@ -68,15 +68,13 @@ async function territorio(tx: Transacao, id: string): Promise<Territorio> {
 }
 
 /**
- * O dono do alvo está protegido agora (proteção de iniciante ou escudo)? O envio já confere isso, mas o
- * alvo pode mudar de dono enquanto a marcha anda (ex.: outro jogador toma o território neutro antes).
+ * Ainda vale a proteção de iniciante? O envio já confere, mas o alvo pode virar de um jogador enquanto a
+ * marcha anda (ex.: outro jogador toma o território neutro antes). O escudo, não: ele só barra marchas
+ * novas, e as que já estavam a caminho lutam normalmente.
  */
-async function alvoProtegido(tx: Transacao, temporadaId: string, donoId: string, agora: number): Promise<boolean> {
+async function emProtecaoIniciante(tx: Transacao, temporadaId: string, agora: number): Promise<boolean> {
   const [temporada] = await tx<{ inicio: Date }[]>`select inicio from temporadas where id = ${temporadaId}`;
-  if (agora < fimProtecaoIniciante(temporada!.inicio.getTime())) return true;
-  const [escudo] = await tx<{ ate: Date }[]>`
-    select ate from protecoes where temporada_id = ${temporadaId} and jogador_id = ${donoId} and tipo = 'escudo'`;
-  return !!escudo && agora < escudo.ate.getTime();
+  return agora < fimProtecaoIniciante(temporada!.inicio.getTime());
 }
 
 async function concluir(tx: Transacao, marchaId: string) {
@@ -136,8 +134,8 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
     await concluir(tx, m.id);
     return;
   }
-  // Se o alvo virou de um jogador protegido enquanto a marcha andava, não há batalha: as tropas voltam para casa.
-  if (destino.dono_id && (await alvoProtegido(tx, m.temporada_id, destino.dono_id, agora))) {
+  // Se o alvo virou de um jogador durante a proteção de iniciante, não há batalha: as tropas voltam para casa.
+  if (destino.dono_id && (await emProtecaoIniciante(tx, m.temporada_id, agora))) {
     await mandarDeVolta(
       tx,
       m,
