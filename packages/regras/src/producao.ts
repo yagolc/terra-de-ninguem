@@ -69,6 +69,21 @@ export function limitePopulacaoCidade(cidade: EstadoCidade, populacaoExtra = 0, 
   return Math.floor(limitePopulacao(cidade.predios.casa) * (1 + bonusPopulacaoMaxima)) + populacaoExtra;
 }
 
+/**
+ * Quanto falta (ms) para nascer o próximo habitante: a população cresce aos poucos (fracionária) e conta
+ * mais um quando passa do próximo inteiro. Nulo se ele não cabe no limite da cidade.
+ */
+export function tempoProximoHabitanteMs(
+  cidade: EstadoCidade,
+  bonus: Pick<BonusExternos, 'populacaoExtra' | 'bonusCrescimento' | 'bonusPopulacaoMaxima'> = {},
+): number | null {
+  const proximo = Math.floor(cidade.populacao) + 1;
+  if (proximo > limitePopulacaoCidade(cidade, bonus.populacaoExtra, bonus.bonusPopulacaoMaxima)) return null;
+  const taxaHora = crescimentoPopulacaoHora(cidade.predios.casa) * (1 + (bonus.bonusCrescimento ?? 0));
+  if (taxaHora <= 0) return null;
+  return ((proximo - cidade.populacao) / taxaHora) * HORA_MS;
+}
+
 export function consumoComidaHora(tropas: Exercito): number {
   return TIPOS_UNIDADE.reduce((soma, tipo) => soma + tropas[tipo] * BALANCEAMENTO.unidades[tipo].consumoComidaHora, 0);
 }

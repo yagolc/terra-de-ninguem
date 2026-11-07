@@ -5,17 +5,18 @@ import {
   habitantesLivres,
   limitePopulacaoCidade,
   producaoHora,
+  tempoProximoHabitanteMs,
   type EstadoCidade,
   type Exercito,
   type Recursos,
 } from '@terra/regras';
-import { RECURSOS_INFO, formatarNumero, formatarTaxa } from '../lib/textos';
+import { RECURSOS_INFO, formatarDuracao, formatarNumero, formatarRelogio, formatarTaxa } from '../lib/textos';
 
 type Props = {
   cidade: EstadoCidade;
   bonus: Recursos;
-  /** Ouro das cidades livres e população a mais das vilas. */
-  extras: { producaoFixaHora: Recursos; populacaoExtra: number; bonusPopulacaoMaxima: number };
+  /** Ouro das cidades livres, população a mais das vilas, limite da raça e crescimento a mais. */
+  extras: { producaoFixaHora: Recursos; populacaoExtra: number; bonusPopulacaoMaxima: number; bonusCrescimento: number };
   /** Todas as tropas do jogador: comem comida continuamente. */
   tropas: Exercito;
   /** Tropas mais as que estão em treino (ocupam população). */
@@ -29,6 +30,7 @@ export default function BarraRecursos({ cidade, bonus, extras, tropas, soldados 
   const saldo: Recursos = { ...producao, comida: producao.comida - consumoComidaHora(tropas) };
   const limite = limitePopulacaoCidade(cidade, extras.populacaoExtra, extras.bonusPopulacaoMaxima);
   const livres = habitantesLivres(cidade, soldados);
+  const proximoHabitante = tempoProximoHabitanteMs(cidade, extras);
   const fome = saldo.comida < 0 && cidade.recursos.comida < 1;
 
   return (
@@ -59,6 +61,16 @@ export default function BarraRecursos({ cidade, bonus, extras, tropas, soldados 
           <span className="text-xs font-normal text-pergaminho-escuro">/{limite}</span>
         </div>
         <div className="text-[11px] text-pergaminho-escuro/80 tabular-nums">{livres} livres</div>
+        <div
+          className="text-[11px] text-pergaminho-escuro/80 tabular-nums"
+          title={
+            proximoHabitante === null
+              ? 'Cidade cheia: evolua a Casa para caber mais gente.'
+              : `Próximo habitante nasce em ${formatarDuracao(proximoHabitante)}.`
+          }
+        >
+          {proximoHabitante === null ? 'cheia' : <>👶 {formatarRelogio(proximoHabitante)}</>}
+        </div>
       </div>
       <p className={`col-span-4 text-center text-[11px] ${fome ? 'text-red-300' : 'text-pergaminho-escuro/70'}`}>
         {fome

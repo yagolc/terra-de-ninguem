@@ -251,6 +251,8 @@ export function useCidade(jogadorId: string) {
         : null,
     [salva, agora],
   );
+  // Crescimento da população a mais: intendente na cidade e raça.
+  const bonusCrescimento = salva && intendente ? intendente.bonusCrescimento + efeitosRaca(salva.raca).crescimento : 0;
   const atual = useMemo(
     () =>
       salva && extras && intendente
@@ -264,10 +266,10 @@ export function useCidade(jogadorId: string) {
             producaoFixaHora: extras.producaoFixaHora,
             populacaoExtra: extras.populacaoExtra,
             bonusPopulacaoMaxima: extras.bonusPopulacaoMaxima,
-            bonusCrescimento: intendente.bonusCrescimento + efeitosRaca(salva.raca).crescimento,
+            bonusCrescimento,
           })
         : null,
-    [salva, extras, intendente, agora],
+    [salva, extras, intendente, agora, bonusCrescimento],
   );
 
   const comandar = useCallback(
@@ -288,8 +290,8 @@ export function useCidade(jogadorId: string) {
     // O herói também é um habitante: conta como soldado na população.
     soldados: atual ? soldadosNaConta(totalUnidades(atual.tropas), atual.treinos) + (salva?.heroi ? 1 : 0) : 0,
     bonus: salva && intendente ? somarRecursos(salva.bonus, intendente.bonusTerritorios, efeitosRaca(salva.raca).producao) : null,
-    /** Ouro das cidades livres e população a mais das vilas (só as leais). */
-    extras,
+    /** Ouro das cidades livres, população a mais das vilas (só as leais), limite da raça e crescimento a mais. */
+    extras: extras ? { ...extras, bonusCrescimento } : null,
     territorio: salva?.territorio ?? null,
     territorios: salva?.territorios ?? 0,
     meusTerritorios: salva?.meusTerritorios ?? [],

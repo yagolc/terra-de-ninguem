@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCEAMENTO } from './balanceamento.ts';
-import { capacidadeArmazem } from './predios.ts';
+import { capacidadeArmazem, crescimentoPopulacaoHora, limitePopulacao } from './predios.ts';
 import {
   atualizarCidade,
   avancarCidade,
@@ -8,6 +8,7 @@ import {
   consumoComidaHora,
   habitantesLivres,
   producaoHora,
+  tempoProximoHabitanteMs,
   verificarAlocacao,
 } from './producao.ts';
 import type { EstadoCidade, Exercito } from './tipos.ts';
@@ -276,5 +277,33 @@ describe('alocação de trabalhadores', () => {
 
   it('conta habitantes livres arredondando a população para baixo', () => {
     expect(habitantesLivres(cidade, 4)).toBe(30 - 21 - 4);
+  });
+});
+
+describe('tempoProximoHabitanteMs', () => {
+  const PREDIOS = { centro: 5, casa: 5, fazenda: 2, serraria: 2, mercado: 1, armazem: 2, quartel: 1, muralha: 0 };
+  const comCasa5 = (mudancas: Partial<EstadoCidade>) => cidadeProdutora({ predios: PREDIOS, ...mudancas });
+  it('conta o que falta até o próximo inteiro, na taxa da casa', () => {
+    const cidade = comCasa5({ populacao: 30.25 });
+    const taxa = crescimentoPopulacaoHora(5);
+    expect(tempoProximoHabitanteMs(cidade)).toBeCloseTo((0.75 / taxa) * HORA_MS);
+    // O intendente (ou a raça) acelera na mesma proporção.
+    expect(tempoProximoHabitanteMs(cidade, { bonusCrescimento: 0.25 })).toBeCloseTo((0.75 / (taxa * 1.25)) * HORA_MS);
+  });
+
+  it('é nulo quando o próximo não cabe no limite, a menos que as vilas ou a raça deem mais', () => {
+    const limite = limitePopulacao(5);
+    const cheia = comCasa5({ populacao: limite });
+    expect(tempoProximoHabitanteMs(cheia)).toBeNull();
+    expect(tempoProximoHabitanteMs(comCasa5({ populacao: limite - 0.5 }))).not.toBeNull();
+    expect(tempoProximoHabitanteMs(cheia, { populacaoExtra: 5 })).not.toBeNull();
+  });
+
+  it('bate com avancarCidade: no prazo o habitante nasce, um pouco antes ainda não', () => {
+    const cidade = comCasa5({ populacao: 30.4, trabalhadores: recursos() });
+    const ms = tempoProximoHabitanteMs(cidade)!;
+    const em = (agora: number) => avancarCidade({ cidade, tropas: exercito(), agora }).cidade.populacao;
+    expect(Math.floor(em(INICIO + ms - 1000))).toBe(30);
+    expect(Math.floor(em(INICIO + ms + 1))).toBe(31);
   });
 });

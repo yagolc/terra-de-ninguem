@@ -127,6 +127,15 @@ export function formatarDuracao(ms: number): string {
   return `${seg} s`;
 }
 
+/** Contagem curta para caber em caixas estreitas: "11:58" ou "1:05:09". */
+export function formatarRelogio(ms: number): string {
+  const totalSeg = Math.max(0, Math.ceil(ms / 1000));
+  const h = Math.floor(totalSeg / 3600);
+  const min = Math.floor((totalSeg % 3600) / 60);
+  const seg = String(totalSeg % 60).padStart(2, '0');
+  return h > 0 ? `${h}:${String(min).padStart(2, '0')}:${seg}` : `${min}:${seg}`;
+}
+
 /** Texto da carta do objetivo secreto. */
 export function descreverObjetivo(
   objetivo: Objetivo,
