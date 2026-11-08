@@ -1,6 +1,6 @@
 # Imagens do jogo: guia e prompts
 
-Lote 1: **24 imagens de prédios** (8 prédios × 3 fases) e **3 cenas de treino** no Quartel.
+Lote 1 (pronto): **24 imagens de prédios** (8 prédios × 3 fases) e **3 cenas de treino** no Quartel. Lote 2: estruturas, povoados, heróis e raças (no fim deste guia).
 
 ## Como gerar
 
@@ -143,9 +143,80 @@ Salve assim em `docs/arte/originais/` (fica fora do site) e rode `npm run arte`:
 
 ---
 
-## Lote 2 (depois, se o lote 1 der certo)
+## Lote 2: mapa, heróis e raças
 
-- Estruturas do mapa: torre de vigia, paliçada, entreposto.
-- Povoados: vila (3 níveis) e cidade livre.
-- Heróis: um retrato por especialidade (Comandante, Castelão, Desbravador, Saqueador, Intendente).
-- Raças: um retrato de cada povo (Humano, Elfo, Orc, Anão) para a tela de Fundação.
+**16 imagens.** Mesmo jeito de gerar do lote 1 (mesma conversa, anexe a Casa fase 1 de referência). Os retratos de heróis e raças usam outro bloco de estilo, de **retrato do peito para cima**, porque são pessoas e não prédios: gere primeiro o **humano** e use ele de referência para os outros retratos.
+
+| Arquivo | O que é | Onde aparece no jogo |
+| --- | --- | --- |
+| `estrutura-torre.png`, `estrutura-palicada.png`, `estrutura-entreposto.png` | Estruturas dos territórios | Menu de construir no território e painel do território que tem a estrutura |
+| `vila-1.png`, `vila-2.png`, `vila-3.png` | Vila: 1 = nível 0 e 1 (neutra ou recém-tomada), 2, 3 | Painel do povoado no mapa |
+| `cidade-livre.png` | Cidade livre | Painel do povoado no mapa |
+| `heroi-comandante.png`, `heroi-castelao.png`, `heroi-desbravador.png`, `heroi-saqueador.png`, `heroi-intendente.png` | Retrato do herói por especialidade | Painel do herói, recrutamento e escolha do herói na marcha |
+| `raca-humano.png`, `raca-elfo.png`, `raca-orc.png`, `raca-anao.png` | Retrato de cada povo | Tela de Fundação (escolha da raça) e regras |
+
+No mapa em si os ícones continuam pequenos (emoji): uma imagem de 30 px não se lê. As imagens entram nos painéis que abrem ao tocar.
+
+Os heróis servem para qualquer raça, então os prompts pedem rosto meio escondido (elmo, capuz, sombra) e sem orelha pontuda ou presa: assim um herói não parece de outro povo.
+
+### Bloco de estilo dos retratos
+
+> Hand-painted medieval fantasy strategy game art, warm painterly style like a board game illustration, same palette and lighting as the buildings. Portrait from the chest up, facing slightly to the side, centered with empty margin around the head. Warm late-afternoon light from the side, earthy palette of browns, ochre, muted gold and moss green. Solid plain dark brown background (#2a1f19), nothing behind the character. No text, no letters, no logos, no border. Square 1:1.
+
+---
+
+### Estruturas
+
+**estrutura-torre**
+> Hand-painted medieval fantasy strategy game art, warm painterly style like a board game illustration. Isometric 3/4 view of a single subject standing on a small round patch of grass and packed dirt, centered, fully visible with empty margin around it. Warm late-afternoon light, earthy palette of browns, ochre, muted gold and moss green. Solid plain dark brown background (#2a1f19), nothing behind the subject. No text, no letters, no logos, no border. Square 1:1. Subject: a tall narrow wooden watchtower on four log legs, a small roofed lookout platform on top with a lit brazier, a ladder and a horn hanging on a post.
+
+**estrutura-palicada**
+> Hand-painted medieval fantasy strategy game art, warm painterly style like a board game illustration. Isometric 3/4 view of a single subject standing on a small round patch of grass and packed dirt, centered, fully visible with empty margin around it. Warm late-afternoon light, earthy palette of browns, ochre, muted gold and moss green. Solid plain dark brown background (#2a1f19), nothing behind the subject. No text, no letters, no logos, no border. Square 1:1. Subject: a short ring of sharpened wooden stakes and logs bound with rope, earth piled at the base, a narrow gap as an entrance and a small banner pole.
+
+**estrutura-entreposto**
+> Hand-painted medieval fantasy strategy game art, warm painterly style like a board game illustration. Isometric 3/4 view of a single subject standing on a small round patch of grass and packed dirt, centered, fully visible with empty margin around it. Warm late-afternoon light, earthy palette of browns, ochre, muted gold and moss green. Solid plain dark brown background (#2a1f19), nothing behind the subject. No text, no letters, no logos, no border. Square 1:1. Subject: a small roadside trading post: an open wooden stall with a canvas awning, stacked sacks of grain, logs and a small chest of coins, a hand cart beside it.
+
+### Povoados
+
+**vila-1**
+> Hand-painted medieval fantasy strategy game art, warm painterly style like a board game illustration. Isometric 3/4 view of a single subject standing on a small round patch of grass and packed dirt, centered, fully visible with empty margin around it. Warm late-afternoon light, earthy palette of browns, ochre, muted gold and moss green. Solid plain dark brown background (#2a1f19), nothing behind the subject. No text, no letters, no logos, no border. Square 1:1. Subject: a tiny hamlet of two humble thatched huts and a small vegetable patch, a dirt path and a wooden well.
+
+**vila-2**
+> Hand-painted medieval fantasy strategy game art, warm painterly style like a board game illustration. Isometric 3/4 view of a single subject standing on a small round patch of grass and packed dirt, centered, fully visible with empty margin around it. Warm late-afternoon light, earthy palette of browns, ochre, muted gold and moss green. Solid plain dark brown background (#2a1f19), nothing behind the subject. No text, no letters, no logos, no border. Square 1:1. Subject: a small village of four thatched cottages around a stone well, a little wooden chapel, fenced gardens and a hay cart.
+
+**vila-3**
+> Hand-painted medieval fantasy strategy game art, warm painterly style like a board game illustration. Isometric 3/4 view of a single subject standing on a small round patch of grass and packed dirt, centered, fully visible with empty margin around it. Warm late-afternoon light, earthy palette of browns, ochre, muted gold and moss green. Solid plain dark brown background (#2a1f19), nothing behind the subject. No text, no letters, no logos, no border. Square 1:1. Subject: a prosperous village of timber-framed houses with tiled roofs around a small square, a stone chapel with a bell, a windmill and a low stone fence.
+
+**cidade-livre**
+> Hand-painted medieval fantasy strategy game art, warm painterly style like a board game illustration. Isometric 3/4 view of a single subject standing on a small round patch of grass and packed dirt, centered, fully visible with empty margin around it. Warm late-afternoon light, earthy palette of browns, ochre, muted gold and moss green. Solid plain dark brown background (#2a1f19), nothing behind the subject. No text, no letters, no logos, no border. Square 1:1. Subject: a proud independent walled town on a hill, stone walls with a gate, tightly packed tall houses with red roofs, a cathedral spire and colorful guild banners, no single ruler's flag.
+
+### Heróis
+
+**heroi-comandante**
+> Hand-painted medieval fantasy strategy game art, warm painterly style like a board game illustration, same palette and lighting as the buildings. Portrait from the chest up, facing slightly to the side, centered with empty margin around the head. Warm late-afternoon light from the side, earthy palette of browns, ochre, muted gold and moss green. Solid plain dark brown background (#2a1f19), nothing behind the character. No text, no letters, no logos, no border. Square 1:1. Subject: a battle-hardened war commander in a plumed steel helmet with a face guard that hides most of the face, plate armor over a red tabard, gripping a sword hilt, a battle-scarred cape.
+
+**heroi-castelao**
+> Hand-painted medieval fantasy strategy game art, warm painterly style like a board game illustration, same palette and lighting as the buildings. Portrait from the chest up, facing slightly to the side, centered with empty margin around the head. Warm late-afternoon light from the side, earthy palette of browns, ochre, muted gold and moss green. Solid plain dark brown background (#2a1f19), nothing behind the character. No text, no letters, no logos, no border. Square 1:1. Subject: a stern castle warden in a closed great helm and heavy mail, holding a large kite shield with an iron boss in front of the chest, a ring of keys on the belt.
+
+**heroi-desbravador**
+> Hand-painted medieval fantasy strategy game art, warm painterly style like a board game illustration, same palette and lighting as the buildings. Portrait from the chest up, facing slightly to the side, centered with empty margin around the head. Warm late-afternoon light from the side, earthy palette of browns, ochre, muted gold and moss green. Solid plain dark brown background (#2a1f19), nothing behind the character. No text, no letters, no logos, no border. Square 1:1. Subject: a swift pathfinder in a deep hood that shadows the face, leather riding coat, a rolled map and a compass on the belt, a scarf blowing in the wind.
+
+**heroi-saqueador**
+> Hand-painted medieval fantasy strategy game art, warm painterly style like a board game illustration, same palette and lighting as the buildings. Portrait from the chest up, facing slightly to the side, centered with empty margin around the head. Warm late-afternoon light from the side, earthy palette of browns, ochre, muted gold and moss green. Solid plain dark brown background (#2a1f19), nothing behind the character. No text, no letters, no logos, no border. Square 1:1. Subject: a cunning raider in a dark hood and a cloth mask over the lower face, studded leather armor, a heavy coin pouch and a curved dagger, a sly confident posture.
+
+**heroi-intendente**
+> Hand-painted medieval fantasy strategy game art, warm painterly style like a board game illustration, same palette and lighting as the buildings. Portrait from the chest up, facing slightly to the side, centered with empty margin around the head. Warm late-afternoon light from the side, earthy palette of browns, ochre, muted gold and moss green. Solid plain dark brown background (#2a1f19), nothing behind the character. No text, no letters, no logos, no border. Square 1:1. Subject: a wise steward in fine but practical robes with a fur collar and a wide-brimmed hat casting a shadow over the eyes, holding a ledger and a quill, a ring of keys and a small scale on the belt.
+
+### Raças
+
+**raca-humano**
+> Hand-painted medieval fantasy strategy game art, warm painterly style like a board game illustration, same palette and lighting as the buildings. Portrait from the chest up, facing slightly to the side, centered with empty margin around the head. Warm late-afternoon light from the side, earthy palette of browns, ochre, muted gold and moss green. Solid plain dark brown background (#2a1f19), nothing behind the character. No text, no letters, no logos, no border. Square 1:1. Subject: a human settler leader, weathered friendly face with a short beard, simple wool cloak over leather armor, a wheat sheaf emblem brooch.
+
+**raca-elfo**
+> Hand-painted medieval fantasy strategy game art, warm painterly style like a board game illustration, same palette and lighting as the buildings. Portrait from the chest up, facing slightly to the side, centered with empty margin around the head. Warm late-afternoon light from the side, earthy palette of browns, ochre, muted gold and moss green. Solid plain dark brown background (#2a1f19), nothing behind the character. No text, no letters, no logos, no border. Square 1:1. Subject: an elf ranger with long pointed ears and long hair, calm sharp eyes, green and brown leaf-patterned leather armor, a longbow over the shoulder, forest leaves in the hair.
+
+**raca-orc**
+> Hand-painted medieval fantasy strategy game art, warm painterly style like a board game illustration, same palette and lighting as the buildings. Portrait from the chest up, facing slightly to the side, centered with empty margin around the head. Warm late-afternoon light from the side, earthy palette of browns, ochre, muted gold and moss green. Solid plain dark brown background (#2a1f19), nothing behind the character. No text, no letters, no logos, no border. Square 1:1. Subject: an orc warrior chieftain with green skin, lower tusks and a fierce grin, crude iron and fur armor, a heavy axe on the shoulder, war paint on the face.
+
+**raca-anao**
+> Hand-painted medieval fantasy strategy game art, warm painterly style like a board game illustration, same palette and lighting as the buildings. Portrait from the chest up, facing slightly to the side, centered with empty margin around the head. Warm late-afternoon light from the side, earthy palette of browns, ochre, muted gold and moss green. Solid plain dark brown background (#2a1f19), nothing behind the character. No text, no letters, no logos, no border. Square 1:1. Subject: a dwarf miner lord, short and broad with a long braided beard decorated with gold rings, a sturdy iron helmet, a pickaxe on the shoulder, warm forge light on the face.
