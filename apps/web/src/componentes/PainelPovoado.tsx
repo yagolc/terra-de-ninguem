@@ -1,8 +1,10 @@
 import { BALANCEAMENTO, RECURSOS, custoNivelVila, estoqueVila, povoadoLeal, recursosQueFaltam, vilaCheiaEm } from '@terra/regras';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
+import { imagemDoPovoado } from '../lib/arte';
 import { RECURSOS_INFO, formatarDuracao, formatarNumero } from '../lib/textos';
 import { useCidade } from '../lib/useCidade';
 import type { PovoadoMapa } from '../lib/useMapa';
+import Ilustracao from './Ilustracao';
 
 type Props = {
   povoado: PovoadoMapa;
@@ -23,6 +25,17 @@ export default function PainelPovoado({ povoado, donoId, meuId, onMelhorado, ago
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const leal = povoadoLeal(povoado.lealDesde, agora);
+  const imagem = imagemDoPovoado(povoado.tipo, donoId ? povoado.nivel : 1);
+  /** Título com a imagem do povoado à esquerda (sem imagem, fica o emoji). */
+  const titulo = (icone: string, texto: ReactNode) => (
+    <div className="flex items-center gap-3">
+      {imagem && <Ilustracao src={imagem} className="size-20 shrink-0" />}
+      <h3 className="font-semibold text-ouro">
+        {!imagem && `${icone} `}
+        {texto}
+      </h3>
+    </div>
+  );
 
   async function melhorar() {
     setEnviando(true);
@@ -46,7 +59,7 @@ export default function PainelPovoado({ povoado, donoId, meuId, onMelhorado, ago
   if (povoado.tipo === 'cidade_livre') {
     return (
       <section className="space-y-1.5 rounded-lg border border-ouro/50 bg-ouro/5 p-3 text-sm">
-        <h3 className="font-semibold text-ouro">⚖️ Cidade livre</h3>
+        {titulo('⚖️', 'Cidade livre')}
         <p>
           +{P.cidadeLivre.ouroHora} {RECURSOS_INFO.ouro.icone} por hora para quem a controla. Muralha própria: +
           {Math.round(P.cidadeLivre.bonusDefesa * 100)}% de defesa.
@@ -77,7 +90,7 @@ export default function PainelPovoado({ povoado, donoId, meuId, onMelhorado, ago
     const cheiaEm = vilaCheiaEm(povoado.saqueadaEm, agora);
     return (
       <section className="space-y-1.5 rounded-lg border border-couro bg-noite/50 p-3 text-sm">
-        <h3 className="font-semibold text-ouro">🏘️ Vila neutra</h3>
+        {titulo('🏘️', 'Vila neutra')}
         <p className="tabular-nums">
           Para saquear agora:{' '}
           {RECURSOS.map((r) => `${formatarNumero(estoque[r])} ${RECURSOS_INFO[r].icone}`).join(' · ')}
@@ -97,9 +110,7 @@ export default function PainelPovoado({ povoado, donoId, meuId, onMelhorado, ago
   const falta = RECURSOS.filter((r) => faltam[r] > 0);
   return (
     <section className="space-y-1.5 rounded-lg border border-couro bg-noite/50 p-3 text-sm">
-      <h3 className="font-semibold text-ouro">
-        🏘️ Vila nível {povoado.nivel} de {P.vila.nivelMaximo}
-      </h3>
+      {titulo('🏘️', `Vila nível ${povoado.nivel} de ${P.vila.nivelMaximo}`)}
       <p>+{P.vila.populacaoPorNivel * povoado.nivel} de população máxima na cidade do dono.</p>
       {lealdade}
       {meu && (

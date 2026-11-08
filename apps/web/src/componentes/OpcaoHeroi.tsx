@@ -1,5 +1,7 @@
 import { bonusHeroi, heroiDisponivel, heroiEmTreino, type Heroi } from '@terra/regras';
+import { imagemDoHeroi } from '../lib/arte';
 import { ESPECIALIDADES_INFO, formatarDuracao } from '../lib/textos';
+import Ilustracao from './Ilustracao';
 
 type Props = {
   heroi: Heroi | null;
@@ -13,6 +15,7 @@ type Props = {
 export default function OpcaoHeroi({ heroi, origemId, agora, marcado, onMudar }: Props) {
   if (!heroi || heroi.territorioId !== origemId) return null;
   const info = ESPECIALIDADES_INFO[heroi.especialidade];
+  const retrato = imagemDoHeroi(heroi.especialidade);
   if (!heroiDisponivel(heroi, agora)) {
     const ate = heroiEmTreino(heroi, agora) ? heroi.treinoProntoEm! : heroi.feridoAte!;
     return (
@@ -24,6 +27,7 @@ export default function OpcaoHeroi({ heroi, origemId, agora, marcado, onMudar }:
   return (
     <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-ouro/40 bg-ouro/5 px-3 py-2 text-sm">
       <input type="checkbox" checked={marcado} onChange={(e) => onMudar(e.target.checked)} className="mt-0.5 accent-[#d4a64a]" />
+      {retrato && <Ilustracao src={retrato} className="size-12 shrink-0" />}
       <span>
         🎖️ Levar {heroi.nome}
         <span className="block text-xs text-pergaminho-escuro">

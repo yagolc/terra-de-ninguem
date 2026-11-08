@@ -1,4 +1,4 @@
-import type { TipoPredio, TipoUnidade } from '@terra/regras';
+import type { Especialidade, Raca, TipoEstrutura, TipoPovoado, TipoPredio, TipoUnidade } from '@terra/regras';
 
 // Imagens geradas para o jogo (WebP em src/assets/arte, criadas por `npm run arte` a partir de docs/arte/originais).
 // O Vite só inclui as que existem; o que faltar continua com o emoji.
@@ -25,4 +25,25 @@ export function imagemDoPredio(tipo: TipoPredio, nivel: number): string | null {
 /** Cena de treino da unidade no quartel (treino-<tipo>), se já existir. */
 export function imagemDoTreino(tipo: TipoUnidade): string | null {
   return ARTE[`treino-${tipo}`] ?? null;
+}
+
+/** Estrutura de território (torre, paliçada, entreposto). */
+export function imagemDaEstrutura(tipo: TipoEstrutura): string | null {
+  return ARTE[`estrutura-${tipo}`] ?? null;
+}
+
+/** Vila (vila-1 nos níveis 0 e 1, depois vila-2 e vila-3) ou cidade livre. */
+export function imagemDoPovoado(tipo: TipoPovoado, nivel: number): string | null {
+  if (tipo === 'cidade_livre') return ARTE['cidade-livre'] ?? null;
+  return ARTE[`vila-${Math.min(3, Math.max(1, nivel))}`] ?? null;
+}
+
+/** Retrato do herói pela especialidade. */
+export function imagemDoHeroi(especialidade: Especialidade): string | null {
+  return ARTE[`heroi-${especialidade}`] ?? null;
+}
+
+/** Retrato do povo, na escolha da raça. */
+export function imagemDaRaca(raca: Raca): string | null {
+  return ARTE[`raca-${raca}`] ?? null;
 }

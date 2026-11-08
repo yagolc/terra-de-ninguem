@@ -3,6 +3,8 @@ import { useState } from 'react';
 import Cronica from '../componentes/Cronica';
 import { CRONICAS } from '../lib/cronicas';
 import { chamarFuncao } from '../lib/funcoes';
+import Ilustracao from '../componentes/Ilustracao';
+import { imagemDaRaca } from '../lib/arte';
 import { RACAS_INFO } from '../lib/textos';
 
 type Props = {
@@ -94,19 +96,23 @@ export default function Fundacao({ temporada, nomeAtual, herdeiro, onFundada }: 
       <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Raça">
         {TIPOS_RACA.map((r) => {
           const info = RACAS_INFO[r];
+          const retrato = imagemDaRaca(r);
           return (
             <button
               key={r}
               role="radio"
               aria-checked={raca === r}
               onClick={() => setRaca(r)}
-              className={`rounded-xl border-2 p-4 text-left transition ${raca === r ? 'border-ouro bg-ouro/10' : 'border-couro bg-carvao/90 hover:border-ouro/50'}`}
+              className={`flex items-center gap-3 rounded-xl border-2 p-4 text-left transition ${raca === r ? 'border-ouro bg-ouro/10' : 'border-couro bg-carvao/90 hover:border-ouro/50'}`}
             >
-              <p className="font-titulo text-lg text-ouro">
-                {info.icone} {info.nome}
-              </p>
-              <p className="mt-1 text-sm text-pergaminho">✅ {info.vantagem}</p>
-              <p className="mt-0.5 text-sm text-pergaminho-escuro">⚠️ {info.desvantagem}</p>
+              {retrato && <Ilustracao src={retrato} className="size-24 shrink-0" />}
+              <span>
+                <span className="block font-titulo text-lg text-ouro">
+                  {info.icone} {info.nome}
+                </span>
+                <span className="mt-1 block text-sm text-pergaminho">✅ {info.vantagem}</span>
+                <span className="mt-0.5 block text-sm text-pergaminho-escuro">⚠️ {info.desvantagem}</span>
+              </span>
             </button>
           );
         })}

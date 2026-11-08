@@ -16,6 +16,7 @@ import {
 } from '@terra/regras';
 import { useState } from 'react';
 import { imagemDoTreino } from '../lib/arte';
+import Ilustracao from './Ilustracao';
 import { RECURSOS_INFO, UNIDADES_INFO, formatarDuracao, formatarNumero, formatarTaxa } from '../lib/textos';
 
 type Props = {
@@ -96,17 +97,7 @@ export default function PainelQuartel({ cidade, tropas, emMarcha, fila, soldados
       </div>
 
       <div className="mt-2 flex items-center gap-3">
-        {imagem && (
-          <img
-            src={imagem}
-            alt=""
-            width={512}
-            height={512}
-            loading="lazy"
-            decoding="async"
-            className="size-24 shrink-0 object-contain [mask-image:radial-gradient(closest-side,black_85%,transparent)]"
-          />
-        )}
+        {imagem && <Ilustracao src={imagem} className="size-24 shrink-0" />}
         <div>
           <p className="text-xs text-pergaminho-escuro">{UNIDADES_INFO[tipo].descricao}</p>
           <p className="mt-1 text-xs tabular-nums text-pergaminho-escuro">

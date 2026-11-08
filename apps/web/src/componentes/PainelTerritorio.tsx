@@ -1,5 +1,6 @@
 import { BALANCEAMENTO, TIPOS_UNIDADE, estruturaAtiva, totalUnidades } from '@terra/regras';
 import { COR_NEUTRA, corDoJogador, type DadosMapa } from '../lib/useMapa';
+import { imagemDaEstrutura } from '../lib/arte';
 import { ESTRUTURAS_INFO, RACAS_INFO, RECURSOS_INFO, TERRENOS_INFO, TITULO_HERDEIRO, UNIDADES_INFO, formatarDuracao } from '../lib/textos';
 import { useState } from 'react';
 import { chamarFuncao } from '../lib/funcoes';
@@ -7,6 +8,7 @@ import InfoReconhecimento from './InfoReconhecimento';
 import PainelConstrucao from './PainelConstrucao';
 import PainelPovoado from './PainelPovoado';
 import { origensPossiveis } from './PainelAtaque';
+import Ilustracao from './Ilustracao';
 
 type Props = {
   dados: DadosMapa;
@@ -130,12 +132,20 @@ export default function PainelTerritorio({
           <>
             <dt className="text-pergaminho-escuro">Estrutura</dt>
             {estrutura.tipo ? (
-              <dd>
-                {ESTRUTURAS_INFO[estrutura.tipo].icone} {ESTRUTURAS_INFO[estrutura.tipo].nome}
-                {estrutura.prontoEm > agora && (
-                  <span className="text-pergaminho-escuro"> · em construção, pronta em {formatarDuracao(estrutura.prontoEm - agora)}</span>
+              <dd className="flex items-center gap-2">
+                {imagemDaEstrutura(estrutura.tipo) && (
+                  <Ilustracao
+                    src={imagemDaEstrutura(estrutura.tipo)!}
+                    className={`size-14 shrink-0 ${estrutura.prontoEm > agora ? 'opacity-50 grayscale' : ''}`}
+                  />
                 )}
-                <span className="block text-xs text-pergaminho-escuro">{ESTRUTURAS_INFO[estrutura.tipo].descricao}</span>
+                <span>
+                  {ESTRUTURAS_INFO[estrutura.tipo].icone} {ESTRUTURAS_INFO[estrutura.tipo].nome}
+                  {estrutura.prontoEm > agora && (
+                    <span className="text-pergaminho-escuro"> · em construção, pronta em {formatarDuracao(estrutura.prontoEm - agora)}</span>
+                  )}
+                  <span className="block text-xs text-pergaminho-escuro">{ESTRUTURAS_INFO[estrutura.tipo].descricao}</span>
+                </span>
               </dd>
             ) : (
               <dd>

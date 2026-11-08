@@ -15,7 +15,9 @@ import {
   type Heroi,
 } from '@terra/regras';
 import { useState } from 'react';
+import { imagemDoHeroi } from '../lib/arte';
 import { ESPECIALIDADES_INFO, RECURSOS_INFO, formatarDuracao, formatarNumero } from '../lib/textos';
+import Ilustracao from './Ilustracao';
 
 type Props = {
   heroi: Heroi | null;
@@ -72,12 +74,15 @@ function Recrutar({ cidade, habitantesLivres, ocupado, onRecrutar }: Props) {
             role="radio"
             aria-checked={especialidade === e}
             onClick={() => setEspecialidade(e)}
-            className={`rounded-lg border px-3 py-2 text-left ${especialidade === e ? 'border-ouro bg-ouro/10' : 'border-couro hover:border-ouro/50'}`}
+            className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-left ${especialidade === e ? 'border-ouro bg-ouro/10' : 'border-couro hover:border-ouro/50'}`}
           >
-            <span className="font-semibold">
-              {ESPECIALIDADES_INFO[e].icone} {ESPECIALIDADES_INFO[e].nome}
+            {imagemDoHeroi(e) && <Ilustracao src={imagemDoHeroi(e)!} className="size-14 shrink-0" />}
+            <span>
+              <span className="font-semibold">
+                {ESPECIALIDADES_INFO[e].icone} {ESPECIALIDADES_INFO[e].nome}
+              </span>
+              <span className="block text-xs text-pergaminho-escuro">{ESPECIALIDADES_INFO[e].descricao}</span>
             </span>
-            <span className="block text-xs text-pergaminho-escuro">{ESPECIALIDADES_INFO[e].descricao}</span>
           </button>
         ))}
       </div>
@@ -108,15 +113,21 @@ function Status({ heroi, cidade, cidadeTerritorioId, nomeDoTerritorio, agora, oc
   const v = verificarTreinoHeroi({ heroi, cidadeTerritorioId, recursos: cidade.recursos, agora });
   const custo = custoTreinoHeroi(heroi.nivel + 1);
   const faltaOuro = recursosQueFaltam(cidade.recursos, custo).ouro;
+  const retrato = imagemDoHeroi(heroi.especialidade);
 
   return (
     <div className="space-y-2 text-sm">
-      <p>
-        <span className="font-semibold">{heroi.nome}</span> · {info.icone} {info.nome} · nível {heroi.nivel}/{H.nivelMaximo}
-      </p>
-      <p className="text-pergaminho-escuro">
-        {pct(bonusHeroi(heroi.nivel))}: {info.descricao}
-      </p>
+      <div className="flex items-center gap-3">
+        {retrato && <Ilustracao src={retrato} className={`size-24 shrink-0 ${ferido ? 'grayscale' : ''}`} />}
+        <div className="space-y-1">
+          <p>
+            <span className="font-semibold">{heroi.nome}</span> · {info.icone} {info.nome} · nível {heroi.nivel}/{H.nivelMaximo}
+          </p>
+          <p className="text-pergaminho-escuro">
+            {pct(bonusHeroi(heroi.nivel))}: {info.descricao}
+          </p>
+        </div>
+      </div>
       <p>
         📍 {onde}
         {emTreino && <span className="text-ouro-claro"> · treinando, pronto em {formatarDuracao(heroi.treinoProntoEm! - agora)}</span>}

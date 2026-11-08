@@ -1,7 +1,9 @@
 import { RECURSOS, TIPOS_ESTRUTURA, custoEstrutura, recursosQueFaltam, tempoEstruturaMs, type TipoEstrutura } from '@terra/regras';
 import { useState } from 'react';
+import { imagemDaEstrutura } from '../lib/arte';
 import { ESTRUTURAS_INFO, RECURSOS_INFO, formatarDuracao, formatarNumero } from '../lib/textos';
 import { useCidade } from '../lib/useCidade';
+import Ilustracao from './Ilustracao';
 
 type Props = {
   territorioId: string;
@@ -39,12 +41,19 @@ export default function PainelConstrucao({ territorioId, meuId, onConstruido }: 
           const custo = custoEstrutura(tipo);
           const faltam = cidade ? recursosQueFaltam(cidade.recursos, custo) : custo;
           const falta = RECURSOS.filter((r) => faltam[r] > 0);
+          const imagem = imagemDaEstrutura(tipo);
           return (
             <li key={tipo} className="rounded-lg border border-couro bg-noite/50 p-3 text-sm">
-              <p className="font-semibold">
-                {info.icone} {info.nome}
-              </p>
-              <p className="mt-0.5 text-xs text-pergaminho-escuro">{info.descricao}</p>
+              <div className="flex items-center gap-3">
+                {imagem && <Ilustracao src={imagem} className="size-16 shrink-0" />}
+                <div>
+                  <p className="font-semibold">
+                    {!imagem && `${info.icone} `}
+                    {info.nome}
+                  </p>
+                  <p className="mt-0.5 text-xs text-pergaminho-escuro">{info.descricao}</p>
+                </div>
+              </div>
               <p className="mt-1.5 text-xs tabular-nums">
                 {RECURSOS.filter((r) => custo[r] > 0)
                   .map((r) => `${formatarNumero(custo[r])} ${RECURSOS_INFO[r].icone}`)
