@@ -14,6 +14,7 @@ import {
   type TipoUnidade,
 } from '@terra/regras';
 import { useCallback, useEffect, useState } from 'react';
+import { buscarHordas, type Horda } from './hordas';
 import { supabase } from './supabase';
 
 export type RegiaoMapa = { id: string; indice: number; nome: string; terreno: Terreno };
@@ -107,6 +108,9 @@ export type Reconhecimento = {
   lido: boolean;
 };
 
+/** Estrada de um território (pública: todos veem); acelera os reforços quando está pronta. */
+export type EstradaMapa = { territorioId: string; donoId: string; prontoEm: number };
+
 export type DadosMapa = {
   temporada: { id: string; numero: number; inicio: number };
   regioes: Map<string, RegiaoMapa>;
@@ -123,6 +127,12 @@ export type DadosMapa = {
   reconhecimentos: Map<string, Reconhecimento>;
   /** Estrutura de cada território que tem uma. */
   estruturas: Map<string, EstruturaMapa>;
+  /** Estrada de cada território que tem uma (de qualquer jogador). */
+  estradas: Map<string, EstradaMapa>;
+  /** Hordas bárbaras da temporada, da mais nova para a mais antiga (públicas). */
+  hordas: Horda[];
+  /** Rios e cordilheiras entre vizinhos que não são fronteira (só para desenhar). */
+  barreiras: { a: string; b: string; tipo: 'rio' | 'montanha' }[];
   /** Marchas alheias vistas pelas torres do jogador, da que chega primeiro para a última. */
   marchasVistas: MarchaVista[];
   /** Vila ou cidade livre de cada território que tem uma. */
@@ -255,6 +265,9 @@ async function buscarMapa(): Promise<DadosMapa | null> {
     heroi,
     racas,
     anterior,
+    estradas,
+    hordas,
+    barreiras,
   ] = await Promise.all([
     supabase.from('regioes').select('id, indice, nome, terreno').eq('temporada_id', temporada.id).returns<RegiaoMapa[]>(),
     supabase
@@ -325,6 +338,17 @@ async function buscarMapa(): Promise<DadosMapa | null> {
       .order('numero', { ascending: false })
       .limit(1)
       .returns<{ vencedor_id: string | null }[]>(),
+    supabase
+      .from('estradas')
+      .select('territorio_id, jogador_id, pronto_em')
+      .eq('temporada_id', temporada.id)
+      .returns<{ territorio_id: string; jogador_id: string; pronto_em: string }[]>(),
+    buscarHordas(temporada.id, 3),
+    supabase
+      .from('barreiras')
+      .select('territorio_a, territorio_b, tipo')
+      .eq('temporada_id', temporada.id)
+      .returns<{ territorio_a: string; territorio_b: string; tipo: 'rio' | 'montanha' }[]>(),
   ]);
   if (
     !regioes.data ||
@@ -335,6 +359,7 @@ async function buscarMapa(): Promise<DadosMapa | null> {
     !marchas.data ||
     !protecoes.data ||
     !estruturas.data ||
+    !estradas.data ||
     !povoados.data
   ) {
     throw new Error('Não foi possível carregar o mapa.');
@@ -388,6 +413,15 @@ async function buscarMapa(): Promise<DadosMapa | null> {
           : { territorioId: e.territorio_id, tipo: null, prontoEm: null },
       ]),
     ),
+    estradas: new Map(
+      estradas.data.map((e): [string, EstradaMapa] => [
+        e.territorio_id,
+        { territorioId: e.territorio_id, donoId: e.jogador_id, prontoEm: Date.parse(e.pronto_em) },
+      ]),
+    ),
+    hordas,
+    // Temporadas antigas não têm barreiras (e, antes da migration, a tabela pode faltar): fica vazio.
+    barreiras: (barreiras.data ?? []).map((b) => ({ a: b.territorio_a, b: b.territorio_b, tipo: b.tipo })),
     marchasVistas,
     povoados: new Map(
       povoados.data.map((p): [string, PovoadoMapa] => [

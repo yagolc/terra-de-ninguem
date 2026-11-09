@@ -6,6 +6,7 @@ import {
   somarExercitos,
   type Especialidade,
   type Recursos,
+  type TipoMissao,
   type TipoPredio,
   type TipoUnidade,
 } from '@terra/regras';
@@ -14,10 +15,11 @@ import { useEffect, useState } from 'react';
 import BarraRecursos from '../componentes/BarraRecursos';
 import CartaoPredio from '../componentes/CartaoPredio';
 import PainelHeroi from '../componentes/PainelHeroi';
+import PainelMissoes from '../componentes/PainelMissoes';
 import PainelQuartel from '../componentes/PainelQuartel';
 import PainelTrabalhadores from '../componentes/PainelTrabalhadores';
 import { useCidade } from '../lib/useCidade';
-import { ESPECIALIDADES_INFO, PREDIOS, RACAS_INFO, RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarDuracao } from '../lib/textos';
+import { ESPECIALIDADES_INFO, MISSOES_INFO, PREDIOS, RACAS_INFO, RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarDuracao } from '../lib/textos';
 
 type Aviso = { tipo: 'erro' | 'ok'; texto: string };
 
@@ -37,6 +39,7 @@ export default function Cidade({ sessao }: { sessao: Session }) {
     heroi,
     raca,
     guardaReal,
+    missoes,
     agora,
     erro,
     comandar,
@@ -74,6 +77,12 @@ export default function Cidade({ sessao }: { sessao: Session }) {
       `${nome}, ${ESPECIALIDADES_INFO[especialidade].nome.toLowerCase()}, se juntou a você.`,
     );
   const treinarHeroi = () => executar({ acao: 'treinar_heroi' }, 'Treino do herói começou.');
+  const cancelarObra = (prontoEm: number) =>
+    executar({ acao: 'cancelar_obra', pronto_em: new Date(prontoEm).toISOString() }, 'Obra cancelada. Os recursos voltaram.');
+  const cancelarTreino = (prontoEm: number) =>
+    executar({ acao: 'cancelar_treino', pronto_em: new Date(prontoEm).toISOString() }, 'Treino cancelado. Os recursos voltaram.');
+  const resgatarMissao = (missao: TipoMissao) =>
+    executar({ acao: 'resgatar_missao', missao }, `Recompensa recebida: ${MISSOES_INFO[missao].titulo.toLowerCase()}.`);
 
   if (erro) {
     return (
@@ -134,6 +143,9 @@ export default function Cidade({ sessao }: { sessao: Session }) {
 
       <div className="mx-auto grid max-w-6xl gap-6 px-4 py-4 md:grid-cols-[1fr_320px]">
         <section>
+          {missoes && (
+            <PainelMissoes resgatadas={missoes.resgatadas} situacao={missoes.situacao} ocupado={ocupado} onResgatar={resgatarMissao} />
+          )}
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3">
             <h2 className="font-titulo text-lg text-ouro">Prédios</h2>
             <p className="text-xs text-pergaminho-escuro">
@@ -153,6 +165,7 @@ export default function Cidade({ sessao }: { sessao: Session }) {
                 agora={agora}
                 ocupado={ocupado}
                 onEvoluir={evoluir}
+                onCancelar={cancelarObra}
               />
             ))}
           </div>
@@ -172,6 +185,7 @@ export default function Cidade({ sessao }: { sessao: Session }) {
             agora={agora}
             ocupado={ocupado}
             onTreinar={treinar}
+            onCancelar={cancelarTreino}
           />
           <PainelHeroi
             heroi={heroi}

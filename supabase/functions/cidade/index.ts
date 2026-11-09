@@ -4,6 +4,9 @@
 //      | { acao: 'enviar_marcha', origem_id, destino_id, tipo: 'saque' | 'conquista' | 'movimento', tropas }
 //      | { acao: 'enviar_reconhecimento', origem_id, destino_id }
 //      | { acao: 'construir_estrutura', territorio_id, tipo: 'torre' | 'palicada' | 'entreposto' }
+//      | { acao: 'construir_estrada', territorio_id }
+//      | { acao: 'resgatar_missao', missao }
+//      | { acao: 'cancelar_obra', pronto_em } | { acao: 'cancelar_treino', pronto_em } (devolvem tudo; pronto_em identifica o item)
 //      | { acao: 'melhorar_vila', territorio_id }
 //      | { acao: 'recrutar_heroi', nome, especialidade } | { acao: 'treinar_heroi' }
 //      (enviar_marcha aceita com_heroi: true para levar o herói, que precisa estar livre na origem)
@@ -12,8 +15,11 @@
 import {
   MENSAGENS_ALOCACAO,
   MENSAGENS_ATAQUE,
+  MENSAGENS_CANCELAMENTO,
+  MENSAGENS_ESTRADA,
   MENSAGENS_ESTRUTURA,
   MENSAGENS_EVOLUCAO,
+  MENSAGENS_MISSAO,
   MENSAGENS_MOVIMENTO,
   MENSAGENS_RECONHECIMENTO,
   MENSAGENS_RECRUTAMENTO,
@@ -25,23 +31,31 @@ import {
   TIPOS_PREDIO,
   TIPOS_UNIDADE,
   bonusHeroi,
+  cancelarObra,
+  cancelarTreino,
   duracaoMarchaMs,
   efeitosRaca,
   duracaoReconhecimentoMs,
+  estradaPronta,
   grafoDeFronteiras,
   habitantesLivres,
   heroiDisponivel,
   ligadosPorTerritoriosProprios,
   mapearExercito,
+  multiplicadorEstrada,
+  somarRecursos,
   subtrairRecursos,
+  totalUnidades,
   verificarAlocacao,
   verificarAtaque,
+  verificarEstrada,
   verificarEstrutura,
   verificarEvolucao,
   verificarMelhoriaVila,
   verificarMovimento,
   verificarReconhecimento,
   verificarRecrutamento,
+  verificarResgateMissao,
   verificarTreinoHeroi,
   verificarTreino,
   type Recursos,
@@ -87,7 +101,7 @@ function heroiDaMarcha(c: CidadeAvancada, corpo: Record<string, unknown>, origem
   if (!heroi || heroi.territorioId !== origemId || !heroiDisponivel(heroi, agora)) {
     throw new ErroDoJogo('O herói precisa estar livre (sem treino e sem ferimento) no território de onde a marcha sai.');
   }
-  return { heroiId: heroi.id, bonusVelocidade: raca + (heroi.especialidade === 'desbravador' ? bonusHeroi(heroi.nivel) : 0) };
+  return { heroiId: heroi.id, bonusVelocidade: raca + (heroi.especialidade === 'desbravador' ? bonusHeroi(heroi.nivel, 'desbravador') : 0) };
 }
 
 /** O herói sai do território e passa a viajar com a marcha recém-criada. */
@@ -141,7 +155,15 @@ async function enviarMarcha(
     if (!v.ok) throw new ErroDoJogo(MENSAGENS_MOVIMENTO[v.motivo]);
     const { heroiId, bonusVelocidade } = heroiDaMarcha(c, corpo, origemId, agora);
     grupo!.tropas = mapearExercito((t) => grupo!.tropas[t] - enviar[t]);
-    const chegada = agora + duracaoMarchaMs(origem, destino, enviar, bonusVelocidade);
+    // Estrada pronta na saída e na chegada: o reforço anda mais rápido.
+    const estradas = await tx<{ territorio_id: string; pronto_em: Date }[]>`
+      select territorio_id, pronto_em from estradas where territorio_id in (${origemId}, ${destinoId})`;
+    const temEstrada = (id: string) =>
+      estradaPronta(
+        estradas.map((e) => ({ territorioId: e.territorio_id, prontoEm: e.pronto_em.getTime() })).find((e) => e.territorioId === id),
+        agora,
+      );
+    const chegada = agora + duracaoMarchaMs(origem, destino, enviar, bonusVelocidade, multiplicadorEstrada(temEstrada(origemId), temEstrada(destinoId)));
     const [marcha] = await tx<{ id: string }[]>`
       insert into marchas (temporada_id, jogador_id, origem_id, destino_id, tipo, lanceiro, arqueiro, cavalaria, partida_em, chegada_em, heroi_id)
       values (${temporada.id}, ${jogadorId}, ${origemId}, ${destinoId}, 'movimento',
@@ -263,6 +285,66 @@ async function construirEstrutura(
   return v.prontoEm;
 }
 
+/** Faz uma estrada num território do jogador (à parte da estrutura; uma por território). */
+async function construirEstrada(
+  tx: Transacao,
+  temporada: Temporada,
+  c: CidadeAvancada,
+  corpo: Record<string, unknown>,
+  agora: number,
+): Promise<number> {
+  const territorioId = String(corpo.territorio_id ?? '');
+  if (!UUID.test(territorioId)) throw new ErroDoJogo('Território desconhecido.');
+  const [territorio] = await tx<{ dono_id: string | null }[]>`
+    select dono_id from territorios where temporada_id = ${temporada.id} and id = ${territorioId}`;
+  if (!territorio) throw new ErroDoJogo('Território desconhecido.');
+  const [existente] = await tx`select 1 from estradas where territorio_id = ${territorioId}`;
+
+  const v = verificarEstrada({
+    territorioDoJogador: territorio.dono_id === c.carregada.jogadorId,
+    jaTemEstrada: !!existente,
+    recursos: c.estado.recursos,
+    agora,
+  });
+  if (!v.ok) throw new ErroDoJogo(MENSAGENS_ESTRADA[v.motivo]);
+
+  c.estado = { ...c.estado, recursos: subtrairRecursos(c.estado.recursos, v.custo) };
+  await tx`
+    insert into estradas (temporada_id, territorio_id, jogador_id, pronto_em)
+    values (${temporada.id}, ${territorioId}, ${c.carregada.jogadorId}, ${new Date(v.prontoEm)})`;
+  return v.prontoEm;
+}
+
+/** Pega a recompensa de uma missão de início cumprida (uma vez por missão na temporada). */
+async function resgatarMissao(tx: Transacao, temporada: Temporada, c: CidadeAvancada, corpo: Record<string, unknown>) {
+  const jogadorId = c.carregada.jogadorId;
+  const [linha] = await tx<{ missoes: string[]; territorios: number; batedores: number; construcoes: number }[]>`
+    select ci.missoes,
+           (select count(*) from territorios where temporada_id = ${temporada.id} and dono_id = ${jogadorId})::int as territorios,
+           (select count(*) from marchas
+             where temporada_id = ${temporada.id} and jogador_id = ${jogadorId} and tipo = 'reconhecimento')::int as batedores,
+           ((select count(*) from estruturas where temporada_id = ${temporada.id} and jogador_id = ${jogadorId})
+            + (select count(*) from estradas where temporada_id = ${temporada.id} and jogador_id = ${jogadorId}))::int as construcoes
+      from cidades ci where ci.id = ${c.carregada.id}`;
+  const v = verificarResgateMissao({
+    missao: String(corpo.missao ?? ''),
+    resgatadas: linha!.missoes,
+    situacao: {
+      predios: c.estado.predios,
+      soldados: totalUnidades(c.tropasTotais),
+      territorios: linha!.territorios,
+      batedores: linha!.batedores,
+      construcoes: linha!.construcoes,
+      temHeroi: !!c.carregada.heroi,
+    },
+    recursos: c.estado.recursos,
+  });
+  if (!v.ok) throw new ErroDoJogo(MENSAGENS_MISSAO[v.motivo]);
+  c.estado = { ...c.estado, recursos: v.recursos };
+  await tx`update cidades set missoes = array_append(missoes, ${v.missao}) where id = ${c.carregada.id}`;
+  return v.missao;
+}
+
 /** Recruta o herói do jogador na cidade (um por temporada; ocupa 1 de população). */
 async function recrutarHeroi(tx: Transacao, temporada: Temporada, c: CidadeAvancada, corpo: Record<string, unknown>) {
   if (!c.carregada.territorioId) throw new ErroDoJogo('Sua cidade não tem território nesta temporada.', 409);
@@ -345,6 +427,26 @@ async function executar(jogadorId: string, corpo: Record<string, unknown>): Prom
         c.novaObra = { tipo, prontoEm: v.prontoEm };
         break;
       }
+      case 'cancelar_obra': {
+        // O item é achado pelo horário de fim que o jogador viu; se a fila mudou nesse meio-tempo, recusa.
+        const obras = [...c.obras].sort((a, b) => a.prontoEm - b.prontoEm);
+        const prontoEm = Date.parse(String(corpo.pronto_em ?? ''));
+        const v = cancelarObra({ predios: c.estado.predios, obras, indice: obras.findIndex((o) => o.prontoEm === prontoEm), agora });
+        if (!v.ok) throw new ErroDoJogo(MENSAGENS_CANCELAMENTO[v.motivo]);
+        c.obras = v.obras;
+        c.estado = { ...c.estado, recursos: somarRecursos(c.estado.recursos, v.devolver) };
+        resultado.canceladas = v.canceladas;
+        break;
+      }
+      case 'cancelar_treino': {
+        const fila = [...c.fila].sort((a, b) => a.prontoEm - b.prontoEm);
+        const prontoEm = Date.parse(String(corpo.pronto_em ?? ''));
+        const v = cancelarTreino({ fila, indice: fila.findIndex((l) => l.prontoEm === prontoEm), agora });
+        if (!v.ok) throw new ErroDoJogo(MENSAGENS_CANCELAMENTO[v.motivo]);
+        c.fila = v.fila;
+        c.estado = { ...c.estado, recursos: somarRecursos(c.estado.recursos, v.devolver) };
+        break;
+      }
       case 'alocar_trabalhadores': {
         const alocacao = lerAlocacao(corpo.alocacao);
         const v = verificarAlocacao({ cidade: c.estado, alocacao, soldados: soldados(c) });
@@ -369,6 +471,14 @@ async function executar(jogadorId: string, corpo: Record<string, unknown>): Prom
       }
       case 'construir_estrutura': {
         resultado.pronto_em = new Date(await construirEstrutura(tx, temporada, c, corpo, agora)).toISOString();
+        break;
+      }
+      case 'construir_estrada': {
+        resultado.pronto_em = new Date(await construirEstrada(tx, temporada, c, corpo, agora)).toISOString();
+        break;
+      }
+      case 'resgatar_missao': {
+        resultado.missao = await resgatarMissao(tx, temporada, c, corpo);
         break;
       }
       case 'melhorar_vila': {

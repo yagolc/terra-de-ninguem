@@ -57,8 +57,8 @@ function Recrutar({ cidade, habitantesLivres, ocupado, onRecrutar }: Props) {
   return (
     <div className="space-y-3 text-sm">
       <p className="text-pergaminho-escuro">
-        Um por temporada. Ele dá um bônus de {pct(bonusHeroi(1))} por nível (até {pct(bonusHeroi(H.nivelMaximo))}), nunca morre e ocupa 1 de
-        população. A especialidade não muda depois.
+        Um por temporada. O bônus cresce a cada nível (até o nível {H.nivelMaximo}), ele nunca morre e ocupa 1 de população. A
+        especialidade não muda depois.
       </p>
       <input
         value={nome}
@@ -81,7 +81,9 @@ function Recrutar({ cidade, habitantesLivres, ocupado, onRecrutar }: Props) {
               <span className="font-semibold">
                 {ESPECIALIDADES_INFO[e].icone} {ESPECIALIDADES_INFO[e].nome}
               </span>
-              <span className="block text-xs text-pergaminho-escuro">{ESPECIALIDADES_INFO[e].descricao}</span>
+              <span className="block text-xs text-pergaminho-escuro">
+                {ESPECIALIDADES_INFO[e].descricao} +{pct(bonusHeroi(1, e))} por nível (até {pct(bonusHeroi(H.nivelMaximo, e))}).
+              </span>
             </span>
           </button>
         ))}
@@ -124,7 +126,7 @@ function Status({ heroi, cidade, cidadeTerritorioId, nomeDoTerritorio, agora, oc
             <span className="font-semibold">{heroi.nome}</span> · {info.icone} {info.nome} · nível {heroi.nivel}/{H.nivelMaximo}
           </p>
           <p className="text-pergaminho-escuro">
-            {pct(bonusHeroi(heroi.nivel))}: {info.descricao}
+            {pct(bonusHeroi(heroi.nivel, heroi.especialidade))}: {info.descricao}
           </p>
         </div>
       </div>

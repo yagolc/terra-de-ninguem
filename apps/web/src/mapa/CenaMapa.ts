@@ -8,6 +8,7 @@ const CORES_TERRENO = { planicie: 0x7d8a45, floresta: 0x3d5e36, montanha: 0x6e62
 const ICONE_TERRENO = { planicie: '', floresta: '🌲', montanha: '⛰️' } as const;
 const ICONE_ESTRUTURA = { torre: '🗼', palicada: '🪵', entreposto: '🏪' } as const;
 const COR_AMEACA = 0xff4d3d;
+const COR_HORDA = 0x9b1b30;
 const ARRASTO_MINIMO = 6;
 
 const cor = (hex: string) => Phaser.Display.Color.HexStringToColor(hex).color;
@@ -95,9 +96,16 @@ export class CenaMapa extends Phaser.Scene {
       g.strokePoints(forma.points, true);
     }
     this.desenharBordasDeRegiao(g, dados.territorios);
+    this.desenharBarreiras(g);
+    this.desenharEstradas(g);
 
     this.camadaBandeiras!.clear();
     for (const t of dados.territorios) this.rotular(t);
+    // Caveira na borda do mapa, de onde vem cada horda bárbara a caminho.
+    for (const h of dados.hordas.filter((h) => h.aCaminho)) {
+      const caveira = this.add.text(h.origem.x * ESCALA, h.origem.y * ESCALA, '☠️', { fontSize: '24px' });
+      this.rotulos.push(caveira.setOrigin(0.5));
+    }
     this.desenharDestaques();
     this.desenharMarchas();
   }
@@ -116,6 +124,11 @@ export class CenaMapa extends Phaser.Scene {
       this.desenharSeta(g, m.origemId, m.destinoId, cor, 3);
     }
     for (const m of dados.marchasVistas) this.desenharSeta(g, m.origemId, m.destinoId, COR_AMEACA, 4);
+    // Hordas bárbaras a caminho (públicas): seta grossa vinho, da borda do mapa até o alvo.
+    for (const h of dados.hordas.filter((h) => h.aCaminho)) {
+      const alvo = dados.territorios.find((t) => t.id === h.territorioId);
+      if (alvo) this.desenharSetaEntre(g, h.origem.x, h.origem.y, alvo.x, alvo.y, COR_HORDA, 5);
+    }
   }
 
   private desenharSeta(g: Phaser.GameObjects.Graphics, origemId: string, destinoId: string, cor: number, espessura: number) {
@@ -123,7 +136,12 @@ export class CenaMapa extends Phaser.Scene {
     const de = dados.territorios.find((t) => t.id === origemId);
     const para = dados.territorios.find((t) => t.id === destinoId);
     if (!de || !para) return;
-    const [x1, y1, x2, y2] = [de.x * ESCALA, de.y * ESCALA, para.x * ESCALA, para.y * ESCALA];
+    this.desenharSetaEntre(g, de.x, de.y, para.x, para.y, cor, espessura);
+  }
+
+  /** Seta entre dois pontos do mapa (em léguas). */
+  private desenharSetaEntre(g: Phaser.GameObjects.Graphics, deX: number, deY: number, paraX: number, paraY: number, cor: number, espessura: number) {
+    const [x1, y1, x2, y2] = [deX * ESCALA, deY * ESCALA, paraX * ESCALA, paraY * ESCALA];
     const angulo = Math.atan2(y2 - y1, x2 - x1);
     // Para um pouco antes do centro do alvo, para não cobrir o nome.
     const fimX = x2 - Math.cos(angulo) * 26;
@@ -159,6 +177,71 @@ export class CenaMapa extends Phaser.Scene {
     for (const { a, b, regioes } of arestas.values()) {
       if (regioes.length === 1 || regioes[0] !== regioes[1]) {
         g.lineBetween(a[0] * ESCALA, a[1] * ESCALA, b[0] * ESCALA, b[1] * ESCALA);
+      }
+    }
+  }
+
+  /**
+   * Rios (azul) e cordilheiras (escuras): a aresta que os dois vizinhos dividem, por cima da borda das regiões.
+   * Não são fronteira: ninguém ataca nem move por ali.
+   */
+  private desenharBarreiras(g: Phaser.GameObjects.Graphics) {
+    const { dados } = this.opcoes;
+    if (dados.barreiras.length === 0) return;
+    const porId = new Map(dados.territorios.map((t) => [t.id, t]));
+    const chave = (p: [number, number]) => p.join(',');
+    for (const { a, b, tipo } of dados.barreiras) {
+      const ta = porId.get(a);
+      const tb = porId.get(b);
+      if (!ta || !tb) continue;
+      const deB = new Set(tb.poligono.map(chave));
+      ta.poligono.forEach((p, i) => {
+        const q = ta.poligono[(i + 1) % ta.poligono.length]!;
+        if (!deB.has(chave(p)) || !deB.has(chave(q))) return;
+        const [x1, y1, x2, y2] = [p[0] * ESCALA, p[1] * ESCALA, q[0] * ESCALA, q[1] * ESCALA];
+        if (tipo === 'rio') {
+          g.lineStyle(9, 0x1c3a5e, 0.9);
+          g.lineBetween(x1, y1, x2, y2);
+          g.lineStyle(6, 0x3a7bd5, 1);
+          g.lineBetween(x1, y1, x2, y2);
+        } else {
+          g.lineStyle(11, 0x1c1410, 0.95);
+          g.lineBetween(x1, y1, x2, y2);
+          g.lineStyle(5, 0x6b5d50, 1);
+          g.lineBetween(x1, y1, x2, y2);
+        }
+      });
+    }
+  }
+
+  /**
+   * Estradas (públicas): um caminho de terra batida entre o centro de dois vizinhos que têm estrada; meio apagado
+   * se uma delas ainda está em obra. Estrada sem vizinha com estrada vira um trecho curto saindo do centro.
+   */
+  private desenharEstradas(g: Phaser.GameObjects.Graphics) {
+    const { dados } = this.opcoes;
+    const agora = Date.now();
+    const porId = new Map(dados.territorios.map((t) => [t.id, t]));
+    const trecho = (x1: number, y1: number, x2: number, y2: number, pronta: boolean) => {
+      g.lineStyle(7, 0x1c1410, pronta ? 0.7 : 0.35);
+      g.lineBetween(x1, y1, x2, y2);
+      g.lineStyle(4, 0xd9b77a, pronta ? 1 : 0.45);
+      g.lineBetween(x1, y1, x2, y2);
+    };
+    for (const [id, estrada] of dados.estradas) {
+      const t = porId.get(id);
+      if (!t) continue;
+      const vizinhasComEstrada = (dados.vizinhos.get(id) ?? []).filter((v) => dados.estradas.has(v));
+      for (const v of vizinhasComEstrada) {
+        const outra = porId.get(v);
+        if (!outra || v < id) continue; // cada par uma vez só
+        const pronta = estrada.prontoEm <= agora && dados.estradas.get(v)!.prontoEm <= agora;
+        trecho(t.x * ESCALA, t.y * ESCALA, outra.x * ESCALA, outra.y * ESCALA, pronta);
+      }
+      if (vizinhasComEstrada.length === 0) {
+        const x = t.x * ESCALA;
+        const y = t.y * ESCALA;
+        trecho(x - 22, y + 24, x + 22, y + 24, estrada.prontoEm <= agora);
       }
     }
   }

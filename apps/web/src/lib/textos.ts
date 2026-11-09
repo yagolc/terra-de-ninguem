@@ -4,8 +4,10 @@ import {
   type Objetivo,
   type Raca,
   type Recurso,
+  type Recursos,
   type Terreno,
   type TipoEstrutura,
+  type TipoMissao,
   type TipoPredio,
   type TipoUnidade,
 } from '@terra/regras';
@@ -168,6 +170,12 @@ export function descreverObjetivo(
       };
     case 'populacao':
       return { icone: '🌾', titulo: 'Prosperidade', texto: `Chegue a ${objetivo.populacao} habitantes na sua cidade.` };
+    case 'senhor_das_vilas':
+      return {
+        icone: '🏘️',
+        titulo: 'Senhor das vilas',
+        texto: `Tenha ${objetivo.vilas} vilas no nível ${objetivo.nivel} ao mesmo tempo (metade das vilas do mapa). Conquiste, melhore e defenda: uma vila saqueada por outro jogador volta ao nível 0.`,
+      };
     case 'senhor_da_guerra':
       return {
         icone: '⚔️',
@@ -199,4 +207,24 @@ export function descreverObjetivo(
         texto: `Controle todas as cidades livres do mapa ao mesmo tempo por ${objetivo.horas} horas seguidas. Se perder uma, o relógio recomeça.`,
       };
   }
+}
+
+/** Missões de início: o que fazer e onde, na ordem de `TIPOS_MISSAO`. */
+export const MISSOES_INFO: Record<TipoMissao, { titulo: string; dica: string }> = {
+  casa_2: { titulo: 'Evolua a Casa para o nível 2', dica: 'Mais casas, mais gente para trabalhar e lutar.' },
+  quartel: { titulo: 'Construa o Quartel', dica: 'Sem ele não dá para treinar tropas.' },
+  soldados_5: { titulo: 'Tenha 5 soldados', dica: 'Treine no painel Exército, aqui na Cidade.' },
+  batedor: { titulo: 'Mande um batedor', dica: 'No Mapa, toque num vizinho e veja quantos bárbaros o defendem.' },
+  primeiro_territorio: { titulo: 'Conquiste seu primeiro território', dica: 'Ataque um vizinho neutro com força de sobra (1,5× a defesa).' },
+  armazem_3: { titulo: 'Evolua o Armazém para o nível 3', dica: 'Guarda mais e protege parte dos recursos contra saque.' },
+  construcao: { titulo: 'Faça uma estrutura ou estrada', dica: 'No painel de um território seu, no Mapa.' },
+  heroi: { titulo: 'Recrute um herói', dica: 'No painel Herói, depois do Quartel.' },
+};
+
+/** "120 🪵 · 40 🪙": só os recursos com valor. */
+export function listarRecursos(valores: Recursos): string {
+  return (Object.keys(RECURSOS_INFO) as Recurso[])
+    .filter((r) => valores[r] > 0)
+    .map((r) => `${formatarNumero(valores[r])} ${RECURSOS_INFO[r].icone}`)
+    .join(' · ');
 }

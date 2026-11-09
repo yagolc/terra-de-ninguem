@@ -96,7 +96,7 @@ export default function PainelAtaque({ dados, alvoId, meuId, agora, onVoltar, on
   const comHeroi = levarHeroi && heroi?.territorioId === origemId;
   // Raça (o anão anda mais devagar) mais o herói desbravador.
   const bonusVelocidade =
-    efeitosRaca(dados.racas.get(meuId)).velocidade + (comHeroi && heroi.especialidade === 'desbravador' ? bonusHeroi(heroi.nivel) : 0);
+    efeitosRaca(dados.racas.get(meuId)).velocidade + (comHeroi && heroi.especialidade === 'desbravador' ? bonusHeroi(heroi.nivel, 'desbravador') : 0);
   const duracao = origem && totalUnidades(enviar) > 0 ? duracaoMarchaMs(origem, alvo, enviar, bonusVelocidade) : null;
 
   const povoado = dados.povoados.get(alvoId);

@@ -13,7 +13,10 @@ export type Objetivo =
   | { tipo: 'derrubar_rival'; rivalId: string }
   /** Conquistar `territorios` diferentes de jogadores da `raca` (ou deixar todos eles só com a cidade). */
   | { tipo: 'velha_rixa'; raca: Raca; territorios: number }
+  /** Não é mais sorteado (virou "senhor das vilas" na temporada 4); fica para as cartas antigas. */
   | { tipo: 'populacao'; populacao: number }
+  /** Ter `vilas` vilas no nível `nivel` ao mesmo tempo. */
+  | { tipo: 'senhor_das_vilas'; vilas: number; nivel: number }
   | { tipo: 'senhor_da_guerra'; vitorias: number }
   | { tipo: 'mestre_construtor'; predios: number; nivel: number }
   | { tipo: 'tesouro'; ouro: number }
@@ -24,6 +27,11 @@ export type Objetivo =
   | { tipo: 'monopolio_comercial'; horas: number };
 
 export type TipoObjetivo = Objetivo['tipo'];
+
+/** Quantas vilas "senhor das vilas" pede: `objetivos.fracaoVilas` das vilas do mapa, arredondado para cima. */
+export function metaSenhorDasVilas(vilasNoMapa: number): number {
+  return Math.ceil(vilasNoMapa * BALANCEAMENTO.objetivos.fracaoVilas);
+}
 
 export function objetivoMetadeDoMapa(): Objetivo {
   return { tipo: 'metade_do_mapa' };
@@ -50,6 +58,8 @@ export function sortearObjetivo(entrada: {
   racasRivais?: Raca[];
   /** Objetivos já sorteados para outros jogadores. */
   jaSorteados: Objetivo[];
+  /** Vilas do mapa (para "senhor das vilas"). */
+  vilasNoMapa?: number;
 }): Objetivo {
   const { regioes, totalTerritorios, jaSorteados } = entrada;
   const aleatorio = geradorComSemente(entrada.semente);
@@ -72,15 +82,16 @@ export function sortearObjetivo(entrada: {
   const racasLivres = racasRivais.filter((r) => !racasUsadas.has(r));
   const racasAlvo = racasLivres.length > 0 ? racasLivres : racasRivais;
 
-  const possiveis: Exclude<TipoObjetivo, 'derrubar_rival' | 'monopolio_comercial'>[] = [
+  const vilasAlvo = metaSenhorDasVilas(entrada.vilasNoMapa ?? 0);
+  const possiveis: Exclude<TipoObjetivo, 'derrubar_rival' | 'monopolio_comercial' | 'populacao'>[] = [
     'metade_do_mapa',
     'territorios_defendidos',
-    'populacao',
     'senhor_da_guerra',
     'mestre_construtor',
     'tesouro',
   ];
   if (duplasLivres.length > 0) possiveis.push('duas_regioes');
+  if (vilasAlvo >= 2) possiveis.push('senhor_das_vilas');
   if (racasAlvo.length > 0) possiveis.push('velha_rixa');
   const tiposUsados = new Set(jaSorteados.map((o) => o.tipo));
   const novos = possiveis.filter((t) => !tiposUsados.has(t));
@@ -96,8 +107,8 @@ export function sortearObjetivo(entrada: {
         territorios: Math.min(config.territoriosDefendidos, totalTerritorios),
         guarnicaoMinima: config.guarnicaoMinima,
       };
-    case 'populacao':
-      return { tipo: 'populacao', populacao: config.populacaoAlvo };
+    case 'senhor_das_vilas':
+      return { tipo: 'senhor_das_vilas', vilas: vilasAlvo, nivel: BALANCEAMENTO.povoados.vila.nivelMaximo };
     case 'senhor_da_guerra':
       return { tipo: 'senhor_da_guerra', vitorias: config.vitoriasContraJogadores };
     case 'mestre_construtor':
@@ -124,6 +135,8 @@ export type SituacaoJogador = {
   vitoriasContraJogadores: number;
   /** Nível de cada prédio da cidade. */
   niveisPredios: readonly number[];
+  /** Nível de cada vila do jogador (as dos territórios dele). */
+  niveisVilas: readonly number[];
   ouro: number;
   /** Cidades livres do mapa: se são do jogador e desde quando o dono atual as tem (ms). */
   cidadesLivres: readonly { minha: boolean; posseDesde: number | null }[];
@@ -203,6 +216,20 @@ export function avaliarObjetivo(objetivo: Objetivo, s: SituacaoJogador): Avaliac
         atual,
         alvo: objetivo.predios * objetivo.nivel,
         partes: [{ atual: prontos, alvo: objetivo.predios }],
+      };
+    }
+    case 'senhor_das_vilas': {
+      const prontas = s.niveisVilas.filter((n) => n >= objetivo.nivel).length;
+      // Barra de progresso: níveis somados das vilas mais altas, até o nível pedido em cada uma.
+      const atual = [...s.niveisVilas]
+        .sort((a, b) => b - a)
+        .slice(0, objetivo.vilas)
+        .reduce((soma, n) => soma + Math.min(n, objetivo.nivel), 0);
+      return {
+        cumprido: prontas >= objetivo.vilas,
+        atual,
+        alvo: objetivo.vilas * objetivo.nivel,
+        partes: [{ atual: prontas, alvo: objetivo.vilas }],
       };
     }
     case 'tesouro': {

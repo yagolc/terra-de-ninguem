@@ -1,6 +1,7 @@
-import type { Especialidade, Exercito, Raca, Recursos, Terreno } from '@terra/regras';
+import { exercito, type Especialidade, type Exercito, type Raca, type Recursos, type Terreno } from '@terra/regras';
 import { useCallback, useEffect, useState } from 'react';
 import { chamarFuncao } from './funcoes';
+import { buscarHordas, type Horda } from './hordas';
 import { buscarReconhecimentos, type Reconhecimento } from './useMapa';
 import { supabase } from './supabase';
 
@@ -51,31 +52,71 @@ export type Relatorio = {
   lido_defensor: boolean;
 };
 
-type Contexto = { nomesTerritorios: Map<string, string>; nomesJogadores: Map<string, string>; reconhecimentos: Reconhecimento[] };
+/** Tropas que voltaram sem lutar: o alvo virou de um jogador na proteção de iniciante (só o atacante vê). */
+export type Devolvida = {
+  id: string;
+  territorioId: string;
+  origemId: string;
+  novoDonoId: string | null;
+  tropas: Exercito;
+  criadoEm: number;
+  lido: boolean;
+};
+
+/** Linha como vem do banco: batalha ou tropas devolvidas (sem vencedor). */
+type LinhaRelatorio = Omit<Relatorio, 'tipo' | 'vencedor'> & { tipo: Relatorio['tipo'] | 'devolvida'; vencedor: Relatorio['vencedor'] | null };
+
+type Contexto = {
+  nomesTerritorios: Map<string, string>;
+  nomesJogadores: Map<string, string>;
+  reconhecimentos: Reconhecimento[];
+  /** Hordas bárbaras já resolvidas (públicas); a tela mostra as que atacaram o jogador. */
+  hordas: Horda[];
+  devolvidas: Devolvida[];
+};
 
 async function buscar(): Promise<{ relatorios: Relatorio[] } & Contexto> {
   if (!supabase) throw new Error('O Supabase não está configurado.');
   const { data: temporada } = await supabase.from('temporadas').select('id').eq('status', 'ativa').maybeSingle<{ id: string }>();
-  if (!temporada) return { relatorios: [], nomesTerritorios: new Map(), nomesJogadores: new Map(), reconhecimentos: [] };
+  if (!temporada) return { relatorios: [], nomesTerritorios: new Map(), nomesJogadores: new Map(), reconhecimentos: [], hordas: [], devolvidas: [] };
 
-  const [relatorios, territorios, jogadores, reconhecimentos] = await Promise.all([
+  const [relatorios, territorios, jogadores, reconhecimentos, hordas] = await Promise.all([
     supabase
       .from('relatorios')
       .select('id, tipo, atacante_id, defensor_id, origem_id, territorio_id, vencedor, conquistou, dados, criado_em, lido_atacante, lido_defensor')
       .eq('temporada_id', temporada.id)
       .order('criado_em', { ascending: false })
       .limit(100)
-      .returns<Relatorio[]>(),
+      .returns<LinhaRelatorio[]>(),
     supabase.from('territorios').select('id, nome').eq('temporada_id', temporada.id).returns<{ id: string; nome: string }[]>(),
     supabase.from('jogadores').select('id, nome').returns<{ id: string; nome: string }[]>(),
     buscarReconhecimentos(temporada.id),
+    buscarHordas(temporada.id, 30),
   ]);
   if (!relatorios.data || !territorios.data || !jogadores.data) throw new Error('Não foi possível carregar os relatórios.');
+  const batalhas = relatorios.data.filter((r): r is Relatorio => r.tipo !== 'devolvida');
+  const devolvidas = relatorios.data
+    .filter((r) => r.tipo === 'devolvida')
+    .map((r): Devolvida => {
+      const dados = r.dados as unknown as { novoDonoId?: string; tropas?: Exercito };
+      return {
+        id: r.id,
+        territorioId: r.territorio_id,
+        origemId: r.origem_id,
+        novoDonoId: dados.novoDonoId ?? null,
+        tropas: dados.tropas ?? exercito(),
+        criadoEm: Date.parse(r.criado_em),
+        lido: r.lido_atacante,
+      };
+    });
   return {
-    relatorios: relatorios.data,
+    relatorios: batalhas,
+    devolvidas,
     nomesTerritorios: new Map(territorios.data.map((t) => [t.id, t.nome])),
     nomesJogadores: new Map(jogadores.data.map((j) => [j.id, j.nome])),
     reconhecimentos,
+    // Só as já resolvidas: a que vem aparece no mapa.
+    hordas: hordas.filter((h) => !h.aCaminho),
   };
 }
 

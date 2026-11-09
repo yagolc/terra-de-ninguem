@@ -39,6 +39,8 @@ async function sortearPara(tx: Transacao, temporadaId: string, jogadorId: string
   const racasRivais = racas.flatMap((r) => (r.jogador_id !== jogadorId && r.raca && r.raca !== minhaRaca ? [r.raca] : []));
   const jaSorteados = await tx<{ objetivo: Objetivo }[]>`
     select objetivo from objetivos where temporada_id = ${temporadaId} and jogador_id <> ${jogadorId}`;
+  const [vilas] = await tx<{ total: number }[]>`
+    select count(*)::int as total from povoados where temporada_id = ${temporadaId} and tipo = 'vila'`;
 
   return sortearObjetivo({
     semente: sementeDeTexto(`${temporadaId}:${jogadorId}`),
@@ -46,6 +48,7 @@ async function sortearPara(tx: Transacao, temporadaId: string, jogadorId: string
     totalTerritorios: regioes.reduce((soma, r) => soma + r.territorios, 0),
     racasRivais,
     jaSorteados: jaSorteados.map((o) => o.objetivo),
+    vilasNoMapa: vilas?.total ?? 0,
   });
 }
 
@@ -84,6 +87,10 @@ export async function atualizarPlacar(tx: Transacao): Promise<{ encerrada: boole
       select defensor_id from relatorios where temporada_id = ${temporadaId} and vencedor = 'defensor' and defensor_id is not null
     ) v group by jogador_id`;
   // Monopólio comercial (aberto a todos): dono atual de cada cidade livre e desde quando.
+  // "Senhor das vilas": nível de cada vila e o dono (o do território).
+  const vilas = await tx<{ dono_id: string | null; nivel: number }[]>`
+    select t.dono_id, p.nivel from povoados p join territorios t on t.id = p.territorio_id
+     where p.temporada_id = ${temporadaId} and p.tipo = 'vila'`;
   const cidadesLivres = await tx<{ dono_id: string | null; posse_desde: Date | null }[]>`
     select t.dono_id, p.posse_desde from povoados p join territorios t on t.id = p.territorio_id
      where p.temporada_id = ${temporadaId} and p.tipo = 'cidade_livre'`;
@@ -166,6 +173,7 @@ export async function atualizarPlacar(tx: Transacao): Promise<{ encerrada: boole
       populacao: cidade.estado.populacao,
       vitoriasContraJogadores: vitoriasContraJogadores.find((v) => v.jogador_id === jogadorId)?.vitorias ?? 0,
       niveisPredios: Object.values(cidade.estado.predios),
+      niveisVilas: vilas.filter((v) => v.dono_id === jogadorId).map((v) => v.nivel),
       cidadesLivres: cidadesLivres.map((c) => ({ minha: c.dono_id === jogadorId, posseDesde: c.posse_desde?.getTime() ?? null })),
       agora,
       ouro: cidade.estado.recursos.ouro,

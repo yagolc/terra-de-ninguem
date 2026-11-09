@@ -116,3 +116,9 @@ export function bonusDosPovoados(
   }
   return { populacaoExtra, producaoFixaHora };
 }
+
+/** Quantas cidades livres o mapa tem para esse número de jogadores (3 até 6 jogadores, 4 com 7 ou 8). */
+export function quantasCidadesLivres(jogadores: number): number {
+  const P = BALANCEAMENTO.povoados;
+  return Math.max(P.cidadesLivresMinimo, Math.round(jogadores * P.cidadesLivresPorJogador));
+}

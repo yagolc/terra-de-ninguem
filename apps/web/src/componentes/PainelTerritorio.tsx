@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { chamarFuncao } from '../lib/funcoes';
 import InfoReconhecimento from './InfoReconhecimento';
 import PainelConstrucao from './PainelConstrucao';
+import PainelEstrada from './PainelEstrada';
 import PainelPovoado from './PainelPovoado';
 import { origensPossiveis } from './PainelAtaque';
 import Ilustracao from './Ilustracao';
@@ -201,6 +202,8 @@ export default function PainelTerritorio({
       )}
 
       {meu && !estrutura && <PainelConstrucao territorioId={t.id} meuId={meuId} onConstruido={onConstruido} />}
+
+      <PainelEstrada territorioId={t.id} estrada={dados.estradas.get(t.id)} meu={meu} meuId={meuId} agora={agora} onConstruido={onConstruido} />
 
       <div>
         <h3 className="mb-1.5 text-sm text-pergaminho-escuro">Vizinhos ({vizinhos.length})</h3>

@@ -6,7 +6,7 @@ Oct 29, 2026 · @Yago
 
 Terra de Ninguém é um jogo de estratégia medieval e assíncrono em que cada jogador constrói sua cidade aos poucos e disputa territórios com os amigos em um mapa compartilhado. Junta a evolução de cidade de Social Empires com a conquista de territórios e a diplomacia de War.
 
-- **Público:** grupo fechado de até 6 amigos, com entrada só por convite.
+- **Público:** grupo fechado de até 8 amigos, com entrada só por convite.
 - **Plataforma:** navegador, com UI responsiva para desktop e celular (PWA instalável).
 - **Ritmo:** cada um entra quando pode. A cidade produz mesmo com o jogador offline, e ataques podem chegar a qualquer momento.
 - **Formato:** partidas em temporadas, com fim, vencedor e reset do mapa.
@@ -43,7 +43,7 @@ São quatro recursos. A população é o recurso central, porque todo habitante 
 
 ## Cidade e prédios
 
-A cidade começa com Centro da Cidade nível 1, e ele limita o nível máximo de todos os outros prédios. Construir e evoluir leva tempo real e custa recursos. No MVP, só uma construção acontece por vez.
+A cidade começa com Centro da Cidade nível 1, e ele limita o nível máximo de todos os outros prédios. Construir e evoluir leva tempo real e custa recursos. As obras ficam numa fila de até 3, feitas uma de cada vez; o treino de tropas tem fila própria, de até 5 lotes. Qualquer item das duas filas pode ser cancelado, com confirmação, e devolve 100% do custo (desde a temporada 4); a obra cancelada leva junto as que dependiam dela.
 
 | Prédio | Função | No MVP? |
 | --- | --- | --- |
@@ -86,7 +86,9 @@ O mapa é dividido em territórios ligados por fronteiras, como no War. Um mapa 
 - **Bônus por território:** cada um dá um bônus de produção (+comida, +madeira ou +ouro).
 - **Terreno:** planície (neutro), floresta (bônus para arqueiros na defesa) e montanha (bônus de defesa geral).
 - **Distância:** o tempo de marcha depende da distância e da unidade mais lenta do exército.
-- **Tamanho:** Até 6 jogadores, com cerca de 4 a 5 territórios por jogador (24 a 30 no total).
+- **Tamanho:** Até 8 jogadores, com 6 territórios por jogador mais 6 (42 com 6 jogadores, 54 com 8; até a temporada 3 eram 4 por jogador). Acima de 30 territórios o mapa cresce junto, e cada território mantém o tamanho. Cidades livres: 3, ou 4 com 7 ou 8 jogadores.
+- **Cidades na borda:** as cidades iniciais sempre encostam na borda do mapa; o centro, cercado por todos os lados, fica para as cidades livres e os neutros.
+- **Rios e cordilheiras:** metade das fronteiras entre regiões vira barreira (cordilheira se um dos lados é montanha, rio nos outros). Não dá para atacar, mover nem fazer estrada por ali; o mapa continua todo ligado e nenhum território fica com menos de 2 vizinhos. Assim surgem passagens e linhas naturais de defesa, e as cidades ficam a pelo menos 3 fronteiras umas das outras.
 - **Povoados:** alguns territórios têm uma vila ou uma cidade livre. Tomado de outro jogador, o povoado só dá bônus depois de 24 h de lealdade (neutro, dá na hora).
   - **Vilas** (cerca de 6 por mapa, guarda fraca): neutras, têm um estoque que o saque leva inteiro e que volta a encher em 8 h. Conquistadas, viram do dono no nível 1 e dão +5 de população máxima por nível (até 3). Saqueada por outro jogador, a vila volta ao nível 0.
   - **Cidades livres** (3 no meio do mapa, guarda forte e muralha própria de +30%): dão +60 de ouro por hora. Na primeira conquista, 5 lanceiros de milícia passam a defendê-la para o conquistador, sem ocupar população nem comer. Ter todas por 12 h seguidas é o monopólio comercial, que vence a temporada (veja abaixo).
@@ -108,7 +110,7 @@ O mapa é dividido em territórios ligados por fronteiras, como no War. Um mapa 
 
 ## Heróis
 
-Com o Quartel construído, cada jogador recruta **um herói** por temporada (300 de ouro), com nome e uma especialidade que não muda. Ele ocupa 1 de população, não come e nunca morre. O bônus é de +2% por nível, até +20% no nível 10.
+Com o Quartel construído, cada jogador recruta **um herói** por temporada (300 de ouro), com nome e uma especialidade que não muda. Ele ocupa 1 de população, não come e nunca morre. O bônus cresce por nível conforme a especialidade: Intendente +2% (até +20% no nível 10), que rende sempre, mesmo parado na cidade; Comandante +3% (até +30%); Castelão, Desbravador e Saqueador +4% (até +40%). Os de guerra valem mais porque só ajudam na marcha ou no território e arriscam ferimento (até a temporada 3, todos davam +2%).
 
 | Especialidade | Bônus |
 | --- | --- |
@@ -118,7 +120,7 @@ Com o Quartel construído, cada jogador recruta **um herói** por temporada (300
 | Saqueador | Carga de saque das tropas com ele (cidades e vilas) |
 | Intendente | Na cidade: toda a produção e o crescimento da população. Noutro território próprio: o dobro, só no recurso daquele território |
 
-Para subir de nível, ele treina na cidade pagando ouro (de 200 no nível 2 a ~5.100 no 10; ~15.000 no total) e fica ocupado durante o treino. Vai nas marchas de ataque e movimento junto com pelo menos 1 soldado. Se o exército dele perde, ou o território onde ele está perde uma defesa, ele fica ferido por 12 h e volta para a cidade. É secreto: os outros só o veem com batedor ou em relatório de batalha.
+Para subir de nível, ele treina na cidade pagando ouro (de 200 no nível 2 a ~5.100 no 10; ~15.000 no total) e fica ocupado durante o treino. Vai nas marchas de ataque e movimento junto com pelo menos 1 soldado. Se o exército dele perde, ou o território onde ele está perde uma defesa, ele fica ferido por 6 h (até a temporada 3: 12 h) e volta para a cidade. É secreto: os outros só o veem com batedor ou em relatório de batalha.
 
 ## Ataques, defesa e proteções
 
@@ -141,6 +143,15 @@ Ataques podem chegar sem aviso a qualquer hora. Três proteções evitam que alg
 - Sem torre de vigia, o defensor só descobre o ataque no relatório.
 - Com torre de vigia, ele vê exércitos chegando e pode reforçar a defesa ou pedir ajuda a um aliado. Níveis mais altos revelam o tamanho e a composição do exército.
 - Notificações no celular avisam do ataque, se o jogador tiver torre.
+- **Estrada (desde a temporada 4):** feita num território próprio, à parte da estrutura (madeira e ouro, 30 min). Tropas movidas entre dois territórios próprios com estrada pronta andam 2× mais rápido, para reforçar antes do ataque chegar; ataques não usam estrada. É pública (todos a veem no mapa) e destruída na conquista.
+
+## Hordas bárbaras (desde a temporada 4)
+
+Para os bárbaros não acabarem no 4º dia: depois da proteção de iniciante, a cada 24 h uma horda sai da borda do mapa contra um território (a cidade inclusive) de um dos 3 primeiros do placar, sorteado. Todos a veem 6 h antes de chegar (seta no mapa e aviso no alto). Começa com uns 5 soldados e ganha 5 a cada horda (±10%). Defendeu: o dono ganha ouro (60 na primeira, +30 a cada uma). Perdeu na cidade: a horda saqueia e vai embora. Perdeu num território comum, com folga para conquistar (1,5×): ele vira neutro, com os bárbaros que sobraram de guarda. A batalha usa as mesmas regras (muralha, paliçada, herói, raça, Guarda Real, milícia).
+
+## Primeiros passos (desde a temporada 4)
+
+Para quem começa devagar não ficar para trás antes da primeira guerra, a tela Cidade mostra missões curtas, cada uma com um prêmio em recursos (pego uma vez, quando a missão está cumprida, até o limite do armazém): Casa nível 2, construir o Quartel, ter 5 soldados, mandar um batedor, conquistar o primeiro território, Armazém nível 3, fazer uma estrutura ou estrada e recrutar um herói. Somadas, dão cerca de 600 de comida, 700 de madeira e 310 de ouro.
 
 ## Diplomacia e alianças
 
@@ -161,10 +172,10 @@ O gerador de mapa divide os territórios em 5 ou 6 regiões, o equivalente aos c
 | --- | --- | --- |
 | Dominar duas regiões específicas | War (continentes) | Conquiste a Floresta do Norte e as Montanhas de Ferro |
 | Dominar mais da metade do mapa | War (24 territórios) | Cerca de 55% dos territórios |
-| Dominar territórios bem defendidos | War (18 territórios com 2 exércitos) | 8 territórios com 6 soldados em cada (no total, até metade da população máxima) |
-| Velha rixa (substitui "derrubar um rival" desde a temporada 3) | War (destruir um exército) | Conquiste 8 territórios diferentes de jogadores de uma raça, ou deixe todos eles só com a cidade principal |
-| Alcançar população X | Próprio do jogo | Vitória econômica, para quem prefere crescer a guerrear |
-| Senhor da guerra | Próprio do jogo | Vença 30 batalhas contra outros jogadores, atacando ou defendendo |
+| Dominar territórios bem defendidos | War (18 territórios com 2 exércitos) | 10 territórios com 7 soldados em cada (até a temporada 3: 8 com 6) |
+| Velha rixa (substitui "derrubar um rival" desde a temporada 3) | War (destruir um exército) | Conquiste 10 territórios diferentes de jogadores de uma raça, ou deixe todos eles só com a cidade principal |
+| Senhor das vilas (substitui "alcançar população X" desde a temporada 4) | Próprio do jogo | Tenha metade das vilas do mapa (4 de 8 com 8 jogadores, 3 de 6 com 6) no nível 3 ao mesmo tempo. A população era fácil demais e se resolvia junto com o mestre construtor, sem sair de casa |
+| Senhor da guerra | Próprio do jogo | Vença 50 batalhas contra outros jogadores, atacando ou defendendo (até a temporada 3: 30) |
 | Mestre construtor | Próprio do jogo | 3 prédios da cidade no nível 10 (cerca de 40 h de obra somadas, contando o Centro) |
 | Tesouro do reino | Próprio do jogo | Junte 7.500 de ouro guardado (só cabe no Armazém nível 10) |
 

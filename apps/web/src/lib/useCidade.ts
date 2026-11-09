@@ -21,6 +21,7 @@ import {
   type Obra,
   type Recurso,
   type Recursos,
+  type SituacaoMissoes,
   type Terreno,
   type TipoPovoado,
   type TipoPredio,
@@ -43,6 +44,7 @@ type LinhaCidade = {
   atualizado_em: string;
   raca: Raca | null;
   guarda_real: number;
+  missoes: string[];
   predios: { tipo: TipoPredio; nivel: number }[];
   obras: { tipo: TipoPredio; pronto_em: string }[];
   filas_treino: { tipo_unidade: TipoUnidade; quantidade: number; pronto_em: string }[];
@@ -71,6 +73,10 @@ type CidadeSalva = {
   raca: Raca | null;
   /** Lanceiros da Guarda Real (só o herdeiro do trono tem). */
   guardaReal: number;
+  /** Missões de início já resgatadas, e o que elas conferem além da cidade e das tropas. */
+  missoes: string[];
+  batedores: number;
+  construcoes: number;
 };
 
 type LinhaHeroi = {
@@ -95,6 +101,7 @@ function converter(
   comEntreposto: Set<string>,
   povoados: LinhaPovoado[],
   heroi: LinhaHeroi | null,
+  contagens: { batedores: number; construcoes: number },
 ): CidadeSalva {
   const predios = Object.fromEntries(TIPOS_PREDIO.map((tipo) => [tipo, 0])) as NiveisPredios;
   for (const p of linha.predios) predios[p.tipo] = p.nivel;
@@ -116,6 +123,9 @@ function converter(
     meusTerritorios: territorios,
     raca: linha.raca,
     guardaReal: linha.guarda_real,
+    missoes: linha.missoes,
+    batedores: contagens.batedores,
+    construcoes: contagens.construcoes,
     heroi: heroi && {
       nome: heroi.nome,
       especialidade: heroi.especialidade,
@@ -147,7 +157,7 @@ async function buscarCidade(jogadorId: string): Promise<CidadeSalva | null> {
   const { data, error } = await supabase
     .from('cidades')
     .select(
-      'temporada_id, territorio_id, comida, madeira, ouro, populacao, trabalhadores_comida, trabalhadores_madeira, trabalhadores_ouro, atualizado_em, raca, guarda_real, predios(tipo, nivel), obras(tipo, pronto_em), filas_treino(tipo_unidade, quantidade, pronto_em), temporadas!inner(status)',
+      'temporada_id, territorio_id, comida, madeira, ouro, populacao, trabalhadores_comida, trabalhadores_madeira, trabalhadores_ouro, atualizado_em, raca, guarda_real, missoes, predios(tipo, nivel), obras(tipo, pronto_em), filas_treino(tipo_unidade, quantidade, pronto_em), temporadas!inner(status)',
     )
     .eq('jogador_id', jogadorId)
     .eq('temporadas.status', 'ativa')
@@ -155,7 +165,7 @@ async function buscarCidade(jogadorId: string): Promise<CidadeSalva | null> {
   if (error) throw new Error('Não foi possível carregar sua cidade.');
   if (!data) return null;
 
-  const [territorios, tropas, marchas, entrepostos, povoados, heroi] = await Promise.all([
+  const [territorios, tropas, marchas, entrepostos, povoados, heroi, batedores, estruturas, estradas] = await Promise.all([
     supabase
       .from('territorios')
       .select('id, nome, terreno, bonus_recurso')
@@ -195,12 +205,24 @@ async function buscarCidade(jogadorId: string): Promise<CidadeSalva | null> {
       .select('nome, especialidade, nivel, territorio_id, marcha_id, treino_pronto_em, ferido_ate')
       .eq('temporada_id', data.temporada_id)
       .maybeSingle<LinhaHeroi>(),
+    // Para as missões de início: batedores mandados e estruturas ou estradas feitas (prontas ou em obra).
+    supabase
+      .from('marchas')
+      .select('id', { count: 'exact', head: true })
+      .eq('temporada_id', data.temporada_id)
+      .eq('jogador_id', jogadorId)
+      .eq('tipo', 'reconhecimento'),
+    supabase.from('estruturas').select('id', { count: 'exact', head: true }).eq('temporada_id', data.temporada_id).eq('jogador_id', jogadorId),
+    supabase.from('estradas').select('id', { count: 'exact', head: true }).eq('temporada_id', data.temporada_id).eq('jogador_id', jogadorId),
   ]);
   if (!territorios.data || !tropas.data || !marchas.data || !entrepostos.data || !povoados.data) {
     throw new Error('Não foi possível carregar seus territórios e tropas.');
   }
   const comEntreposto = new Set(entrepostos.data.map((e) => e.territorio_id));
-  return converter(data, territorios.data, tropas.data, marchas.data, comEntreposto, povoados.data, heroi.data);
+  return converter(data, territorios.data, tropas.data, marchas.data, comEntreposto, povoados.data, heroi.data, {
+    batedores: batedores.count ?? 0,
+    construcoes: (estruturas.count ?? 0) + (estradas.count ?? 0),
+  });
 }
 
 /**
@@ -298,6 +320,21 @@ export function useCidade(jogadorId: string) {
     heroi: salva?.heroi ?? null,
     raca: salva?.raca ?? null,
     guardaReal: salva?.guardaReal ?? 0,
+    /** Missões de início: as já resgatadas e a situação que diz quais estão cumpridas. */
+    missoes:
+      salva && atual
+        ? {
+            resgatadas: salva.missoes,
+            situacao: {
+              predios: atual.cidade.predios,
+              soldados: totalUnidades(atual.tropas),
+              territorios: salva.territorios,
+              batedores: salva.batedores,
+              construcoes: salva.construcoes,
+              temHeroi: !!salva.heroi,
+            } satisfies SituacaoMissoes,
+          }
+        : null,
     agora,
     erro,
     comandar,

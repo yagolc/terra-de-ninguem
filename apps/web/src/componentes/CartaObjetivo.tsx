@@ -17,6 +17,9 @@ function textoProgresso(objetivo: Objetivo, progresso: AvaliacaoObjetivo): strin
   if (objetivo.tipo === 'mestre_construtor' && prontos) {
     return `${prontos.atual} de ${prontos.alvo} prédios no nível ${objetivo.nivel} · ${progresso.atual} de ${progresso.alvo} níveis`;
   }
+  if (objetivo.tipo === 'senhor_das_vilas' && prontos) {
+    return `${prontos.atual} de ${prontos.alvo} vilas no nível ${objetivo.nivel} · ${progresso.atual} de ${progresso.alvo} níveis`;
+  }
   if (objetivo.tipo === 'monopolio_comercial' && prontos) {
     return prontos.atual < prontos.alvo
       ? `${prontos.atual} de ${prontos.alvo} cidades livres são suas`

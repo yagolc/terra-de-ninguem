@@ -96,7 +96,7 @@ São 8 épicos em sequência, cada um com uma entrega que dá para testar. O pri
 1. **Fundação:** repositório, projeto no Supabase, frontend publicado e login por convite. *Entrega: os amigos conseguem entrar.*
 2. **Regras do jogo:** pacote com fórmulas de produção, custos e batalha, coberto por testes. *Entrega: simulações de batalha no terminal.*
 3. **Cidade:** tabelas, atualização por tempo, construir, evoluir, alocar trabalhadores e a tela Cidade. *Entrega: cada um evolui sua cidade sozinho.*
-4. **Mapa e temporada:** gerador de regiões, territórios e fronteiras para até 6 jogadores, posição das cidades e a tela Mapa. *Entrega: todos veem o mesmo mapa.*
+4. **Mapa e temporada:** gerador de regiões, territórios e fronteiras para até 8 jogadores, posição das cidades e a tela Mapa. *Entrega: todos veem o mesmo mapa.*
 5. **Exército:** treinamento, tropas nos territórios e consumo de comida. *Entrega: exércitos prontos para sair.*
 6. **Ataques:** envio de marchas, job do pg\_cron, batalha, saque, conquista, proteções e relatórios. *Entrega: o primeiro ataque de verdade.*
 7. **Objetivos e fim de temporada:** sorteio do objetivo secreto, verificação de vitória, pontos e ranking. *Entrega: uma temporada completa.*

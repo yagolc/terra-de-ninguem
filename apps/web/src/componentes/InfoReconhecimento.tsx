@@ -43,7 +43,7 @@ export default function InfoReconhecimento({ reconhecimento, agora, nomeDono, ci
   const palicada = estrutura === 'palicada' && estruturaPronta;
   const heroi = reconhecimento.heroi;
   // Castelão visto pelo batedor: conta como se estivesse livre (pode estar ferido, mas é melhor sobrar tropa).
-  const bonusDefesa = heroi?.especialidade === 'castelao' ? bonusHeroi(heroi.nivel) : 0;
+  const bonusDefesa = heroi?.especialidade === 'castelao' ? bonusHeroi(heroi.nivel, 'castelao') : 0;
   const defesaRaca = bonusDefesaRaca(racaDono, terreno);
   const analise = analisarDefesa({ defensor: tropas, terreno, nivelMuralha: muralha, palicada, cidadeLivre, bonusDefesa: bonusDefesa + defesaRaca });
   // Da melhor opção para a pior.

@@ -1,4 +1,5 @@
 // Estruturas dos territórios: torre de vigia, paliçada e entreposto. Uma por território, pagas com comida e ouro.
+// A estrada fica à parte: um território pode ter uma estrada e uma estrutura.
 import { BALANCEAMENTO } from './balanceamento.ts';
 import { RECURSOS, type Recursos, type TipoEstrutura, type Verificacao } from './tipos.ts';
 import { MINUTO_MS } from './util.ts';
@@ -41,4 +42,41 @@ export function verificarEstrutura(entrada: {
   const custo = custoEstrutura(entrada.tipo);
   if (RECURSOS.some((r) => entrada.recursos[r] < custo[r])) return { ok: false, motivo: 'recursos_insuficientes' };
   return { ok: true, custo, prontoEm: entrada.agora + tempoEstruturaMs(entrada.tipo) };
+}
+
+export type MotivoRecusaEstrada = 'territorio_invalido' | 'ja_tem_estrada' | 'recursos_insuficientes';
+
+export function custoEstrada(): Recursos {
+  return { ...BALANCEAMENTO.estrada.custo };
+}
+
+export function tempoEstradaMs(): number {
+  return BALANCEAMENTO.estrada.tempoMin * MINUTO_MS;
+}
+
+/** A estrada está pronta (em obra ainda não acelera nada). */
+export function estradaPronta(estrada: { prontoEm: number } | null | undefined, agora: number): boolean {
+  return !!estrada && estrada.prontoEm <= agora;
+}
+
+/** Confere a obra da estrada: o território é do jogador, ainda não tem estrada (pronta ou em obra) e há recursos. */
+export function verificarEstrada(entrada: {
+  territorioDoJogador: boolean;
+  jaTemEstrada: boolean;
+  recursos: Recursos;
+  agora: number;
+}): Verificacao<{ custo: Recursos; prontoEm: number }, MotivoRecusaEstrada> {
+  if (!entrada.territorioDoJogador) return { ok: false, motivo: 'territorio_invalido' };
+  if (entrada.jaTemEstrada) return { ok: false, motivo: 'ja_tem_estrada' };
+  const custo = custoEstrada();
+  if (RECURSOS.some((r) => entrada.recursos[r] < custo[r])) return { ok: false, motivo: 'recursos_insuficientes' };
+  return { ok: true, custo, prontoEm: entrada.agora + tempoEstradaMs() };
+}
+
+/**
+ * Quanto mais rápido anda uma marcha de movimento: `estrada.multiplicadorVelocidade` se a saída e a chegada têm
+ * estrada pronta; 1 se falta estrada numa das pontas. Ataques não usam estrada.
+ */
+export function multiplicadorEstrada(origemComEstrada: boolean, destinoComEstrada: boolean): number {
+  return origemComEstrada && destinoComEstrada ? BALANCEAMENTO.estrada.multiplicadorVelocidade : 1;
 }

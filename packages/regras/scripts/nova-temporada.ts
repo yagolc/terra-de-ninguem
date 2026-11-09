@@ -40,8 +40,8 @@ const { values: opcoes } = parseArgs({
 
 const jogadores = consultar<Jogador>('select id, nome from public.jogadores order by criado_em');
 const quantos = opcoes.jogadores ? Number(opcoes.jogadores) : jogadores.length;
-if (quantos < 1 || quantos > 6) {
-  console.error(`Erro: o mapa é para 1 a 6 jogadores (há ${jogadores.length} cadastrados).`);
+if (quantos < 1 || quantos > BALANCEAMENTO.mapa.jogadoresMaximo) {
+  console.error(`Erro: o mapa é para 1 a ${BALANCEAMENTO.mapa.jogadoresMaximo} jogadores (há ${jogadores.length} cadastrados).`);
   process.exit(1);
 }
 const sementeBase = opcoes.semente ? Number(opcoes.semente) : Math.floor(Math.random() * 1_000_000);
@@ -54,7 +54,11 @@ const participantes = jogadores.slice(0, quantos);
 // ---------------------------------------------------------------------------
 const grafo = grafoDeFronteiras(mapa.fronteiras);
 console.log(`\nTerra de Ninguém: nova temporada (semente ${sementeBase} → mapa ${mapa.semente})\n`);
-console.log(`  ${mapa.territorios.length} territórios, ${mapa.fronteiras.length} fronteiras, ${mapa.regioes.length} regiões:`);
+console.log(
+  `  ${mapa.territorios.length} territórios, ${mapa.fronteiras.length} fronteiras, ` +
+    `${mapa.barreiras.filter((b) => b.tipo === 'rio').length} rios e ${mapa.barreiras.filter((b) => b.tipo === 'montanha').length} cordilheiras, ` +
+    `${mapa.regioes.length} regiões:`,
+);
 for (const r of mapa.regioes) {
   const n = mapa.territorios.filter((t) => t.regiao === r.indice).length;
   console.log(`    ${r.nome.padEnd(24)} ${String(n).padStart(2)} territórios (${NOMES_TERRENO[r.terreno]})`);
@@ -94,6 +98,19 @@ function previaSvg(m: MapaGerado): string {
     .filter((e) => e.donos.length === 1 || m.territorios[e.donos[0]!]!.regiao !== m.territorios[e.donos[1]!]!.regiao)
     .map((e) => `<line x1="${e.a[0] * escala}" y1="${e.a[1] * escala}" x2="${e.b[0] * escala}" y2="${e.b[1] * escala}"/>`)
     .join('');
+  // Rios (azul) e cordilheiras (cinza-escuro) por cima da borda das regiões, na aresta que os dois vizinhos dividem.
+  const barreiras = m.barreiras
+    .flatMap(({ a, b, tipo }) =>
+      [...arestas.values()]
+        .filter((e) => e.donos.length === 2 && e.donos.includes(a) && e.donos.includes(b))
+        .map(
+          (e) =>
+            `<line x1="${e.a[0] * escala}" y1="${e.a[1] * escala}" x2="${e.b[0] * escala}" y2="${e.b[1] * escala}" ` +
+            (tipo === 'rio' ? 'stroke="#3a7bd5" stroke-width="7"' : 'stroke="#2b2622" stroke-width="9"') +
+            ' stroke-linecap="round"/>',
+        ),
+    )
+    .join('');
 
   const corpo = m.territorios
     .map((t) => {
@@ -119,8 +136,8 @@ function previaSvg(m: MapaGerado): string {
 <style>text{font-family:Georgia,serif;text-anchor:middle;fill:#f1e6cf;paint-order:stroke;stroke:#1c1410;stroke-width:3px}
 .nome{font-size:11px}.tropas{font-size:10px;fill:#e8c475}.jogador{font-size:13px;font-weight:bold}</style>
 <rect x="-10" y="-10" width="${largura + 20}" height="${altura + 60}" fill="#1c1410"/>
-${corpo}<g stroke="#e8c475" stroke-width="3" stroke-linecap="round">${bordasRegiao}</g>
-<text x="${largura / 2}" y="${altura + 32}" style="font-size:14px">Semente ${m.semente} · planície (verde-claro), floresta (verde-escuro), montanha (cinza) · ⚔ = bárbaros · 🏘 vila · ⚖ cidade livre</text>
+${corpo}<g stroke="#e8c475" stroke-width="3" stroke-linecap="round">${bordasRegiao}</g>${barreiras}
+<text x="${largura / 2}" y="${altura + 32}" style="font-size:14px">Semente ${m.semente} · planície (verde-claro), floresta (verde-escuro), montanha (cinza) · ⚔ = bárbaros · 🏘 vila · ⚖ cidade livre · rio (azul) e cordilheira (preto): não dá para passar</text>
 </svg>`;
 }
 
@@ -156,6 +173,12 @@ const valoresFronteiras = mapa.fronteiras
   .map(([a, b]) => [idsTerritorios[a]!, idsTerritorios[b]!].sort())
   .map(([a, b]) => `(t, ${texto(a!)}, ${texto(b!)})`)
   .join(',\n    ');
+const valoresBarreiras = mapa.barreiras
+  .map(({ a, b, tipo }) => {
+    const [x, y] = [idsTerritorios[a]!, idsTerritorios[b]!].sort();
+    return `(t, ${texto(x!)}, ${texto(y!)}, ${texto(tipo)})`;
+  })
+  .join(',\n    ');
 // Bárbaros: uma linha de tropas sem dono em cada território neutro com guarnição.
 const valoresBarbaros = mapa.territorios
   .filter((t) => totalUnidades(t.guarnicao) > 0)
@@ -185,6 +208,7 @@ begin
     ${valoresTerritorios};
   insert into public.fronteiras (temporada_id, territorio_a, territorio_b) values
     ${valoresFronteiras};
+${valoresBarreiras ? `  insert into public.barreiras (temporada_id, territorio_a, territorio_b, tipo) values\n    ${valoresBarreiras};` : ''}
   insert into public.tropas (temporada_id, territorio_id, dono_id, lanceiro, arqueiro, cavalaria) values
     ${valoresBarbaros};
   insert into public.povoados (temporada_id, territorio_id, tipo) values

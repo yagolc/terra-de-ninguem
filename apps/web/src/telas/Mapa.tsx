@@ -5,6 +5,7 @@ import PainelAtaque from '../componentes/PainelAtaque';
 import PainelMovimento from '../componentes/PainelMovimento';
 import PainelTerritorio from '../componentes/PainelTerritorio';
 import CanvasMapa from '../mapa/CanvasMapa';
+import { resultadoDaHorda } from '../lib/hordas';
 import { COR_NEUTRA, corDoJogador, useMapa } from '../lib/useMapa';
 import { UNIDADES_INFO, formatarDuracao } from '../lib/textos';
 
@@ -51,6 +52,11 @@ export default function Mapa({ sessao }: { sessao: Session }) {
     agora,
   );
 
+  // Horda bárbara: a que vem (todos veem) ou, por 12 h, como terminou a última.
+  const horda = dados.hordas[0];
+  const recente = horda && (horda.aCaminho || agora - horda.chegadaEm < 12 * 60 * 60 * 1000) ? horda : null;
+  const nomeJogador = (id: string | null) => (id === meuId ? 'Você' : id ? (dados.jogadores.get(id)?.nome ?? 'Alguém') : 'ninguém');
+
   function selecionar(id: string | null) {
     setSelecionado(id);
     setModo('detalhe');
@@ -70,6 +76,27 @@ export default function Mapa({ sessao }: { sessao: Session }) {
             ⚖️ {monopolio.donoId === meuId ? 'Você tem' : `${dados.jogadores.get(monopolio.donoId)?.nome ?? 'Alguém'} tem`} todas as cidades
             livres: vence em{' '}
             <span className="tabular-nums">{monopolio.venceEm > agora ? formatarDuracao(monopolio.venceEm - agora) : 'instantes'}</span>
+          </p>
+        )}
+        {recente && (
+          <p
+            role="status"
+            className={`rounded-lg border px-3 py-1.5 text-xs font-semibold backdrop-blur ${recente.aCaminho ? 'border-[#9b1b30] bg-[#9b1b30]/85 text-pergaminho' : 'border-couro bg-noite/85 text-pergaminho'}`}
+          >
+            ☠️{' '}
+            {recente.aCaminho ? (
+              <>
+                Horda bárbara ({totalUnidades(recente.tropas)} soldados) a caminho de {nomeDe(recente.territorioId)}
+                {(() => {
+                  const dono = dados.territorios.find((t) => t.id === recente.territorioId)?.dono_id ?? null;
+                  return dono === meuId ? ' (seu)' : dono ? `, de ${nomeJogador(dono)}` : '';
+                })()}
+                : chega em{' '}
+                <span className="tabular-nums">{recente.chegadaEm > agora ? formatarDuracao(recente.chegadaEm - agora) : 'instantes'}</span>
+              </>
+            ) : (
+              resultadoDaHorda(recente, nomeJogador(recente.defensorId), nomeDe(recente.territorioId))
+            )}
           </p>
         )}
         <div className="pointer-events-auto flex flex-wrap gap-2 md:hidden">

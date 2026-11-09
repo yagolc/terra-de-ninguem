@@ -4,9 +4,11 @@ import {
   bonusHeroi,
   duracaoMarchaMs,
   efeitosRaca,
+  estradaPronta,
   exercito,
   ligadosPorTerritoriosProprios,
   mapearExercito,
+  multiplicadorEstrada,
   totalUnidades,
   verificarMovimento,
   type Exercito,
@@ -58,8 +60,11 @@ export default function PainelMovimento({ dados, origemId, meuId, agora, onVolta
   const comHeroi = levarHeroi && heroi?.territorioId === origemId;
   // Raça (o anão anda mais devagar) mais o herói desbravador.
   const bonusVelocidade =
-    efeitosRaca(dados.racas.get(meuId)).velocidade + (comHeroi && heroi.especialidade === 'desbravador' ? bonusHeroi(heroi.nivel) : 0);
-  const duracao = destino && totalUnidades(enviar) > 0 ? duracaoMarchaMs(origem, destino, enviar, bonusVelocidade) : null;
+    efeitosRaca(dados.racas.get(meuId)).velocidade + (comHeroi && heroi.especialidade === 'desbravador' ? bonusHeroi(heroi.nivel, 'desbravador') : 0);
+  // Estrada pronta na saída e na chegada: o reforço anda mais rápido.
+  const pelaEstrada = multiplicadorEstrada(estradaPronta(dados.estradas.get(origemId), agora), estradaPronta(dados.estradas.get(destinoId), agora));
+  const duracao =
+    destino && totalUnidades(enviar) > 0 ? duracaoMarchaMs(origem, destino, enviar, bonusVelocidade, pelaEstrada) : null;
 
   async function confirmar() {
     setEnviando(true);
@@ -157,7 +162,8 @@ export default function PainelMovimento({ dados, origemId, meuId, agora, onVolta
 
           {duracao !== null && (
             <p className="rounded-lg bg-noite/60 px-3 py-2 text-sm">
-              ⏱ {formatarDuracao(duracao)} de caminhada · chegam {horario.format(new Date(agora + duracao))}
+              ⏱ {formatarDuracao(duracao)} de caminhada{pelaEstrada > 1 && ` pela estrada (${pelaEstrada}× mais rápido)`} · chegam{' '}
+              {horario.format(new Date(agora + duracao))}
             </p>
           )}
           {!verificacao.ok && verificacao.motivo !== 'sem_tropas' && (

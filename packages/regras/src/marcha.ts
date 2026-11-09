@@ -15,14 +15,15 @@ export function velocidadeExercito(tropas: Exercito): number | null {
 
 /**
  * Duração da marcha em ms (arredondada ao segundo), com um mínimo para todo ataque dar tempo de reação.
- * @param bonusVelocidade herói desbravador na marcha (0,2 = 20% mais rápida).
+ * @param bonusVelocidade herói desbravador e raça (0,2 = 20% mais rápida).
+ * @param multiplicadorVelocidade estrada nas duas pontas de um movimento (2 = o dobro da velocidade).
  */
-export function duracaoMarchaMs(origem: Ponto, destino: Ponto, tropas: Exercito, bonusVelocidade = 0): number {
+export function duracaoMarchaMs(origem: Ponto, destino: Ponto, tropas: Exercito, bonusVelocidade = 0, multiplicadorVelocidade = 1): number {
   const velocidade = velocidadeExercito(tropas);
   if (velocidade === null) throw new RangeError('Uma marcha precisa de pelo menos uma unidade.');
 
   const ms = Math.max(
-    (distancia(origem, destino) / (velocidade * (1 + bonusVelocidade))) * HORA_MS,
+    (distancia(origem, destino) / (velocidade * (1 + bonusVelocidade) * multiplicadorVelocidade)) * HORA_MS,
     BALANCEAMENTO.marcha.duracaoMinimaMin * MINUTO_MS,
   );
   return Math.round(ms / 1000) * 1000;

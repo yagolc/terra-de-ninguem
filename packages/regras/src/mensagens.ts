@@ -1,6 +1,8 @@
 // Textos para o jogador de cada motivo de recusa. Servidor e interface usam os mesmos.
 import type { MotivoRecusaAtaque, MotivoRecusaMovimento } from './ataques.ts';
-import type { MotivoRecusaEstrutura } from './estruturas.ts';
+import type { MotivoRecusaCancelamento } from './cancelamento.ts';
+import type { MotivoRecusaEstrada, MotivoRecusaEstrutura } from './estruturas.ts';
+import type { MotivoRecusaMissao } from './missoes.ts';
 import type { MotivoRecusaRecrutamento, MotivoRecusaTreinoHeroi } from './herois.ts';
 import type { MotivoRecusaVila } from './povoados.ts';
 import type { MotivoRecusaEvolucao } from './predios.ts';
@@ -60,6 +62,22 @@ export const MENSAGENS_ESTRUTURA: Record<MotivoRecusaEstrutura, string> = {
   territorio_invalido: 'Só dá para construir em territórios seus.',
   ja_tem_estrutura: 'Esse território já tem uma estrutura. É uma por território.',
   recursos_insuficientes: 'Recursos insuficientes.',
+};
+
+export const MENSAGENS_ESTRADA: Record<MotivoRecusaEstrada, string> = {
+  territorio_invalido: 'Só dá para fazer estrada em territórios seus.',
+  ja_tem_estrada: 'Esse território já tem estrada.',
+  recursos_insuficientes: 'Recursos insuficientes.',
+};
+
+export const MENSAGENS_MISSAO: Record<MotivoRecusaMissao, string> = {
+  missao_desconhecida: 'Missão desconhecida.',
+  ja_resgatada: 'Essa recompensa já foi pega.',
+  nao_cumprida: 'Essa missão ainda não foi cumprida.',
+};
+
+export const MENSAGENS_CANCELAMENTO: Record<MotivoRecusaCancelamento, string> = {
+  item_invalido: 'Esse item não está mais na fila. Talvez já tenha terminado.',
 };
 
 export const MENSAGENS_VILA: Record<MotivoRecusaVila, string> = {

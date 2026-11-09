@@ -9,6 +9,7 @@ import {
   custoTreinoHeroi,
   limitePopulacao,
   protecaoArmazem,
+  quantasCidadesLivres,
 } from '@terra/regras';
 import type { ReactNode } from 'react';
 import { CRONICAS } from '../lib/cronicas';
@@ -192,6 +193,12 @@ export default function Regras() {
           mande um batedor. A torre não mostra de que tipo são os soldados: para isso, também é preciso um batedor. Quando ela avista alguém, a aba Mapa
           ganha um aviso ⚠️ vermelho.
         </p>
+        <p>
+          🛤️ <b>Estrada</b> ({custo(B.estrada.custo)}, {B.estrada.tempoMin} min): fica à parte, então um território pode ter uma estrada e
+          uma estrutura. Tropas que você <b>move entre dois territórios seus com estrada pronta</b> andam{' '}
+          <b>{B.estrada.multiplicadorVelocidade}× mais rápido</b>, para reforçar antes de um ataque chegar. Ataques não usam estrada.
+          Estradas não são secretas: todos as veem no mapa. Também são destruídas na conquista.
+        </p>
       </Secao>
 
       <Secao icone="🧝" titulo="Raças">
@@ -232,13 +239,14 @@ export default function Regras() {
         <ul className="space-y-1">
           {TIPOS_ESPECIALIDADE.map((e) => (
             <li key={e}>
-              {ESPECIALIDADES_INFO[e].icone} <b>{ESPECIALIDADES_INFO[e].nome}:</b> {ESPECIALIDADES_INFO[e].descricao}
+              {ESPECIALIDADES_INFO[e].icone} <b>{ESPECIALIDADES_INFO[e].nome}:</b> {ESPECIALIDADES_INFO[e].descricao} +
+              {pct(B.herois.bonusPorNivel[e])} por nível, até {pct(B.herois.bonusPorNivel[e] * B.herois.nivelMaximo)}.
             </li>
           ))}
         </ul>
         <p>
-          O bônus é de <b>{pct(B.herois.bonusPorNivel)} por nível</b>, até {pct(B.herois.bonusPorNivel * B.herois.nivelMaximo)} no nível{' '}
-          {B.herois.nivelMaximo}. Para subir, ele treina na cidade pagando ouro (do nível 2 por {num(custoTreinoHeroi(2).ouro)} 🪙 ao nível{' '}
+          O intendente rende sempre, mesmo parado na cidade; os outros só ajudam na marcha ou no território e arriscam ferimento, por
+          isso dão mais por nível. Para subir até o nível {B.herois.nivelMaximo}, ele treina na cidade pagando ouro (do nível 2 por {num(custoTreinoHeroi(2).ouro)} 🪙 ao nível{' '}
           {B.herois.nivelMaximo} por {num(custoTreinoHeroi(B.herois.nivelMaximo).ouro)} 🪙); enquanto treina, fica ocupado.
         </p>
         <p>
@@ -261,13 +269,27 @@ export default function Regras() {
           parte do que foi investido.
         </p>
         <p>
-          ⚖️ <b>Cidade livre.</b> Há {B.povoados.cidadesLivres} no meio do mapa, com guarda forte e muralha própria (+
+          ⚖️ <b>Cidade livre.</b> Há {quantasCidadesLivres(6)} no meio do mapa ({quantasCidadesLivres(8)} com 7 ou 8 jogadores), com guarda forte e muralha própria (+
           {pct(B.povoados.cidadeLivre.bonusDefesa)} de defesa, que depois protege o dono também). Dá{' '}
           <b>+{B.povoados.cidadeLivre.ouroHora} de ouro por hora</b>. Na primeira conquista, {B.povoados.cidadeLivre.milicia}{' '}
           lanceiros de milícia passam a defendê-la para quem conquistou: não ocupam população, não comem e não marcham, e se dispersam
           se a cidade for tomada. Quem tiver todas por {B.objetivos.monopolioHoras} h seguidas faz o{' '}
           <b>monopólio comercial e vence a temporada</b>. Vale para todos, e o relógio aparece no mapa para todo mundo: tome uma
           delas e ele zera.
+        </p>
+      </Secao>
+
+      <Secao icone="☠️" titulo="Hordas bárbaras">
+        <p>
+          Depois da proteção de iniciante, a cada {B.hordas.intervaloHoras} h uma <b>horda bárbara</b> sai da borda do mapa contra um
+          território (a cidade também pode ser o alvo) de um dos {B.hordas.primeirosDoPlacar} primeiros do placar. Todos a veem chegando{' '}
+          <b>{B.hordas.avisoHoras} h antes</b>, com a seta no mapa e o aviso no alto: dá tempo de mandar reforço ou pedir ajuda.
+        </p>
+        <p>
+          A primeira tem uns {B.hordas.unidadesBase} soldados e cada nova vem com {B.hordas.unidadesPorHorda} a mais. Quem defende ganha ouro (
+          {B.hordas.ouroBase} na primeira, {B.hordas.ouroPorHorda} a mais a cada horda). Se a horda vencer na <b>cidade</b>, saqueia e vai
+          embora; num <b>território comum</b>, com força para conquistar, ele vira neutro, com os bárbaros de guarda, e qualquer um pode
+          tomá-lo.
         </p>
       </Secao>
 

@@ -98,9 +98,13 @@ describe('treino', () => {
 });
 
 describe('disponibilidade e bônus', () => {
-  it('+2% por nível, até +20%', () => {
-    expect(bonusHeroi(1)).toBeCloseTo(0.02);
-    expect(bonusHeroi(H.nivelMaximo)).toBeCloseTo(0.2);
+  it('intendente +2% por nível (até +20%); os de guerra valem mais, porque só ajudam em batalha e arriscam ferimento', () => {
+    expect(bonusHeroi(1, 'intendente')).toBeCloseTo(0.02);
+    expect(bonusHeroi(H.nivelMaximo, 'intendente')).toBeCloseTo(0.2);
+    expect(bonusHeroi(H.nivelMaximo, 'comandante')).toBeCloseTo(0.3);
+    for (const e of ['comandante', 'castelao', 'desbravador', 'saqueador'] as const) {
+      expect(bonusHeroi(1, e)).toBeGreaterThan(bonusHeroi(1, 'intendente'));
+    }
   });
 
   it('em treino, ferido ou marchando não está disponível nem dá bônus', () => {
@@ -110,7 +114,7 @@ describe('disponibilidade e bônus', () => {
     expect(heroiDisponivel(heroi({ territorioId: null, marchaId: 'm' }), AGORA)).toBe(false);
     expect(bonusSeDisponivel(heroi({ feridoAte: AGORA + 1 }), 'comandante', AGORA)).toBe(0);
     expect(bonusSeDisponivel(heroi(), 'castelao', AGORA)).toBe(0);
-    expect(bonusSeDisponivel(heroi(), 'comandante', AGORA)).toBeCloseTo(bonusHeroi(5));
+    expect(bonusSeDisponivel(heroi(), 'comandante', AGORA)).toBeCloseTo(bonusHeroi(5, 'comandante'));
   });
 
   it('comandante e castelão mudam a força da batalha', () => {
@@ -133,7 +137,7 @@ describe('disponibilidade e bônus', () => {
 
   it('intendente: na cidade, tudo e crescimento; noutro território, o dobro num recurso só', () => {
     const recursoDoTerritorio = new Map([['floresta', 'madeira' as const]]);
-    const b = bonusHeroi(10);
+    const b = bonusHeroi(10, 'intendente');
     const naCidade = bonusIntendente({ heroi: heroi({ especialidade: 'intendente', nivel: 10 }), cidadeTerritorioId: 'cidade', recursoDoTerritorio, agora: AGORA });
     expect(naCidade.bonusTerritorios).toEqual(recursos({ comida: b, madeira: b, ouro: b }));
     expect(naCidade.bonusCrescimento).toBeCloseTo(b);

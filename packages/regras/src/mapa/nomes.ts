@@ -8,6 +8,10 @@ export const NOMES_TERRITORIOS = [
   'Moinho Velho', 'Fosso dos Ossos', 'Outeiro Verde', 'Baía Cinzenta', 'Pinhal Escuro', 'Cerro das Águias',
   'Ruínas de Ferro', 'Lameiro Fundo', 'Sertão Seco', 'Atalaia do Norte', 'Poço dos Desejos', 'Ribeira Mansa',
   'Bastião Ermo', 'Gruta do Eco', 'Trilha do Peregrino', 'Coroa de Pedra', 'Cabo da Tormenta', 'Vale do Silêncio',
+  'Passo da Neblina', 'Lago dos Juncos', 'Quebrada do Vento', 'Mosteiro em Ruínas', 'Campo do Martelo', 'Vale das Bigornas',
+  'Rochedo do Corvo', 'Pântano Velho', 'Toca da Raposa', 'Planície do Trigo', 'Serra Partida', 'Bosque do Eremita',
+  'Charco das Rãs', 'Muralha Caída', 'Ladeira do Sino', 'Vau dos Mortos', 'Campo de Cardos', 'Fonte da Lua',
+  'Picos Gelados', 'Feitoria Velha', 'Mata dos Lobos', 'Barranco Fundo', 'Colina das Ovelhas', 'Ponte de Pedra',
 ] as const;
 
 export const NOMES_REGIOES = {

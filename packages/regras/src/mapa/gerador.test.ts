@@ -2,11 +2,20 @@ import { describe, expect, it } from 'vitest';
 import { BALANCEAMENTO } from '../balanceamento.ts';
 import { BONUS_DO_TERRENO, distanciasNoGrafo, grafoDeFronteiras } from '../territorios.ts';
 import { totalUnidades } from '../util.ts';
-import { avaliarMapa, escolherMelhorMapa, gerarMapa, totalDeTerritorios, type MapaGerado } from './gerador.ts';
+import { quantasCidadesLivres } from '../povoados.ts';
+import {
+  avaliarMapa,
+  escolherMelhorMapa,
+  gerarMapa,
+  tamanhoDoMapa,
+  territoriosNaBorda,
+  totalDeTerritorios,
+  type MapaGerado,
+} from './gerador.ts';
 
-// 200 mapas: 40 sementes para cada quantidade de jogadores de 2 a 6.
+// 280 mapas: 40 sementes para cada quantidade de jogadores de 2 a 8.
 const MAPAS: MapaGerado[] = [];
-for (let jogadores = 2; jogadores <= 6; jogadores++) {
+for (let jogadores = 2; jogadores <= BALANCEAMENTO.mapa.jogadoresMaximo; jogadores++) {
   for (let s = 1; s <= 40; s++) MAPAS.push(gerarMapa({ semente: s * 104729 + jogadores, jogadores }));
 }
 
@@ -16,13 +25,22 @@ describe('gerarMapa', () => {
     expect(gerarMapa({ semente: 99, jogadores: 4 })).not.toEqual(gerarMapa({ semente: 100, jogadores: 4 }));
   });
 
-  it('tem 4 territórios por jogador mais 6 e de 5 a 6 regiões (24 a 30 com 6 jogadores)', () => {
+  it('tem 6 territórios por jogador mais 6 e de 5 a 6 regiões (42 com 6 jogadores, 54 com 8)', () => {
     for (const mapa of MAPAS) {
       const jogadores = mapa.iniciais.length;
       expect(mapa.territorios).toHaveLength(totalDeTerritorios(jogadores));
       expect(mapa.regioes.length).toBe(mapa.territorios.length >= BALANCEAMENTO.mapa.territoriosPara6Regioes ? 6 : 5);
     }
-    expect(totalDeTerritorios(6)).toBe(30);
+    expect(totalDeTerritorios(6)).toBe(42);
+    expect(totalDeTerritorios(8)).toBe(54);
+  });
+
+  it('o mapa cresce com os territórios, e cada território fica do mesmo tamanho', () => {
+    expect(tamanhoDoMapa(30)).toEqual({ largura: 60, altura: 40 });
+    expect(tamanhoDoMapa(20)).toEqual({ largura: 60, altura: 40 });
+    const grande = tamanhoDoMapa(totalDeTerritorios(8));
+    expect((grande.largura * grande.altura) / 54).toBeCloseTo((60 * 40) / 30, 0);
+    for (const mapa of MAPAS) expect({ largura: mapa.largura, altura: mapa.altura }).toEqual(tamanhoDoMapa(mapa.territorios.length));
   });
 
   it('o mapa é todo conectado e as fronteiras não se repetem', () => {
@@ -88,8 +106,8 @@ describe('gerarMapa', () => {
       const grafo = grafoDeFronteiras(m.fronteiras);
       const livres = m.povoados.filter((p) => p.tipo === 'cidade_livre').map((p) => p.indice);
       const vilas = m.povoados.filter((p) => p.tipo === 'vila').map((p) => p.indice);
-      expect(livres.length).toBeGreaterThan(0);
-      expect(livres.length).toBeLessThanOrEqual(BALANCEAMENTO.povoados.cidadesLivres);
+      // Um mapa cru pode ter menos cidades livres (ou nenhuma); escolherMelhorMapa fica com um que tem todas.
+      expect(livres.length).toBeLessThanOrEqual(quantasCidadesLivres(m.iniciais.length));
       expect(vilas.length).toBeGreaterThan(0);
       expect(new Set(m.povoados.map((p) => p.indice)).size).toBe(m.povoados.length);
       for (const p of m.povoados) expect(m.iniciais).not.toContain(p.indice);
@@ -100,8 +118,35 @@ describe('gerarMapa', () => {
     }
   });
 
-  it('recusa quantidade de jogadores fora de 1 a 6', () => {
-    expect(() => gerarMapa({ semente: 1, jogadores: 7 })).toThrow(RangeError);
+  it('rios e cordilheiras: só entre regiões, nunca fronteira, sem deixar território com menos de 2 vizinhos', () => {
+    for (const mapa of MAPAS) {
+      const passagens = new Set(mapa.fronteiras.map(([a, b]) => `${a}-${b}`));
+      const vizinhos = new Map<number, number>();
+      for (const [a, b] of mapa.fronteiras) {
+        vizinhos.set(a, (vizinhos.get(a) ?? 0) + 1);
+        vizinhos.set(b, (vizinhos.get(b) ?? 0) + 1);
+      }
+      for (const { a, b, tipo } of mapa.barreiras) {
+        expect(a).toBeLessThan(b);
+        expect(passagens.has(`${a}-${b}`)).toBe(false);
+        expect(mapa.territorios[a]!.regiao).not.toBe(mapa.territorios[b]!.regiao);
+        const montanha = mapa.territorios[a]!.terreno === 'montanha' || mapa.territorios[b]!.terreno === 'montanha';
+        expect(tipo).toBe(montanha ? 'montanha' : 'rio');
+      }
+      for (const t of mapa.territorios) expect(vizinhos.get(t.indice) ?? 0).toBeGreaterThanOrEqual(BALANCEAMENTO.mapa.barreiras.vizinhosMinimos);
+    }
+    expect(MAPAS.some((m) => m.barreiras.length > 0)).toBe(true);
+  });
+
+  it('as cidades iniciais encostam na borda do mapa', () => {
+    for (const mapa of MAPAS) {
+      const borda = territoriosNaBorda(mapa.territorios.map((t) => t.poligono), mapa.largura, mapa.altura);
+      for (const i of mapa.iniciais) expect(borda.has(i)).toBe(true);
+    }
+  });
+
+  it('recusa quantidade de jogadores fora de 1 a 8', () => {
+    expect(() => gerarMapa({ semente: 1, jogadores: 9 })).toThrow(RangeError);
     expect(() => gerarMapa({ semente: 1, jogadores: 0 })).toThrow(RangeError);
   });
 });
@@ -118,10 +163,15 @@ describe('escolherMelhorMapa', () => {
     }
   });
 
-  it('o mapa escolhido para a temporada tem todas as cidades livres', () => {
-    for (const sementeBase of [1, 2026, 555, 9999]) {
-      const { mapa } = escolherMelhorMapa({ sementeBase, jogadores: 6 });
-      expect(mapa.povoados.filter((p) => p.tipo === 'cidade_livre')).toHaveLength(BALANCEAMENTO.povoados.cidadesLivres);
+  it('o mapa escolhido para a temporada tem todas as cidades livres (3 com 6 jogadores, 4 com 8)', () => {
+    expect(quantasCidadesLivres(6)).toBe(3);
+    expect(quantasCidadesLivres(7)).toBe(4);
+    expect(quantasCidadesLivres(8)).toBe(4);
+    for (const jogadores of [6, 8]) {
+      for (const sementeBase of [1, 2026, 555, 9999]) {
+        const { mapa } = escolherMelhorMapa({ sementeBase, jogadores });
+        expect(mapa.povoados.filter((p) => p.tipo === 'cidade_livre')).toHaveLength(quantasCidadesLivres(jogadores));
+      }
     }
   });
 });

@@ -2,6 +2,7 @@ import type { Session } from '@supabase/supabase-js';
 import { useState } from 'react';
 import DetalheRelatorio from '../componentes/DetalheRelatorio';
 import InfoReconhecimento from '../componentes/InfoReconhecimento';
+import { resultadoDaHorda } from '../lib/hordas';
 import { useRelatorios, type Relatorio } from '../lib/useRelatorios';
 
 const quando = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -15,11 +16,13 @@ export default function Relatorios({ sessao }: { sessao: Session }) {
   if (erro) return <p className="p-6 text-center text-pergaminho-escuro">{erro}</p>;
   if (!estado) return <p className="p-6 text-center text-pergaminho-escuro">Buscando os relatórios…</p>;
 
-  const { relatorios, nomesTerritorios, nomesJogadores, reconhecimentos } = estado;
-  // Batalhas e batedores numa lista só, do mais recente para o mais antigo.
+  const { relatorios, nomesTerritorios, nomesJogadores, reconhecimentos, hordas, devolvidas } = estado;
+  // Batalhas, batedores e hordas bárbaras contra o jogador numa lista só, do mais recente para o mais antigo.
   const itens = [
     ...relatorios.map((r) => ({ tipo: 'batalha' as const, quando: Date.parse(r.criado_em), r })),
     ...reconhecimentos.map((rec) => ({ tipo: 'batedor' as const, quando: rec.disponivelEm, rec })),
+    ...hordas.filter((h) => h.defensorId === meuId).map((h) => ({ tipo: 'horda' as const, quando: h.chegadaEm, h })),
+    ...devolvidas.map((d) => ({ tipo: 'devolvida' as const, quando: d.criadoEm, d })),
   ].sort((a, b) => b.quando - a.quando);
   const nomeTerritorio = (id: string) => nomesTerritorios.get(id) ?? 'território desconhecido';
   const nomeDefensor = (r: Relatorio) => (r.defensor_id ? (nomesJogadores.get(r.defensor_id) ?? 'Defensor') : 'Bárbaros');
@@ -34,6 +37,56 @@ export default function Relatorios({ sessao }: { sessao: Session }) {
       ) : (
         <ul className="space-y-2">
           {itens.map((item) => {
+            if (item.tipo === 'devolvida') {
+              const { d } = item;
+              const novoDono = d.novoDonoId ? (nomesJogadores.get(d.novoDonoId) ?? 'outro jogador') : 'outro jogador';
+              const total = d.tropas.lanceiro + d.tropas.arqueiro + d.tropas.cavalaria;
+              return (
+                <li key={`devolvida-${d.id}`} className={`rounded-xl border bg-carvao/90 p-4 ${d.lido ? 'border-couro' : 'border-ouro/60'}`}>
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl leading-none" aria-hidden>
+                      ↩️
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-semibold">
+                        Tropas voltaram de {nomeTerritorio(d.territorioId)} sem lutar
+                        {!d.lido && <span className="ml-2 rounded bg-ouro px-1.5 py-0.5 text-[10px] font-bold text-noite">NOVO</span>}
+                      </span>
+                      <span className="block text-sm text-pergaminho-escuro">
+                        Enquanto marchavam, o território virou de {novoDono}, e na proteção de iniciante ninguém ataca jogadores. Os{' '}
+                        {total} soldados voltam para {nomeTerritorio(d.origemId)}.
+                      </span>
+                      <span className="block text-xs text-pergaminho-escuro">{quando.format(new Date(d.criadoEm))}</span>
+                    </span>
+                  </div>
+                </li>
+              );
+            }
+            if (item.tipo === 'horda') {
+              const { h } = item;
+              const venci = h.vencedor === 'defensor';
+              return (
+                <li key={`horda-${h.id}`} className="rounded-xl border border-[#9b1b30]/70 bg-carvao/90 p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl leading-none" aria-hidden>
+                      ☠️
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-semibold">Horda bárbara em {nomeTerritorio(h.territorioId)}</span>
+                      <span className={`block text-sm ${venci ? 'text-[#9fd39a]' : 'text-red-300'}`}>
+                        {resultadoDaHorda(h, 'Você', nomeTerritorio(h.territorioId))}
+                      </span>
+                      <span className="block text-xs text-pergaminho-escuro">
+                        {quando.format(new Date(h.chegadaEm))} · {h.tropas.lanceiro + h.tropas.arqueiro + h.tropas.cavalaria} bárbaros
+                        {h.resultado?.saque &&
+                          h.resultado.saque.comida + h.resultado.saque.madeira + h.resultado.saque.ouro > 0 &&
+                          ` · levaram ${h.resultado.saque.comida} 🌾 ${h.resultado.saque.madeira} 🪵 ${h.resultado.saque.ouro} 🪙`}
+                      </span>
+                    </span>
+                  </div>
+                </li>
+              );
+            }
             if (item.tipo === 'batedor') {
               const { rec } = item;
               const chave = `batedor-${rec.territorioId}-${rec.observadoEm}`;

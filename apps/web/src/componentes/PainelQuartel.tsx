@@ -1,6 +1,7 @@
 import {
   BALANCEAMENTO,
   MENSAGENS_TREINO,
+  cancelarTreino,
   RECURSOS,
   TIPOS_UNIDADE,
   consumoComidaHora,
@@ -17,7 +18,8 @@ import {
 import { useState } from 'react';
 import { imagemDoTreino } from '../lib/arte';
 import Ilustracao from './Ilustracao';
-import { RECURSOS_INFO, UNIDADES_INFO, formatarDuracao, formatarNumero, formatarTaxa } from '../lib/textos';
+import { RECURSOS_INFO, UNIDADES_INFO, formatarDuracao, formatarNumero, formatarTaxa, listarRecursos } from '../lib/textos';
+import JanelaConfirmacao from './JanelaConfirmacao';
 
 type Props = {
   cidade: EstadoCidade;
@@ -28,6 +30,8 @@ type Props = {
   agora: number;
   ocupado: boolean;
   onTreinar: (tipo: TipoUnidade, quantidade: number) => void;
+  /** Cancela o lote que termina em `prontoEm` (depois da confirmação). */
+  onCancelar: (prontoEm: number) => void;
 };
 
 /** Quanto dá para treinar agora, limitado por recursos e habitantes livres. */
@@ -38,9 +42,11 @@ function maximoTreinavel(cidade: EstadoCidade, tipo: TipoUnidade, soldados: numb
 }
 
 /** Exército do jogador e treino de tropas no quartel. */
-export default function PainelQuartel({ cidade, tropas, emMarcha, fila, soldados, agora, ocupado, onTreinar }: Props) {
+export default function PainelQuartel({ cidade, tropas, emMarcha, fila, soldados, agora, ocupado, onTreinar, onCancelar }: Props) {
   const [tipo, setTipo] = useState<TipoUnidade>('lanceiro');
   const [quantidade, setQuantidade] = useState(1);
+  // Posição na fila do lote que o jogador quer cancelar (abre a confirmação).
+  const [aCancelar, setACancelar] = useState<number | null>(null);
 
   if (cidade.predios.quartel < 1) {
     return (
@@ -170,16 +176,47 @@ export default function PainelQuartel({ cidade, tropas, emMarcha, fila, soldados
           </h3>
           <ol className="mt-1.5 space-y-1 text-sm">
             {fila.map((lote, i) => (
-              <li key={`${lote.prontoEm}-${i}`} className="flex justify-between rounded-md bg-noite/60 px-2.5 py-1.5">
-                <span>
+              <li key={`${lote.prontoEm}-${i}`} className="flex items-center gap-2 rounded-md bg-noite/60 px-2.5 py-1.5">
+                <span className="flex-1">
                   {UNIDADES_INFO[lote.tipo].icone} {lote.quantidade} {UNIDADES_INFO[lote.tipo].plural.toLowerCase()}
                 </span>
                 <span className="tabular-nums text-pergaminho-escuro">{formatarDuracao(lote.prontoEm - agora)}</span>
+                <button
+                  onClick={() => setACancelar(i)}
+                  disabled={ocupado}
+                  aria-label={`Cancelar treino de ${lote.quantidade} ${UNIDADES_INFO[lote.tipo].plural.toLowerCase()}`}
+                  title="Cancelar"
+                  className="-my-0.5 shrink-0 rounded-md px-1.5 py-0.5 text-pergaminho-escuro hover:bg-sangue/40 hover:text-pergaminho disabled:opacity-40"
+                >
+                  ✕
+                </button>
               </li>
             ))}
           </ol>
         </>
       )}
+      {aCancelar !== null && fila[aCancelar] && (() => {
+        const lote = fila[aCancelar]!;
+        const previa = cancelarTreino({ fila, indice: aCancelar, agora });
+        return (
+          <JanelaConfirmacao
+            titulo="Cancelar treino?"
+            confirmar="Cancelar treino"
+            onConfirmar={() => onCancelar(lote.prontoEm)}
+            onFechar={() => setACancelar(null)}
+          >
+            <p>
+              {lote.quantidade} {(lote.quantidade === 1 ? UNIDADES_INFO[lote.tipo].nome : UNIDADES_INFO[lote.tipo].plural).toLowerCase()} saem da
+              fila e os habitantes voltam a ficar livres.
+            </p>
+            {previa.ok && (
+              <p>
+                Volta tudo o que foi pago: <span className="tabular-nums">{listarRecursos(previa.devolver)}</span>.
+              </p>
+            )}
+          </JanelaConfirmacao>
+        );
+      })()}
     </section>
   );
 }

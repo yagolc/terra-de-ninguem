@@ -370,6 +370,14 @@ export async function salvarCidade(tx: Transacao, c: CidadeAvancada): Promise<vo
   const lotesProntos = c.carregada.fila.filter((l) => !restantes.has(l.id)).map((l) => l.id);
   if (obrasProntas.length > 0) await tx`delete from obras where id = any(${obrasProntas}::uuid[])`;
   if (lotesProntos.length > 0) await tx`delete from filas_treino where id = any(${lotesProntos}::uuid[])`;
+  // Um cancelamento adianta o resto da fila: grava os horários que mudaram.
+  const prontoAntes = new Map([...c.carregada.obras, ...c.carregada.fila].map((i) => [i.id, i.prontoEm]));
+  for (const o of c.obras) {
+    if (prontoAntes.get(o.id) !== o.prontoEm) await tx`update obras set pronto_em = ${new Date(o.prontoEm)} where id = ${o.id}`;
+  }
+  for (const l of c.fila) {
+    if (prontoAntes.get(l.id) !== l.prontoEm) await tx`update filas_treino set pronto_em = ${new Date(l.prontoEm)} where id = ${l.id}`;
+  }
   if (c.novaObra) {
     await tx`insert into obras (cidade_id, tipo, pronto_em) values (${id}, ${c.novaObra.tipo}, ${new Date(c.novaObra.prontoEm)})`;
   }

@@ -31,7 +31,7 @@ export default function OpcaoHeroi({ heroi, origemId, agora, marcado, onMudar }:
       <span>
         🎖️ Levar {heroi.nome}
         <span className="block text-xs text-pergaminho-escuro">
-          {info.icone} {info.nome} nível {heroi.nivel}: +{Math.round(bonusHeroi(heroi.nivel) * 100)}%. {info.descricao} Se a batalha for
+          {info.icone} {info.nome} nível {heroi.nivel}: +{Math.round(bonusHeroi(heroi.nivel, heroi.especialidade) * 100)}%. {info.descricao} Se a batalha for
           perdida, ele volta ferido para a cidade.
         </span>
       </span>

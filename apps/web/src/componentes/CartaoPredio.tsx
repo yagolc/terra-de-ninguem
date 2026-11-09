@@ -2,6 +2,7 @@ import {
   BALANCEAMENTO,
   MENSAGENS_EVOLUCAO,
   RECURSOS,
+  cancelarObra,
   capacidadeArmazem,
   custoEvolucao,
   limitePopulacao,
@@ -18,8 +19,10 @@ import {
   type Recursos,
   type TipoPredio,
 } from '@terra/regras';
+import { useState } from 'react';
 import { imagemDoPredio } from '../lib/arte';
-import { PREDIOS, RECURSOS_INFO, formatarDuracao, formatarNumero, formatarTaxa } from '../lib/textos';
+import { PREDIOS, RECURSOS_INFO, formatarDuracao, formatarNumero, formatarTaxa, listarRecursos } from '../lib/textos';
+import JanelaConfirmacao from './JanelaConfirmacao';
 
 /** Uma linha curta com o efeito atual do prédio. */
 function efeito(tipo: TipoPredio, cidade: EstadoCidade, bonus: Recursos): string | null {
@@ -57,6 +60,8 @@ type Props = {
   agora: number;
   ocupado: boolean;
   onEvoluir: (tipo: TipoPredio) => void;
+  /** Cancela a obra que termina em `prontoEm` (depois da confirmação). */
+  onCancelar: (prontoEm: number) => void;
 };
 
 /** "140 de madeira e 70 de ouro" */
@@ -65,7 +70,9 @@ function descreverFalta(falta: Recursos): string {
   return partes.length > 1 ? `${partes.slice(0, -1).join(', ')} e ${partes.at(-1)}` : (partes[0] ?? '');
 }
 
-export default function CartaoPredio({ tipo, cidade, bonus, obras, agora, ocupado, onEvoluir }: Props) {
+export default function CartaoPredio({ tipo, cidade, bonus, obras, agora, ocupado, onEvoluir, onCancelar }: Props) {
+  // Posição na fila da obra que o jogador quer cancelar (abre a confirmação).
+  const [aCancelar, setACancelar] = useState<number | null>(null);
   const info = PREDIOS[tipo];
   const nivel = cidade.predios[tipo];
   // Níveis contando as obras da fila: o próximo pedido deste prédio vai para o nível seguinte a eles.
@@ -83,6 +90,7 @@ export default function CartaoPredio({ tipo, cidade, bonus, obras, agora, ocupad
   const naFila = obras.length > 0;
   // Imagem da fase do nível atual; ainda não construído, a primeira fase apagada.
   const imagem = imagemDoPredio(tipo, nivel);
+  const previa = aCancelar === null ? null : cancelarObra({ predios: cidade.predios, obras, indice: aCancelar, agora });
 
   return (
     <article
@@ -120,11 +128,46 @@ export default function CartaoPredio({ tipo, cidade, bonus, obras, agora, ocupad
             key={obra.prontoEm}
             className={`rounded-lg border px-3 py-2 text-sm ${posicao === 0 ? 'border-ouro/40 bg-ouro/10 text-ouro-claro' : 'border-couro bg-noite/50 text-pergaminho-escuro'}`}
           >
-            {posicao === 0 ? '🔨' : '⏳'} {nivel + i === 0 ? 'Construção' : `Nível ${nivel + i + 1}`}
-            {posicao === 0 ? ' · faltam ' : ' · na fila, pronto em '}
-            <span className="tabular-nums">{formatarDuracao(obra.prontoEm - agora)}</span>
+            <div className="flex items-center gap-2">
+              <span className="flex-1">
+                {posicao === 0 ? '🔨' : '⏳'} {nivel + i === 0 ? 'Construção' : `Nível ${nivel + i + 1}`}
+                {posicao === 0 ? ' · faltam ' : ' · na fila, pronto em '}
+                <span className="tabular-nums">{formatarDuracao(obra.prontoEm - agora)}</span>
+              </span>
+              <button
+                onClick={() => setACancelar(posicao)}
+                disabled={ocupado}
+                aria-label={`Cancelar ${nivel + i === 0 ? 'construção' : `nível ${nivel + i + 1}`} de ${info.nome}`}
+                title="Cancelar"
+                className="-my-1 shrink-0 rounded-md px-1.5 py-0.5 text-pergaminho-escuro hover:bg-sangue/40 hover:text-pergaminho disabled:opacity-40"
+              >
+                ✕
+              </button>
+            </div>
           </div>
         ))}
+        {previa?.ok && (
+          <JanelaConfirmacao
+            titulo="Cancelar obra?"
+            confirmar="Cancelar obra"
+            onConfirmar={() => onCancelar(obras[aCancelar!]!.prontoEm)}
+            onFechar={() => setACancelar(null)}
+          >
+            <p>
+              Sai da fila:{' '}
+              {previa.canceladas
+                .map((c) => `${PREDIOS[c.tipo].nome} ${c.nivelAlvo === 1 ? '(construção)' : `nível ${c.nivelAlvo}`}`)
+                .join(', ')}
+              .
+            </p>
+            {previa.canceladas.length > 1 && (
+              <p className="text-xs text-pergaminho-escuro">As de depois dependiam dessa e saem junto.</p>
+            )}
+            <p>
+              Volta tudo o que foi pago: <span className="tabular-nums">{listarRecursos(previa.devolver)}</span>.
+            </p>
+          </JanelaConfirmacao>
+        )}
 
         {maximo ? (
           <p className="text-sm text-pergaminho-escuro">Nível máximo</p>

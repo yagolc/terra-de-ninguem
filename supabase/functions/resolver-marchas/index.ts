@@ -1,7 +1,8 @@
 // Edge Function `resolver-marchas`: chamada a cada minuto pelo pg_cron (migration 0007).
 // Resolve as marchas que já chegaram: batalha, perdas, saque, conquista, escudo e relatório;
 // e entrega as tropas (e o saque) das marchas de volta. Cada marcha numa transação própria.
-// Depois atualiza o placar e encerra a temporada se alguém cumpriu o objetivo ou o prazo acabou.
+// Depois resolve e solta as hordas bárbaras (hordas.ts), atualiza o placar e encerra a temporada se alguém
+// cumpriu o objetivo ou o prazo acabou.
 // Publicar com: npx supabase functions deploy resolver-marchas --no-verify-jwt
 // Exige o cabeçalho x-segredo-cron igual à variável SEGREDO_CRON (npx supabase secrets set).
 import {
@@ -41,6 +42,7 @@ import { sql, type Transacao } from '../_compartilhado/db.ts';
 import { heroiNoRelatorio, heroiNoTerritorio, posicionarHeroi, type HeroiSalvo } from '../_compartilhado/herois.ts';
 import { atualizarPlacar } from '../_compartilhado/objetivos.ts';
 import { resposta } from '../_compartilhado/http.ts';
+import { cuidarDasHordas } from './hordas.ts';
 
 type Marcha = {
   id: string;
@@ -102,7 +104,7 @@ async function mandarDeVolta(
     return;
   }
   const [casa] = await tx<{ x: number; y: number }[]>`select x, y from territorios where id = ${m.origem_id}`;
-  const bonusVelocidade = velocidadeRaca + (heroi?.especialidade === 'desbravador' ? bonusHeroi(heroi.nivel) : 0);
+  const bonusVelocidade = velocidadeRaca + (heroi?.especialidade === 'desbravador' ? bonusHeroi(heroi.nivel, 'desbravador') : 0);
   const chegada = agora + duracaoMarchaMs(de, casa!, sobreviventes, bonusVelocidade);
   const [volta] = await tx<{ id: string }[]>`
     insert into marchas (temporada_id, jogador_id, origem_id, destino_id, tipo, lanceiro, arqueiro, cavalaria,
@@ -134,8 +136,14 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
     await concluir(tx, m.id);
     return;
   }
-  // Se o alvo virou de um jogador durante a proteção de iniciante, não há batalha: as tropas voltam para casa.
+  // Se o alvo virou de um jogador durante a proteção de iniciante, não há batalha: as tropas voltam para casa,
+  // com um relatório só para o atacante explicando por quê.
   if (destino.dono_id && (await emProtecaoIniciante(tx, m.temporada_id, agora))) {
+    await tx`
+      insert into relatorios (temporada_id, marcha_id, tipo, atacante_id, defensor_id, origem_id, territorio_id,
+                              vencedor, conquistou, dados)
+      values (${m.temporada_id}, ${m.id}, 'devolvida', ${m.jogador_id}, null, ${m.origem_id}, ${destino.id}, null, false,
+              ${tx.json({ motivo: 'protecao_iniciante', novoDonoId: destino.dono_id, tropas: atacanteDaMarcha })})`;
     await mandarDeVolta(
       tx,
       m,
@@ -155,8 +163,8 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
   const heroiDefensor = defensor?.carregada.heroi?.territorioId === destino.id ? defensor.carregada.heroi : null;
   // Bônus somados: herói (comandante, saqueador, castelão) e raça de cada lado (orc ataca e carrega mais...).
   const racaAtacante = efeitosRaca(atacante.carregada.raca);
-  const bonusAtaque = racaAtacante.ataque + (heroiAtacante?.especialidade === 'comandante' ? bonusHeroi(heroiAtacante.nivel) : 0);
-  const bonusCarga = racaAtacante.carga + (heroiAtacante?.especialidade === 'saqueador' ? bonusHeroi(heroiAtacante.nivel) : 0);
+  const bonusAtaque = racaAtacante.ataque + (heroiAtacante?.especialidade === 'comandante' ? bonusHeroi(heroiAtacante.nivel, 'comandante') : 0);
+  const bonusCarga = racaAtacante.carga + (heroiAtacante?.especialidade === 'saqueador' ? bonusHeroi(heroiAtacante.nivel, 'saqueador') : 0);
 
   // Exército que defende: as tropas do dono no território, ou os bárbaros.
   const [barbaros] = defensor
@@ -240,8 +248,9 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
   if (conquistou) {
     // O atacante fica no território; os sobreviventes do defensor recuam para a cidade dele (bárbaros se dispersam).
     await tx`update territorios set dono_id = ${m.jogador_id} where id = ${destino.id}`;
-    // A estrutura do território (pronta ou em obra) é destruída na conquista.
+    // A estrutura e a estrada do território (prontas ou em obra) são destruídas na conquista.
     await tx`delete from estruturas where territorio_id = ${destino.id}`;
+    await tx`delete from estradas where territorio_id = ${destino.id}`;
     grupoEm(atacante, destino.id).tropas = batalha.sobreviventesAtacante;
     // Povoado: muda de dono. Neutro, é leal na hora (a vila já vem no nível 1); tomado de outro jogador,
     // só dá bônus depois da lealdade. A milícia do antigo dono se dispersa; a cidade livre só entrega uma
@@ -446,6 +455,8 @@ Deno.serve(async (req) => {
       erros.push(id);
     }
   }
+  // Hordas bárbaras: as que chegaram lutam; a próxima sai quando for a hora.
+  await cuidarDasHordas(erros);
   // Depois das batalhas: placar, objetivos e, se for o caso, fim da temporada.
   let encerrada = false;
   try {

@@ -27,9 +27,9 @@ export type MotivoRecusaRecrutamento =
 
 export type MotivoRecusaTreinoHeroi = 'sem_heroi' | 'nivel_maximo' | 'em_treino' | 'ferido' | 'fora_da_cidade' | 'recursos_insuficientes';
 
-/** Bônus da especialidade no nível dado (0,02 por nível). */
-export function bonusHeroi(nivel: number): number {
-  return BALANCEAMENTO.herois.bonusPorNivel * nivel;
+/** Bônus da especialidade no nível dado (`herois.bonusPorNivel` de cada especialidade × nível). */
+export function bonusHeroi(nivel: number, especialidade: Especialidade): number {
+  return BALANCEAMENTO.herois.bonusPorNivel[especialidade] * nivel;
 }
 
 export function heroiEmTreino(heroi: Heroi, agora: number): boolean {
@@ -47,7 +47,7 @@ export function heroiDisponivel(heroi: Heroi, agora: number): boolean {
 
 /** Bônus que o herói dá agora, se for da especialidade pedida e estiver disponível (0 caso contrário). */
 export function bonusSeDisponivel(heroi: Heroi | null, especialidade: Especialidade, agora: number): number {
-  return heroi && heroi.especialidade === especialidade && heroiDisponivel(heroi, agora) ? bonusHeroi(heroi.nivel) : 0;
+  return heroi && heroi.especialidade === especialidade && heroiDisponivel(heroi, agora) ? bonusHeroi(heroi.nivel, especialidade) : 0;
 }
 
 /** Até quando o herói fica ferido depois de perder uma batalha. */

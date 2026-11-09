@@ -1,6 +1,6 @@
 // TODOS os números de balanceamento do jogo ficam aqui. Valores provisórios até o playtest (Épico 8).
 // Tempos em minutos/segundos e taxas "por hora" para facilitar a leitura; as funções convertem para ms.
-import type { Raca, Recursos, Terreno, TipoEstrutura, TipoPredio, TipoUnidade } from './tipos.ts';
+import type { Especialidade, Raca, Recursos, Terreno, TipoEstrutura, TipoPredio, TipoUnidade } from './tipos.ts';
 
 /** Efeitos de uma raça (frações: 0,1 = +10%, −0,1 = −10%). O que não aparece é zero. */
 type ConfigRaca = {
@@ -139,16 +139,19 @@ export const BALANCEAMENTO = {
   objetivos: {
     /** "Dominar mais da metade do mapa": fração dos territórios. */
     fracaoMetadeDoMapa: 0.55,
-    /** "Fronteiras de ferro": territórios com a guarnição mínima em cada (no total, até metade da população máxima). */
-    territoriosDefendidos: 8,
-    guarnicaoMinima: 6,
-    /** "Vitória econômica": habitantes (o limite das casas é 110; as vilas dão mais). */
-    populacaoAlvo: 110,
+    /** "Fronteiras de ferro": territórios com a guarnição mínima em cada (no total, até 2/3 da população máxima das casas). */
+    territoriosDefendidos: 10,
+    guarnicaoMinima: 7,
+    /**
+     * "Senhor das vilas" (substitui "população" desde a temporada 4): esta fração das vilas do mapa, arredondada
+     * para cima, todas no nível máximo (4 de 8 com 8 jogadores, 3 de 6 com 6).
+     */
+    fracaoVilas: 0.5,
     /** "Duas regiões": soma dos territórios da dupla entre essas frações do mapa. */
     duplaDeRegioesMin: 0.33,
     duplaDeRegioesMax: 0.5,
     /** "Senhor da guerra": batalhas vencidas contra jogadores (atacando ou defendendo). */
-    vitoriasContraJogadores: 30,
+    vitoriasContraJogadores: 50,
     /** "Mestre construtor": quantos prédios da cidade no nível pedido (o Centro tem de chegar lá primeiro). */
     mestreConstrutorPredios: 3,
     mestreConstrutorNivel: 10,
@@ -157,7 +160,7 @@ export const BALANCEAMENTO = {
     /** "Monopólio comercial": horas seguidas com todas as cidades livres. */
     monopolioHoras: 12,
     /** "Velha rixa": territórios diferentes conquistados de jogadores da raça rival. */
-    rixaTerritorios: 8,
+    rixaTerritorios: 10,
   },
 
   pontos: {
@@ -185,6 +188,11 @@ export const BALANCEAMENTO = {
   } satisfies Record<TipoEstrutura, { custo: Recursos; tempoMin: number }>,
   /** Bônus de defesa da paliçada no território dela (soma com a muralha na cidade). */
   bonusPalicada: 0.2,
+  /**
+   * Estrada: à parte da estrutura do território (dá para ter as duas), visível para todos e destruída na conquista.
+   * Marcha de movimento entre dois territórios próprios com estrada pronta (saída e chegada) anda mais rápido.
+   */
+  estrada: { custo: { comida: 0, madeira: 150, ouro: 30 }, tempoMin: 30, multiplicadorVelocidade: 2 },
   /** O entreposto multiplica o bônus de produção do terreno (2 = +10% vira +20%). */
   multiplicadorEntreposto: 2,
 
@@ -192,7 +200,9 @@ export const BALANCEAMENTO = {
   povoados: {
     /** Fração dos territórios (fora cidades iniciais e cidades livres) que ganham uma vila. */
     fracaoVilas: 0.3,
-    cidadesLivres: 3,
+    /** Cidades livres no mapa: metade do número de jogadores, arredondada, e no mínimo 3 (4 com 7 ou 8 jogadores). */
+    cidadesLivresMinimo: 3,
+    cidadesLivresPorJogador: 0.5,
     /** Horas até um povoado tomado de outro jogador passar a dar bônus ao novo dono. */
     lealdadeHoras: 24,
     vila: {
@@ -227,12 +237,18 @@ export const BALANCEAMENTO = {
     custoRecrutar: { comida: 0, madeira: 0, ouro: 300 },
     nivelQuartelMinimo: 1,
     nivelMaximo: 10,
-    /** Bônus da especialidade por nível (0,02 = +2% por nível, +20% no nível 10). */
-    bonusPorNivel: 0.02,
+    /**
+     * Bônus da especialidade por nível (0,02 = +2% por nível, +20% no nível 10). O intendente rende sempre, parado
+     * na cidade; os de guerra só ajudam na marcha ou no território e arriscam ferimento, por isso valem mais.
+     */
+    bonusPorNivel: { comandante: 0.03, castelao: 0.04, desbravador: 0.04, saqueador: 0.04, intendente: 0.02 } satisfies Record<
+      Especialidade,
+      number
+    >,
     /** Treino para o nível n: ouro = ouroBase × crescimentoOuro^(n−2); tempo = minutosBase × crescimentoTempo^(n−2). */
     treino: { ouroBase: 200, crescimentoOuro: 1.5, minutosBase: 60, crescimentoTempo: 1.3 },
     /** Horas fora de combate depois de perder uma batalha (ele nunca morre). */
-    feridoHoras: 12,
+    feridoHoras: 6,
     /** O intendente fora da cidade rende este múltiplo do bônus, só no recurso daquele território. */
     multiplicadorIntendenteTerritorio: 2,
     nomeMinimo: 2,
@@ -246,6 +262,33 @@ export const BALANCEAMENTO = {
     orc: { ataque: 0.1, carga: 0.1, defesa: -0.1 },
     anao: { producao: { ouro: 0.15 }, defesaPorTerreno: { montanha: 0.2 }, velocidade: -0.15 },
   } satisfies Record<Raca, ConfigRaca>,
+
+  /**
+   * Hordas bárbaras: uma a cada `intervaloHoras`, a partir do fim da proteção de iniciante, contra um dos
+   * `primeirosDoPlacar`. Todos a veem `avisoHoras` antes de chegar. Começa pequena e cresce a cada horda.
+   */
+  hordas: {
+    intervaloHoras: 24,
+    avisoHoras: 6,
+    primeirosDoPlacar: 3,
+    unidadesBase: 5,
+    unidadesPorHorda: 5,
+    variacao: 0.1,
+    ouroBase: 60,
+    ouroPorHorda: 30,
+  },
+
+  /** Recompensa de cada missão de início (ver `missoes.ts`): um empurrão nos primeiros dias. */
+  missoes: {
+    casa_2: { comida: 50, madeira: 100, ouro: 0 },
+    quartel: { comida: 100, madeira: 100, ouro: 0 },
+    soldados_5: { comida: 150, madeira: 100, ouro: 0 },
+    batedor: { comida: 0, madeira: 0, ouro: 60 },
+    primeiro_territorio: { comida: 200, madeira: 200, ouro: 50 },
+    armazem_3: { comida: 0, madeira: 200, ouro: 0 },
+    construcao: { comida: 100, madeira: 0, ouro: 50 },
+    heroi: { comida: 0, madeira: 0, ouro: 150 },
+  },
 
   /** Herdeiro do trono: o vencedor da temporada anterior começa protegido, mas vira alvo. */
   herdeiro: {
@@ -267,8 +310,16 @@ export const BALANCEAMENTO = {
     /** Tamanho do mapa em léguas (mesma unidade da velocidade das tropas). */
     largura: 60,
     altura: 40,
+    /** Até esse número de territórios o mapa tem largura × altura; acima, a área cresce junto, e cada território mantém o tamanho. */
+    territoriosNoTamanhoBase: 30,
+    jogadoresMaximo: 8,
     territoriosBase: 6,
-    territoriosPorJogador: 4,
+    territoriosPorJogador: 6,
+    /**
+     * Rios e cordilheiras: esta fração das fronteiras entre regiões vira barreira (não dá para atravessar). O mapa
+     * continua todo ligado e nenhum território fica com menos de `vizinhosMinimos` vizinhos.
+     */
+    barreiras: { fracaoEntreRegioes: 0.5, vizinhosMinimos: 2 },
     /** Com pelo menos esse número de territórios, o mapa tem 6 regiões; abaixo, 5. */
     territoriosPara6Regioes: 24,
     /** Bônus de produção de cada território no recurso ligado ao terreno (0,1 = +10%). */

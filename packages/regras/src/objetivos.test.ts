@@ -5,6 +5,7 @@ import {
   cidadesAlheiasPorRegiao,
   fimDaTemporada,
   metaMetadeDoMapa,
+  metaSenhorDasVilas,
   monopolioComercial,
   objetivoMetadeDoMapa,
   pontuar,
@@ -36,6 +37,7 @@ function situacao(mudancas: Partial<SituacaoJogador> = {}): SituacaoJogador {
     populacao: 10,
     vitoriasContraJogadores: 0,
     niveisPredios: [1, 0, 0, 0, 0, 0, 0, 0],
+    niveisVilas: [],
     ouro: 0,
     cidadesLivres: [],
     agora: 0,
@@ -52,7 +54,14 @@ describe('sortearObjetivo', () => {
   it('sorteia objetivos válidos e variados (300 sorteios)', () => {
     const vistos = new Set<string>();
     for (let s = 1; s <= 300; s++) {
-      const o = sortearObjetivo({ semente: s, regioes: REGIOES, totalTerritorios: TOTAL, racasRivais: ['orc', 'anao'], jaSorteados: [] });
+      const o = sortearObjetivo({
+        semente: s,
+        regioes: REGIOES,
+        totalTerritorios: TOTAL,
+        racasRivais: ['orc', 'anao'],
+        jaSorteados: [],
+        vilasNoMapa: 8,
+      });
       vistos.add(o.tipo);
       if (o.tipo === 'duas_regioes') {
         const soma = o.regioes.reduce((t, id) => t + REGIOES.find((r) => r.id === id)!.territorios, 0);
@@ -64,9 +73,22 @@ describe('sortearObjetivo', () => {
         expect(['orc', 'anao']).toContain(o.raca);
         expect(o.territorios).toBe(BALANCEAMENTO.objetivos.rixaTerritorios);
       }
+      if (o.tipo === 'senhor_das_vilas') expect(o).toEqual({ tipo: 'senhor_das_vilas', vilas: 4, nivel: BALANCEAMENTO.povoados.vila.nivelMaximo });
       expect(o.tipo).not.toBe('derrubar_rival');
+      expect(o.tipo).not.toBe('populacao');
     }
     expect(vistos.size).toBe(8);
+  });
+
+  it('"senhor das vilas" pede metade das vilas do mapa, e não sai se o mapa tem menos de 3 vilas', () => {
+    expect(metaSenhorDasVilas(8)).toBe(4);
+    expect(metaSenhorDasVilas(6)).toBe(3);
+    expect(metaSenhorDasVilas(7)).toBe(4);
+    for (let s = 1; s <= 100; s++) {
+      const base = { semente: s, regioes: REGIOES, totalTerritorios: TOTAL, racasRivais: ['orc' as const], jaSorteados: [] };
+      expect(sortearObjetivo({ ...base, vilasNoMapa: 2 }).tipo).not.toBe('senhor_das_vilas');
+      expect(sortearObjetivo(base).tipo).not.toBe('senhor_das_vilas');
+    }
   });
 
   it('sem outra raça no mapa, nunca sorteia "velha rixa"', () => {
@@ -80,7 +102,7 @@ describe('sortearObjetivo', () => {
   it('prefere tipos que ninguém tirou ainda', () => {
     const jaSorteados: Objetivo[] = [
       objetivoMetadeDoMapa(),
-      { tipo: 'populacao', populacao: 100 },
+      { tipo: 'senhor_das_vilas', vilas: 4, nivel: 3 },
       { tipo: 'territorios_defendidos', territorios: 12, guarnicaoMinima: 10 },
       { tipo: 'duas_regioes', regioes: ['r2', 'r3'] },
       { tipo: 'senhor_da_guerra', vitorias: 30 },
@@ -88,9 +110,9 @@ describe('sortearObjetivo', () => {
       { tipo: 'tesouro', ouro: 7500 },
     ];
     for (let s = 1; s <= 50; s++) {
-      expect(sortearObjetivo({ semente: s, regioes: REGIOES, totalTerritorios: TOTAL, racasRivais: ['elfo'], jaSorteados }).tipo).toBe(
-        'velha_rixa',
-      );
+      expect(
+        sortearObjetivo({ semente: s, regioes: REGIOES, totalTerritorios: TOTAL, racasRivais: ['elfo'], jaSorteados, vilasNoMapa: 8 }).tipo,
+      ).toBe('velha_rixa');
     }
   });
 });
@@ -162,6 +184,14 @@ describe('avaliarObjetivo', () => {
     const obj: Objetivo = { tipo: 'populacao', populacao: 100 };
     expect(avaliarObjetivo(obj, situacao({ populacao: 99.9 })).cumprido).toBe(false);
     expect(avaliarObjetivo(obj, situacao({ populacao: 100 })).cumprido).toBe(true);
+  });
+
+  it('senhor das vilas: conta as vilas no nível pedido; a barra soma os níveis das mais altas', () => {
+    const obj: Objetivo = { tipo: 'senhor_das_vilas', vilas: 4, nivel: 3 };
+    const quase = avaliarObjetivo(obj, situacao({ niveisVilas: [3, 3, 3, 2, 1] }));
+    expect(quase).toMatchObject({ cumprido: false, atual: 11, alvo: 12, partes: [{ atual: 3, alvo: 4 }] });
+    expect(avaliarObjetivo(obj, situacao({ niveisVilas: [3, 3, 3, 3] })).cumprido).toBe(true);
+    expect(avaliarObjetivo(obj, situacao({ niveisVilas: [] }))).toMatchObject({ cumprido: false, atual: 0 });
   });
 
   it('derrubar rival: precisa reduzi-lo à cidade, tendo conquistado algo dele', () => {
@@ -267,11 +297,17 @@ describe('avaliarObjetivo', () => {
 
 describe('objetivos cabem nos limites do jogo', () => {
   const O = BALANCEAMENTO.objetivos;
-  it('soldados de "fronteiras de ferro" são no máximo metade da população máxima', () => {
-    expect(O.territoriosDefendidos * O.guarnicaoMinima).toBeLessThanOrEqual(limitePopulacao(BALANCEAMENTO.predios.casa.nivelMaximo) / 2);
+  const casasNoMaximo = limitePopulacao(BALANCEAMENTO.predios.casa.nivelMaximo);
+  const V = BALANCEAMENTO.povoados.vila;
+  it('soldados de "fronteiras de ferro" são no máximo 2/3 da população máxima das casas', () => {
+    expect(O.territoriosDefendidos * O.guarnicaoMinima).toBeLessThanOrEqual((casasNoMaximo * 2) / 3);
   });
-  it('população e prédios pedidos existem no jogo', () => {
-    expect(O.populacaoAlvo).toBeLessThanOrEqual(limitePopulacao(BALANCEAMENTO.predios.casa.nivelMaximo));
+  it('"senhor das vilas" pede mais de uma vila e deixa vilas para os outros', () => {
+    expect(O.fracaoVilas).toBeGreaterThan(0);
+    expect(O.fracaoVilas).toBeLessThanOrEqual(0.5);
+    expect(V.nivelMaximo).toBeGreaterThanOrEqual(1);
+  });
+  it('prédios pedidos existem no jogo', () => {
     expect(O.mestreConstrutorPredios).toBeLessThanOrEqual(TIPOS_PREDIO.length);
     const chegamAoNivel = TIPOS_PREDIO.filter((p) => BALANCEAMENTO.predios[p].nivelMaximo >= O.mestreConstrutorNivel);
     expect(chegamAoNivel.length).toBeGreaterThanOrEqual(O.mestreConstrutorPredios);

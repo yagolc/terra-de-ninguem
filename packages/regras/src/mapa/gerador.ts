@@ -3,6 +3,7 @@
 import { Delaunay } from 'd3-delaunay';
 import { geradorComSemente } from '../aleatorio.ts';
 import { BALANCEAMENTO } from '../balanceamento.ts';
+import { quantasCidadesLivres } from '../povoados.ts';
 import { BONUS_DO_TERRENO, distanciasNoGrafo, grafoDeFronteiras } from '../territorios.ts';
 import { TERRENOS, TIPOS_UNIDADE, type Exercito, type Recurso, type Terreno, type TipoPovoado } from '../tipos.ts';
 import { exercito, mapearExercito } from '../util.ts';
@@ -33,8 +34,13 @@ export type MapaGerado = {
   altura: number;
   regioes: RegiaoGerada[];
   territorios: TerritorioGerado[];
-  /** Pares de territórios vizinhos, com o menor índice primeiro. */
+  /** Pares de territórios vizinhos por onde se passa, com o menor índice primeiro. */
   fronteiras: [number, number][];
+  /**
+   * Vizinhos separados por um rio ou uma cordilheira: não são fronteira (ninguém ataca nem move por ali), só
+   * aparecem no desenho. Cordilheira quando um dos lados é montanha.
+   */
+  barreiras: { a: number; b: number; tipo: TipoBarreira }[];
   /** Território inicial de cada jogador, na ordem dos jogadores. */
   iniciais: number[];
   /** Vilas e cidades livres (no máximo um povoado por território, nunca num inicial). */
@@ -49,6 +55,8 @@ export type AvaliacaoMapa = {
   /** Maior área menos a menor: quanto menor, mais justo. */
   desequilibrio: number;
 };
+
+export type TipoBarreira = 'rio' | 'montanha';
 
 type Aleatorio = () => number;
 
@@ -231,15 +239,33 @@ function avaliar(grafo: Map<number, number[]>, total: number, iniciais: number[]
   };
 }
 
-/** Cidades iniciais o mais afastadas possível: testa cada território como primeira e afasta as seguintes. */
-function escolherIniciais(grafo: Map<number, number[]>, total: number, jogadores: number): number[] {
+/**
+ * Territórios que encostam na borda do mapa. As cidades iniciais ficam neles: no meio, a cidade fica cercada
+ * por todos os lados, e o centro é das cidades livres e dos neutros.
+ */
+export function territoriosNaBorda(poligonos: readonly (readonly Ponto2[])[], largura: number, altura: number): Set<number> {
+  const perto = (a: number, b: number) => Math.abs(a - b) < 0.01;
+  const borda = new Set<number>();
+  poligonos.forEach((p, i) => {
+    if (p.some(([x, y]) => perto(x, 0) || perto(y, 0) || perto(x, largura) || perto(y, altura))) borda.add(i);
+  });
+  return borda;
+}
+
+/**
+ * Cidades iniciais o mais afastadas possível, só entre os territórios `permitidos` (os da borda): testa cada
+ * um como primeira e afasta as seguintes.
+ */
+function escolherIniciais(grafo: Map<number, number[]>, total: number, jogadores: number, naBorda: ReadonlySet<number>): number[] {
+  // Mapa sem borda suficiente (pouquíssimos territórios): vale qualquer um.
+  const permitidos = naBorda.size >= jogadores ? naBorda : new Set(Array.from({ length: total }, (_, i) => i));
   let melhor: { iniciais: number[]; avaliacao: AvaliacaoMapa } | null = null;
-  for (let primeira = 0; primeira < total; primeira++) {
+  for (const primeira of permitidos) {
     const iniciais = [primeira];
     while (iniciais.length < jogadores) {
       const distancia = distanciasNoGrafo(grafo, iniciais);
       let longe = -1;
-      for (let i = 0; i < total; i++) {
+      for (const i of permitidos) {
         if (!iniciais.includes(i) && (longe === -1 || (distancia.get(i) ?? 0) > (distancia.get(longe) ?? 0))) longe = i;
       }
       iniciais.push(longe);
@@ -255,6 +281,49 @@ function escolherIniciais(grafo: Map<number, number[]>, total: number, jogadores
     }
   }
   return melhor!.iniciais;
+}
+
+/**
+ * Rios e cordilheiras: sorteia fronteiras entre regiões diferentes e tira do jogo as que dá para tirar sem
+ * deixar um território com menos de `vizinhosMinimos` vizinhos nem partir o mapa em dois.
+ */
+function escolherBarreiras(
+  aleatorio: Aleatorio,
+  fronteiras: readonly [number, number][],
+  regiaoDe: readonly number[],
+  terrenos: readonly Terreno[],
+  total: number,
+): { passaveis: [number, number][]; barreiras: { a: number; b: number; tipo: TipoBarreira }[] } {
+  const { fracaoEntreRegioes, vizinhosMinimos } = BALANCEAMENTO.mapa.barreiras;
+  const candidatas = embaralhar(
+    aleatorio,
+    fronteiras.filter(([a, b]) => regiaoDe[a] !== regiaoDe[b]),
+  );
+  const alvo = Math.round(candidatas.length * fracaoEntreRegioes);
+  const grau = new Array<number>(total).fill(0);
+  for (const [a, b] of fronteiras) {
+    grau[a]!++;
+    grau[b]!++;
+  }
+  const fechadas = new Set<string>();
+  const abertas = () => fronteiras.filter(([a, b]) => !fechadas.has(`${a}-${b}`));
+  for (const [a, b] of candidatas) {
+    if (fechadas.size >= alvo) break;
+    if (grau[a]! <= vizinhosMinimos || grau[b]! <= vizinhosMinimos) continue;
+    fechadas.add(`${a}-${b}`);
+    if (distanciasNoGrafo(grafoDeFronteiras(abertas()), [0]).size < total) {
+      fechadas.delete(`${a}-${b}`);
+      continue;
+    }
+    grau[a]!--;
+    grau[b]!--;
+  }
+  return {
+    passaveis: abertas(),
+    barreiras: fronteiras
+      .filter(([a, b]) => fechadas.has(`${a}-${b}`))
+      .map(([a, b]) => ({ a, b, tipo: terrenos[a] === 'montanha' || terrenos[b] === 'montanha' ? 'montanha' : 'rio' })),
+  };
 }
 
 /**
@@ -275,7 +344,7 @@ function escolherCidadesLivres(grafo: Map<number, number[]>, total: number, inic
   const escolhidas: number[] = [];
   for (const aceitaVizinhas of [false, true]) {
     for (const { t } of candidatos) {
-      if (escolhidas.length >= BALANCEAMENTO.povoados.cidadesLivres) break;
+      if (escolhidas.length >= quantasCidadesLivres(iniciais.length)) break;
       if (escolhidas.includes(t) || (!aceitaVizinhas && escolhidas.some((e) => grafo.get(e)?.includes(t)))) continue;
       escolhidas.push(t);
     }
@@ -319,17 +388,28 @@ export function totalDeTerritorios(jogadores: number): number {
   return BALANCEAMENTO.mapa.territoriosBase + BALANCEAMENTO.mapa.territoriosPorJogador * jogadores;
 }
 
+/**
+ * Largura e altura do mapa (léguas). Com mais territórios que o tamanho base, a área cresce na mesma proporção:
+ * cada território mantém o tamanho, e as marchas entre vizinhos continuam levando o mesmo tempo.
+ */
+export function tamanhoDoMapa(totalTerritorios: number): { largura: number; altura: number } {
+  const { largura, altura, territoriosNoTamanhoBase } = BALANCEAMENTO.mapa;
+  const escala = Math.sqrt(Math.max(1, totalTerritorios / territoriosNoTamanhoBase));
+  return { largura: arredondar(largura * escala), altura: arredondar(altura * escala) };
+}
+
 export function gerarMapa(entrada: { semente: number; jogadores: number }): MapaGerado {
   const { semente, jogadores } = entrada;
-  if (!Number.isInteger(jogadores) || jogadores < 1 || jogadores > 6) {
-    throw new RangeError('O mapa é gerado para 1 a 6 jogadores.');
-  }
   const config = BALANCEAMENTO.mapa;
+  if (!Number.isInteger(jogadores) || jogadores < 1 || jogadores > config.jogadoresMaximo) {
+    throw new RangeError(`O mapa é gerado para 1 a ${config.jogadoresMaximo} jogadores.`);
+  }
   const aleatorio = geradorComSemente(semente);
   const total = totalDeTerritorios(jogadores);
+  const { largura, altura } = tamanhoDoMapa(total);
 
   // Formato dos territórios e fronteiras.
-  const { pontos, voronoi } = diagramaRelaxado(aleatorio, total, config.largura, config.altura);
+  const { pontos, voronoi } = diagramaRelaxado(aleatorio, total, largura, altura);
   const poligonos = pontos.map((_, i) => {
     const celula = voronoi.cellPolygon(i);
     if (!celula) throw new Error(`Território ${i} ficou sem formato (semente ${semente}).`);
@@ -348,25 +428,29 @@ export function gerarMapa(entrada: { semente: number; jogadores: number }): Mapa
     }
   }
   fronteiras.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-  const grafo = grafoDeFronteiras(fronteiras);
+  const grafoCompleto = grafoDeFronteiras(fronteiras);
 
   // Regiões, terrenos e nomes.
   const quantasRegioes = total >= config.territoriosPara6Regioes ? 6 : 5;
-  const regiaoDe = dividirEmRegioes(aleatorio, grafo, total, quantasRegioes);
+  const regiaoDe = dividirEmRegioes(aleatorio, grafoCompleto, total, quantasRegioes);
   const terrenoDaRegiao = embaralhar(aleatorio, [...TERRENOS, ...TERRENOS]).slice(0, quantasRegioes);
   const centrosRegioes = terrenoDaRegiao.map((_, r): Ponto2 => {
     const membros = pontos.filter((_, i) => regiaoDe[i] === r);
     return [membros.reduce((s, p) => s + p[0], 0) / membros.length, membros.reduce((s, p) => s + p[1], 0) / membros.length];
   });
-  const nomesRegioes = nomearRegioes(centrosRegioes, terrenoDaRegiao, config.largura, config.altura);
+  const nomesRegioes = nomearRegioes(centrosRegioes, terrenoDaRegiao, largura, altura);
   const nomesTerritorios = embaralhar(aleatorio, NOMES_TERRITORIOS);
 
   const terrenos = pontos.map((_, i) =>
     aleatorio() < config.chanceTerrenoDaRegiao ? terrenoDaRegiao[regiaoDe[i]!]! : sortearComPeso(aleatorio, config.pesosTerreno),
   );
 
-  // Cidades iniciais e guarnições bárbaras.
-  const iniciais = escolherIniciais(grafo, total, jogadores);
+  // Rios e cordilheiras entre regiões: daqui para a frente, só as fronteiras por onde se passa contam.
+  const { passaveis, barreiras } = escolherBarreiras(aleatorio, fronteiras, regiaoDe, terrenos, total);
+  const grafo = grafoDeFronteiras(passaveis);
+
+  // Cidades iniciais (na borda do mapa) e guarnições bárbaras.
+  const iniciais = escolherIniciais(grafo, total, jogadores, territoriosNaBorda(poligonos, largura, altura));
   const distanciaDasCidades = distanciasNoGrafo(grafo, iniciais);
 
   const territorios = pontos.map(([x, y], indice) => ({
@@ -397,11 +481,12 @@ export function gerarMapa(entrada: { semente: number; jogadores: number }): Mapa
 
   return {
     semente,
-    largura: config.largura,
-    altura: config.altura,
+    largura,
+    altura,
     regioes: terrenoDaRegiao.map((terreno, indice) => ({ indice, nome: nomesRegioes[indice]!, terreno })),
     territorios,
-    fronteiras,
+    fronteiras: passaveis,
+    barreiras,
     iniciais,
     povoados,
   };
