@@ -38,7 +38,12 @@ const { values: opcoes } = parseArgs({
   },
 });
 
-const jogadores = consultar<Jogador>('select id, nome from public.jogadores order by criado_em');
+// Contas bloqueadas (quem saiu do grupo: `auth.users.banned_until`) não ganham vaga. Numa linha só: no Windows a
+// quebra de linha corta o comando do `consultar`.
+const jogadores = consultar<Jogador>(
+  'select j.id, j.nome from public.jogadores j join auth.users u on u.id = j.id' +
+    ' where u.banned_until is null or u.banned_until < now() order by j.criado_em',
+);
 const quantos = opcoes.jogadores ? Number(opcoes.jogadores) : jogadores.length;
 if (quantos < 1 || quantos > BALANCEAMENTO.mapa.jogadoresMaximo) {
   console.error(`Erro: o mapa é para 1 a ${BALANCEAMENTO.mapa.jogadoresMaximo} jogadores (há ${jogadores.length} cadastrados).`);
