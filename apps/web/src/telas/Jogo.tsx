@@ -170,7 +170,9 @@ export default function Jogo({ sessao }: { sessao: Session }) {
         </div>
       </header>
 
-      <main className={`min-h-0 flex-1 ${aba === 'mapa' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+      {/* Só o mapa tem rolagem própria. Com a aba Mapa no endereço, a fundação e o fim de temporada aparecem no lugar
+          dele e precisam rolar. */}
+      <main className={`min-h-0 flex-1 ${aba === 'mapa' && temporada && fundada ? 'overflow-hidden' : 'overflow-y-auto'}`}>
         {aba === 'regras' ? (
           <Regras />
         ) : temporada === undefined ? null : temporada === null ? (
