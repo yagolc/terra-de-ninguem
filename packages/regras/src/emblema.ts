@@ -37,6 +37,16 @@ export const FORMAS_EMBLEMA = [
   'olho',
   'onda',
   'montanha',
+  // Heráldica (desde o perfil com brasões prontos).
+  'escudo_meio',
+  'coroa_real',
+  'ramo',
+  'flor_de_lis',
+  'aguia',
+  'morcego',
+  'chave',
+  'ancora',
+  'fita',
 ] as const;
 export type FormaEmblema = (typeof FORMAS_EMBLEMA)[number];
 

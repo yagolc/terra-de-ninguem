@@ -1,16 +1,17 @@
 import type { CamadaEmblema } from '@terra/regras';
-import { FORMAS, transformacaoDaCamada } from '../lib/formasEmblema';
+import { FORMAS, partesDaForma, transformacaoDaCamada } from '../lib/formasEmblema';
 
 /** As camadas do emblema, no quadro de 0 a 100, para pôr dentro de um `<svg>` (a primeira fica no fundo). */
 export function CamadasEmblema({ camadas }: { camadas: readonly CamadaEmblema[] }) {
   return (
     <>
-      {camadas.map((c, i) => {
-        const forma = FORMAS[c.forma];
-        return (
-          <path key={i} d={forma.d} fill={c.cor} fillRule={forma.furos ? 'evenodd' : 'nonzero'} transform={transformacaoDaCamada(c)} />
-        );
-      })}
+      {camadas.map((c, i) => (
+        <g key={i} fill={c.cor} fillRule={FORMAS[c.forma].furos ? 'evenodd' : 'nonzero'} transform={transformacaoDaCamada(c)}>
+          {partesDaForma(c.forma).map((d, j) => (
+            <path key={j} d={d} />
+          ))}
+        </g>
+      ))}
     </>
   );
 }

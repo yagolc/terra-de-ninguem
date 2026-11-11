@@ -1,7 +1,7 @@
 import { CORES_EMBLEMA, FORMAS_EMBLEMA, LIMITES_EMBLEMA, type CamadaEmblema, type FormaEmblema } from '@terra/regras';
 import { useRef, useState, type PointerEvent as EventoPonteiro } from 'react';
 import { NOMES_CORES } from '../lib/bandeira';
-import { EMBLEMAS_PRONTOS, FORMAS, transformacaoDaCamada } from '../lib/formasEmblema';
+import { EMBLEMAS_PRONTOS, FORMAS, partesDaForma, transformacaoDaCamada } from '../lib/formasEmblema';
 import Emblema from './Emblema';
 
 type Props = {
@@ -128,30 +128,26 @@ export default function EditorEmblema({ camadas, onMudar, fundo }: Props) {
         >
           {/* Guias do centro. */}
           <path d="M50 0V100M0 50H100" stroke="#1c1410" strokeOpacity={0.15} strokeWidth={0.5} />
-          {camadas.map((c, i) => {
-            const forma = FORMAS[c.forma];
-            return (
-              <path
-                key={i}
-                data-camada={i}
-                d={forma.d}
-                fill={c.cor}
-                fillRule={forma.furos ? 'evenodd' : 'nonzero'}
-                transform={transformacaoDaCamada(c)}
-              />
-            );
-          })}
+          {camadas.map((c, i) => (
+            <g key={i} data-camada={i} fill={c.cor} fillRule={FORMAS[c.forma].furos ? 'evenodd' : 'nonzero'} transform={transformacaoDaCamada(c)}>
+              {partesDaForma(c.forma).map((d, j) => (
+                <path key={j} d={d} />
+              ))}
+            </g>
+          ))}
           {atual && (
-            <path
-              d={FORMAS[atual.forma].d}
+            <g
               fill="none"
               stroke="#d4a64a"
               strokeWidth={1.2}
               strokeDasharray="3 2"
-              vectorEffect="non-scaling-stroke"
               transform={transformacaoDaCamada(atual)}
               pointerEvents="none"
-            />
+            >
+              {partesDaForma(atual.forma).map((d, j) => (
+                <path key={j} d={d} vectorEffect="non-scaling-stroke" />
+              ))}
+            </g>
           )}
         </svg>
       </div>
