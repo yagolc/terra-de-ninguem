@@ -67,7 +67,8 @@ export const FORMAS: Record<FormaEmblema, Forma> = {
 
 /** `transform` SVG da camada no quadro de 0 a 100 do emblema. */
 export function transformacaoDaCamada(c: CamadaEmblema): string {
-  return `translate(${c.x} ${c.y}) rotate(${c.rotacao}) scale(${c.espelhar ? -c.escala : c.escala} ${c.escala})`;
+  const sx = c.escala * c.largura;
+  return `translate(${c.x} ${c.y}) rotate(${c.rotacao}) scale(${c.espelhar ? -sx : sx} ${c.escala * c.altura})`;
 }
 
 const camada = (forma: FormaEmblema, cor: string, x = 50, y = 50, escala = 1, rotacao = 0, espelhar = false): CamadaEmblema => ({
@@ -75,6 +76,8 @@ const camada = (forma: FormaEmblema, cor: string, x = 50, y = 50, escala = 1, ro
   x,
   y,
   escala,
+  largura: 1,
+  altura: 1,
   rotacao,
   cor,
   espelhar,

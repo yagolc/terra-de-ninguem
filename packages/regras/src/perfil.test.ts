@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CORES_SECUNDARIAS, PADROES_BANDEIRA, TAMANHO_DESCRICAO, verificarPerfil } from './perfil.ts';
 import { CORES_JOGADORES } from './territorios.ts';
 
-const ESTRELA = { forma: 'estrela', x: 50, y: 50, escala: 0.6, rotacao: 0, cor: '#d4a64a', espelhar: false } as const;
+const ESTRELA = { forma: 'estrela', x: 50, y: 50, escala: 0.6, largura: 1, altura: 1, rotacao: 0, cor: '#d4a64a', espelhar: false } as const;
 const VALIDO = { cor: CORES_JOGADORES[1], corSecundaria: '#f1e6cf', padrao: 'cruz', emblema: [ESTRELA], descricao: 'Senhor do norte.' };
 
 describe('perfil do jogador', () => {

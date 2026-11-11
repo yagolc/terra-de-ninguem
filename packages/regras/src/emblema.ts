@@ -53,19 +53,22 @@ export const CORES_EMBLEMA: readonly string[] = [
 
 /**
  * O emblema ocupa um quadro de 100 × 100; cada forma, no tamanho 1, preenche o quadro inteiro. `x` e `y` são o
- * centro da forma no quadro; `rotacao` em graus; `espelhar` vira na horizontal.
+ * centro da forma no quadro; `escala` muda o tamanho por igual e `largura`/`altura` esticam (multiplicam a escala
+ * só numa direção, antes da rotação); `rotacao` em graus; `espelhar` vira na horizontal.
  */
 export type CamadaEmblema = {
   forma: FormaEmblema;
   x: number;
   y: number;
   escala: number;
+  largura: number;
+  altura: number;
   rotacao: number;
   cor: string;
   espelhar: boolean;
 };
 
-export const LIMITES_EMBLEMA = { camadas: 12, escalaMinima: 0.05, escalaMaxima: 1.5 } as const;
+export const LIMITES_EMBLEMA = { camadas: 12, escalaMinima: 0.05, escalaMaxima: 1.5, esticarMinimo: 0.2, esticarMaximo: 3 } as const;
 
 export type MotivoRecusaEmblema = 'emblema_invalido' | 'camadas_demais';
 
@@ -89,10 +92,18 @@ export function verificarEmblema(
     const y = numero(c.y);
     const escala = numero(c.escala);
     const rotacao = numero(c.rotacao);
+    // Largura e altura são opcionais (emblemas de antes não tinham): sem elas, 1.
+    const largura = c.largura === undefined ? 1 : numero(c.largura);
+    const altura = c.altura === undefined ? 1 : numero(c.altura);
     const cor = typeof c.cor === 'string' ? c.cor.toLowerCase() : '';
-    if (!forma || x === null || y === null || escala === null || rotacao === null) return { ok: false, motivo: 'emblema_invalido' };
+    if (!forma || x === null || y === null || escala === null || rotacao === null || largura === null || altura === null) {
+      return { ok: false, motivo: 'emblema_invalido' };
+    }
     if (x < 0 || x > 100 || y < 0 || y > 100) return { ok: false, motivo: 'emblema_invalido' };
     if (escala < LIMITES_EMBLEMA.escalaMinima || escala > LIMITES_EMBLEMA.escalaMaxima) return { ok: false, motivo: 'emblema_invalido' };
+    for (const esticar of [largura, altura]) {
+      if (esticar < LIMITES_EMBLEMA.esticarMinimo || esticar > LIMITES_EMBLEMA.esticarMaximo) return { ok: false, motivo: 'emblema_invalido' };
+    }
     if (!CORES_EMBLEMA.includes(cor)) return { ok: false, motivo: 'emblema_invalido' };
     if (c.espelhar !== undefined && typeof c.espelhar !== 'boolean') return { ok: false, motivo: 'emblema_invalido' };
     emblema.push({
@@ -100,6 +111,8 @@ export function verificarEmblema(
       x: arredondar(x, 1),
       y: arredondar(y, 1),
       escala: arredondar(escala, 3),
+      largura: arredondar(largura, 2),
+      altura: arredondar(altura, 2),
       rotacao: ((Math.round(rotacao) % 360) + 360) % 360,
       cor,
       espelhar: c.espelhar === true,

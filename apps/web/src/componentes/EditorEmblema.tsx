@@ -56,7 +56,7 @@ export default function EditorEmblema({ camadas, onMudar, fundo }: Props) {
   function adicionar(forma: FormaEmblema) {
     if (cheio) return;
     const cor = atual?.cor ?? '#d4a64a';
-    onMudar([...camadas, { forma, x: 50, y: 50, escala: 0.5, rotacao: 0, cor, espelhar: false }]);
+    onMudar([...camadas, { forma, x: 50, y: 50, escala: 0.5, largura: 1, altura: 1, rotacao: 0, cor, espelhar: false }]);
     setSelecionada(camadas.length);
     setPainel('camadas');
   }
@@ -194,7 +194,7 @@ export default function EditorEmblema({ camadas, onMudar, fundo }: Props) {
               aria-label={`Adicionar ${FORMAS[forma].nome}`}
               className="grid aspect-square place-items-center rounded-lg border-2 border-couro bg-noite/60 p-1 hover:border-ouro/60"
             >
-              <Emblema camadas={[{ forma, x: 50, y: 50, escala: 0.8, rotacao: 0, cor: '#f1e6cf', espelhar: false }]} tamanho={30} />
+              <Emblema camadas={[{ forma, x: 50, y: 50, escala: 0.8, largura: 1, altura: 1, rotacao: 0, cor: '#f1e6cf', espelhar: false }]} tamanho={30} />
             </button>
           ))}
         </div>
@@ -242,7 +242,7 @@ export default function EditorEmblema({ camadas, onMudar, fundo }: Props) {
                   >
                     <button type="button" onClick={() => setSelecionada(i)} className="flex min-w-0 flex-1 items-center gap-2 text-left text-sm">
                       <span className="rounded bg-noite/70 p-0.5">
-                        <Emblema camadas={[{ ...c, x: 50, y: 50, escala: 0.85, rotacao: c.rotacao }]} tamanho={24} />
+                        <Emblema camadas={[{ ...c, x: 50, y: 50, escala: 0.85 / Math.max(1, c.largura, c.altura) }]} tamanho={24} />
                       </span>
                       <span className="truncate">{FORMAS[c.forma].nome}</span>
                     </button>
@@ -272,6 +272,22 @@ export default function EditorEmblema({ camadas, onMudar, fundo }: Props) {
                 max={LIMITES_EMBLEMA.escalaMaxima * 100}
                 sufixo="%"
                 onMudar={(v) => mudarCamada(selecionada, { escala: v / 100 })}
+              />
+              <Controle
+                rotulo="Largura"
+                valor={atual.largura * 100}
+                min={LIMITES_EMBLEMA.esticarMinimo * 100}
+                max={LIMITES_EMBLEMA.esticarMaximo * 100}
+                sufixo="%"
+                onMudar={(v) => mudarCamada(selecionada, { largura: v / 100 })}
+              />
+              <Controle
+                rotulo="Altura"
+                valor={atual.altura * 100}
+                min={LIMITES_EMBLEMA.esticarMinimo * 100}
+                max={LIMITES_EMBLEMA.esticarMaximo * 100}
+                sufixo="%"
+                onMudar={(v) => mudarCamada(selecionada, { altura: v / 100 })}
               />
               <Controle rotulo="Rotação" valor={atual.rotacao} min={0} max={359} sufixo="°" onMudar={(v) => mudarCamada(selecionada, { rotacao: v })} />
               <Controle rotulo="Horizontal" valor={atual.x} min={0} max={100} sufixo="" onMudar={(v) => mudarCamada(selecionada, { x: v })} />

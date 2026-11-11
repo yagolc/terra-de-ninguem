@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CORES_EMBLEMA, FORMAS_EMBLEMA, LIMITES_EMBLEMA, verificarEmblema, type CamadaEmblema } from './emblema.ts';
 
-const CAMADA: CamadaEmblema = { forma: 'estrela', x: 50, y: 50, escala: 0.6, rotacao: 0, cor: '#d4a64a', espelhar: false };
+const CAMADA: CamadaEmblema = { forma: 'estrela', x: 50, y: 50, escala: 0.6, largura: 1, altura: 1, rotacao: 0, cor: '#d4a64a', espelhar: false };
 
 describe('emblema', () => {
   it('vazio ou ausente vale como sem emblema', () => {
@@ -20,6 +20,17 @@ describe('emblema', () => {
     expect(v).toEqual({ ok: true, emblema: [{ ...CAMADA, x: 12.3, y: 100, escala: 0.123, rotacao: 270, cor: '#d4a64a' }] });
     const volta = verificarEmblema([{ ...CAMADA, rotacao: 725 }]);
     expect(volta.ok && volta.emblema[0]!.rotacao).toBe(5);
+  });
+
+  it('largura e altura esticam a forma; sem elas (emblemas antigos), valem 1', () => {
+    const { largura: _l, altura: _a, ...antiga } = CAMADA;
+    expect(verificarEmblema([antiga])).toEqual({ ok: true, emblema: [CAMADA] });
+    const v = verificarEmblema([{ ...CAMADA, largura: 2.345, altura: LIMITES_EMBLEMA.esticarMinimo }]);
+    expect(v.ok && v.emblema[0]).toMatchObject({ largura: 2.35, altura: LIMITES_EMBLEMA.esticarMinimo });
+    for (const fora of [LIMITES_EMBLEMA.esticarMinimo - 0.01, LIMITES_EMBLEMA.esticarMaximo + 0.01, '2', null]) {
+      expect(verificarEmblema([{ ...CAMADA, largura: fora }])).toEqual({ ok: false, motivo: 'emblema_invalido' });
+      expect(verificarEmblema([{ ...CAMADA, altura: fora }])).toEqual({ ok: false, motivo: 'emblema_invalido' });
+    }
   });
 
   it(`aceita até ${LIMITES_EMBLEMA.camadas} camadas`, () => {
