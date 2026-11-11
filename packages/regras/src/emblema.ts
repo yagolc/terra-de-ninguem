@@ -1,4 +1,4 @@
-// Emblema do jogador: até 12 camadas de formas geométricas (posição, tamanho, rotação, cor), empilhadas na ordem
+// Emblema do jogador: até 20 camadas de formas geométricas (posição, tamanho, rotação, cor), empilhadas na ordem
 // da lista (a primeira fica no fundo). O desenho de cada forma fica no site; aqui só os nomes e os limites.
 import { CORES_JOGADORES } from './territorios.ts';
 
@@ -78,7 +78,7 @@ export type CamadaEmblema = {
   espelhar: boolean;
 };
 
-export const LIMITES_EMBLEMA = { camadas: 12, escalaMinima: 0.05, escalaMaxima: 1.5, esticarMinimo: 0.2, esticarMaximo: 3 } as const;
+export const LIMITES_EMBLEMA = { camadas: 20, escalaMinima: 0.05, escalaMaxima: 1.5, esticarMinimo: 0.2, esticarMaximo: 3 } as const;
 
 export type MotivoRecusaEmblema = 'emblema_invalido' | 'camadas_demais';
 

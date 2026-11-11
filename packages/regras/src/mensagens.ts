@@ -118,6 +118,6 @@ export const MENSAGENS_PERFIL: Record<MotivoRecusaPerfil, string> = {
   cor_secundaria_invalida: 'Escolha a segunda cor da paleta.',
   padrao_invalido: 'Padrão de bandeira desconhecido.',
   emblema_invalido: 'O emblema tem uma camada inválida.',
-  camadas_demais: 'O emblema pode ter no máximo 12 camadas.',
+  camadas_demais: 'O emblema pode ter no máximo 20 camadas.',
   descricao_longa: 'A descrição pode ter no máximo 280 caracteres.',
 };

@@ -38,7 +38,7 @@ function Controle({ rotulo, valor, min, max, passo = 1, sufixo, onMudar }: {
 }
 
 /**
- * Editor do emblema por camadas: até 12 formas empilhadas, cada uma com posição (arrastando no quadro ou pelos
+ * Editor do emblema por camadas: até 20 formas empilhadas, cada uma com posição (arrastando no quadro ou pelos
  * controles), tamanho, rotação, cor e espelho. A camada de baixo da lista fica na frente.
  */
 export default function EditorEmblema({ camadas, onMudar, fundo }: Props) {

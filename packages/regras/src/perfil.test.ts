@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CORES_SECUNDARIAS, PADROES_BANDEIRA, TAMANHO_DESCRICAO, verificarPerfil } from './perfil.ts';
+import { LIMITES_EMBLEMA } from './emblema.ts';
 import { CORES_JOGADORES } from './territorios.ts';
 
 const ESTRELA = { forma: 'estrela', x: 50, y: 50, escala: 0.6, largura: 1, altura: 1, rotacao: 0, cor: '#d4a64a', espelhar: false } as const;
@@ -37,7 +38,7 @@ describe('perfil do jogador', () => {
     for (const padrao of PADROES_BANDEIRA) expect(verificarPerfil({ ...VALIDO, padrao }, []).ok).toBe(true);
     expect(verificarPerfil({ ...VALIDO, padrao: 'listras' }, [])).toEqual({ ok: false, motivo: 'padrao_invalido' });
     expect(verificarPerfil({ ...VALIDO, emblema: [{ ...ESTRELA, forma: 'unicornio' }] }, [])).toEqual({ ok: false, motivo: 'emblema_invalido' });
-    expect(verificarPerfil({ ...VALIDO, emblema: Array(13).fill(ESTRELA) }, [])).toEqual({ ok: false, motivo: 'camadas_demais' });
+    expect(verificarPerfil({ ...VALIDO, emblema: Array(LIMITES_EMBLEMA.camadas + 1).fill(ESTRELA) }, [])).toEqual({ ok: false, motivo: 'camadas_demais' });
     const sem = verificarPerfil({ ...VALIDO, emblema: undefined }, []);
     expect(sem.ok && sem.bandeira.emblema).toEqual([]);
   });
