@@ -79,7 +79,7 @@ export const RACAS_INFO: Record<Raca, { nome: string; plural: string; icone: str
     nome: 'Elfo',
     plural: 'elfos',
     icone: '🧝',
-    vantagem: '+20% de defesa em floresta e +10% de madeira.',
+    vantagem: '+20% de defesa em floresta e +20% de madeira.',
     desvantagem: 'A população cresce 10% mais devagar.',
   },
   orc: {

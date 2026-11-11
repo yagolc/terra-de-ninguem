@@ -258,7 +258,7 @@ export const BALANCEAMENTO = {
   /** Raças: vantagem e desvantagem pequenas; somam com o herói. */
   racas: {
     humano: { crescimento: 0.2, populacaoMaxima: 0.1 },
-    elfo: { producao: { madeira: 0.1 }, defesaPorTerreno: { floresta: 0.2 }, crescimento: -0.1 },
+    elfo: { producao: { madeira: 0.2 }, defesaPorTerreno: { floresta: 0.2 }, crescimento: -0.1 },
     orc: { ataque: 0.1, carga: 0.1, defesa: -0.1 },
     anao: { producao: { ouro: 0.15 }, defesaPorTerreno: { montanha: 0.2 }, velocidade: -0.15 },
   } satisfies Record<Raca, ConfigRaca>,

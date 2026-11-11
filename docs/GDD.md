@@ -100,7 +100,7 @@ O mapa é dividido em territórios ligados por fronteiras, como no War. Um mapa 
 | Raça | Vantagem | Desvantagem |
 | --- | --- | --- |
 | Humano | +20% de crescimento da população, +10% no limite das casas | nenhuma |
-| Elfo | +20% de defesa em floresta, +10% de madeira | população cresce 10% mais devagar |
+| Elfo | +20% de defesa em floresta, +20% de madeira | população cresce 10% mais devagar |
 | Orc | +10% de ataque, +10% de carga de saque | −10% de defesa |
 | Anão | +20% de defesa em montanha, +15% de ouro | marchas 15% mais lentas |
 
