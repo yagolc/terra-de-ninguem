@@ -1,6 +1,6 @@
 import { BALANCEAMENTO } from '@terra/regras';
 import { RACAS_INFO, TITULO_HERDEIRO } from '../lib/textos';
-import { corDoJogador } from '../lib/useMapa';
+import Bandeira from './Bandeira';
 import type { LinhaPlacar } from '../lib/useTemporada';
 
 /** Ranking da temporada: pontos = territórios, habitantes e batalhas vencidas. */
@@ -26,9 +26,11 @@ export default function TabelaPlacar({ placar, meuId, vencedorId }: { placar: Li
             <tr key={linha.jogadorId} className={`border-t border-couro/60 ${linha.jogadorId === meuId ? 'text-ouro-claro' : ''}`}>
               <td className="py-2 tabular-nums">{i + 1}</td>
               <td className="py-2">
-                <span className="mr-1.5 inline-block size-2.5 rounded-full" style={{ background: corDoJogador({ id: linha.jogadorId, cor: linha.cor }) }} />
-                {linha.raca && <span title={RACAS_INFO[linha.raca].nome}>{RACAS_INFO[linha.raca].icone} </span>}
-                {linha.nome}
+                <a href={`#perfil=${linha.jogadorId}`} title={`Perfil de ${linha.nome}`} className="hover:text-ouro-claro hover:underline">
+                  <Bandeira bandeira={linha.bandeira} largura={21} semEmblema className="mr-1.5 inline-block align-[-2px]" />
+                  {linha.raca && <span title={RACAS_INFO[linha.raca].nome}>{RACAS_INFO[linha.raca].icone} </span>}
+                  {linha.nome}
+                </a>
                 {linha.jogadorId === vencedorId && ' 👑'}
                 {linha.herdeiro && (
                   <span className="block text-[11px] text-ouro-claro" title="Cada batalha vencida contra ele vale pontos a mais">

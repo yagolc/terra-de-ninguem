@@ -34,6 +34,7 @@ import {
 import type { Transacao } from './db.ts';
 import { heroiDoJogador, type HeroiSalvo } from './herois.ts';
 import { ErroDoJogo } from './http.ts';
+import { gravarNomeJogador } from './nome.ts';
 
 export type Temporada = { id: string; inicio: number };
 
@@ -92,11 +93,7 @@ export async function criarCidade(tx: Transacao, jogadorId: string, escolha: { r
 
   const raca = TIPOS_RACA.find((r) => r === escolha.raca);
   if (!raca) throw new ErroDoJogo('Escolha sua raça para fundar a cidade.');
-  if (escolha.nome !== undefined) {
-    const nome = String(escolha.nome).trim();
-    if (nome.length < 1 || nome.length > 24) throw new ErroDoJogo('O nome deve ter de 1 a 24 caracteres.');
-    await tx`update jogadores set nome = ${nome} where id = ${jogadorId}`;
-  }
+  if (escolha.nome !== undefined) await gravarNomeJogador(tx, jogadorId, escolha.nome);
   const guardaReal = (await herdeiroDoTrono(tx, temporadaId)) === jogadorId ? BALANCEAMENTO.herdeiro.guardaReal : 0;
 
   const territorioId = await territorioInicial(tx, temporadaId, jogadorId);

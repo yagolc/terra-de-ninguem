@@ -9,6 +9,7 @@ import Cidade from './Cidade';
 import FimDeTemporada from './FimDeTemporada';
 import Fundacao from './Fundacao';
 import Objetivo from './Objetivo';
+import Perfil from './Perfil';
 import Regras from './Regras';
 import Relatorios from './Relatorios';
 
@@ -20,13 +21,20 @@ function abaDoEndereco(): Aba {
   if (location.hash === '#relatorios') return 'relatorios';
   if (location.hash === '#objetivo') return 'objetivo';
   if (location.hash === '#regras') return 'regras';
+  if (location.hash.startsWith('#perfil')) return 'perfil';
   return 'cidade';
+}
+
+/** `#perfil=<id>` abre o perfil de outro jogador; `#perfil`, o próprio (null). */
+function perfilDoEndereco(): string | null {
+  return location.hash.startsWith('#perfil=') ? decodeURIComponent(location.hash.slice('#perfil='.length)) : null;
 }
 
 /** Moldura do jogo logado: cabeçalho, abas (topo no desktop, barra inferior no celular) e a tela ativa. */
 export default function Jogo({ sessao }: { sessao: Session }) {
   const [aba, setAba] = useState<Aba>(abaDoEndereco);
   const [nome, setNome] = useState<string | null>(null);
+  const [perfilDe, setPerfilDe] = useState<string | null>(perfilDoEndereco);
   // undefined = carregando; null = nenhuma temporada ativa (mostra o fim da última).
   const [temporada, setTemporada] = useState<number | null | undefined>(undefined);
   const [temporadaId, setTemporadaId] = useState<string | null>(null);
@@ -77,7 +85,10 @@ export default function Jogo({ sessao }: { sessao: Session }) {
   }, [aba, sessao.user.id, temporadaId]);
 
   useEffect(() => {
-    const aoMudarEndereco = () => setAba(abaDoEndereco());
+    const aoMudarEndereco = () => {
+      setAba(abaDoEndereco());
+      setPerfilDe(perfilDoEndereco());
+    };
     addEventListener('hashchange', aoMudarEndereco);
     return () => removeEventListener('hashchange', aoMudarEndereco);
   }, []);
@@ -119,6 +130,7 @@ export default function Jogo({ sessao }: { sessao: Session }) {
   function irPara(nova: Aba) {
     location.hash = nova;
     setAba(nova);
+    setPerfilDe(null);
   }
 
   return (
@@ -128,7 +140,19 @@ export default function Jogo({ sessao }: { sessao: Session }) {
           <div className="flex items-center gap-2">
             <img src="/escudo.svg" alt="" className="size-8" />
             <div>
-              <h1 className="font-titulo text-lg leading-tight text-ouro">{nome ?? 'Terra de Ninguém'}</h1>
+              <h1 className="font-titulo text-lg leading-tight text-ouro">
+                {nome === null ? (
+                  'Terra de Ninguém'
+                ) : (
+                  <button
+                    onClick={() => irPara('perfil')}
+                    title="Seu perfil"
+                    className="rounded text-left hover:text-ouro-claro focus-visible:outline-2 focus-visible:outline-ouro"
+                  >
+                    {nome}
+                  </button>
+                )}
+              </h1>
               <p className="flex flex-wrap items-center gap-x-2 text-xs text-pergaminho-escuro">
                 {temporada ? `Temporada ${temporada}` : ' '}
                 {temporada && escudoAte !== null && <IndicadorEscudo ate={escudoAte} />}
@@ -175,6 +199,8 @@ export default function Jogo({ sessao }: { sessao: Session }) {
       <main className={`min-h-0 flex-1 ${aba === 'mapa' && temporada && fundada ? 'overflow-hidden' : 'overflow-y-auto'}`}>
         {aba === 'regras' ? (
           <Regras />
+        ) : aba === 'perfil' ? (
+          <Perfil jogadorId={perfilDe ?? sessao.user.id} meuId={sessao.user.id} onNomeMudou={setNome} />
         ) : temporada === undefined ? null : temporada === null ? (
           <FimDeTemporada sessao={sessao} />
         ) : fundada === undefined ? null : !fundada ? (

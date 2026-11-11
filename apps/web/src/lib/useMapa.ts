@@ -32,7 +32,14 @@ export type TerritorioMapa = {
   cidade_principal: boolean;
   reservado_para: string | null;
 };
-export type JogadorMapa = { id: string; nome: string; cor: string | null };
+export type JogadorMapa = {
+  id: string;
+  nome: string;
+  cor: string | null;
+  cor_secundaria: string | null;
+  padrao: string | null;
+  emblema: unknown;
+};
 
 export type MarchaMapa = {
   id: string;
@@ -281,7 +288,7 @@ async function buscarMapa(): Promise<DadosMapa | null> {
       .select('territorio_a, territorio_b')
       .eq('temporada_id', temporada.id)
       .returns<{ territorio_a: string; territorio_b: string }[]>(),
-    supabase.from('jogadores').select('id, nome, cor').returns<JogadorMapa[]>(),
+    supabase.from('jogadores').select('id, nome, cor, cor_secundaria, padrao, emblema').returns<JogadorMapa[]>(),
     supabase
       .from('tropas')
       .select('territorio_id, lanceiro, arqueiro, cavalaria')

@@ -3,11 +3,13 @@ import {
   cidadesAlheiasPorRegiao,
   monopolioComercial,
   type AvaliacaoObjetivo,
+  type Bandeira,
   type Monopolio,
   type Objetivo,
   type Raca,
 } from '@terra/regras';
 import { useCallback, useEffect, useState } from 'react';
+import { bandeiraDoJogador, COLUNAS_BANDEIRA, type LinhaBandeira } from './bandeira';
 import { chamarFuncao } from './funcoes';
 import { supabase } from './supabase';
 
@@ -15,6 +17,7 @@ export type LinhaPlacar = {
   jogadorId: string;
   nome: string;
   cor: string | null;
+  bandeira: Bandeira;
   territorios: number;
   populacao: number;
   vitorias: number;
@@ -88,7 +91,7 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
   const temporada = converterTemporada(linha);
 
   const [jogadores, regioes, placar, objetivos, territorios, tropas, batalhas, cidade, povoados, racas] = await Promise.all([
-    supabase.from('jogadores').select('id, nome, cor').returns<{ id: string; nome: string; cor: string | null }[]>(),
+    supabase.from('jogadores').select(`id, nome, ${COLUNAS_BANDEIRA}`).returns<(LinhaBandeira & { nome: string })[]>(),
     supabase.from('regioes').select('id, nome').eq('temporada_id', temporada.id).returns<{ id: string; nome: string }[]>(),
     supabase
       .from('placar')
@@ -222,6 +225,9 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
       jogadorId: p.jogador_id,
       nome: nomeJogador(p.jogador_id),
       cor: nomesJogadores.get(p.jogador_id)?.cor ?? null,
+      bandeira: bandeiraDoJogador(
+        nomesJogadores.get(p.jogador_id) ?? { id: p.jogador_id, cor: null, cor_secundaria: null, padrao: null, emblema: null },
+      ),
       territorios: p.territorios,
       populacao: p.populacao,
       vitorias: p.vitorias,

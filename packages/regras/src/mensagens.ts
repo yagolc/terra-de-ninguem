@@ -3,6 +3,8 @@ import type { MotivoRecusaAtaque, MotivoRecusaMovimento } from './ataques.ts';
 import type { MotivoRecusaCancelamento } from './cancelamento.ts';
 import type { MotivoRecusaEstrada, MotivoRecusaEstrutura } from './estruturas.ts';
 import type { MotivoRecusaMissao } from './missoes.ts';
+import type { MotivoRecusaNome } from './nome.ts';
+import type { MotivoRecusaPerfil } from './perfil.ts';
 import type { MotivoRecusaRecrutamento, MotivoRecusaTreinoHeroi } from './herois.ts';
 import type { MotivoRecusaVila } from './povoados.ts';
 import type { MotivoRecusaEvolucao } from './predios.ts';
@@ -102,4 +104,20 @@ export const MENSAGENS_TREINO_HEROI: Record<MotivoRecusaTreinoHeroi, string> = {
   ferido: 'Seu herói está ferido e precisa se recuperar antes de treinar.',
   fora_da_cidade: 'O herói só treina na cidade. Traga-o de volta com uma marcha de movimento.',
   recursos_insuficientes: 'Recursos insuficientes.',
+};
+
+export const MENSAGENS_NOME: Record<MotivoRecusaNome, string> = {
+  nome_vazio: 'Escreva um nome.',
+  nome_longo: 'O nome pode ter no máximo 24 caracteres.',
+  nome_em_uso: 'Outro jogador já usa esse nome.',
+};
+
+export const MENSAGENS_PERFIL: Record<MotivoRecusaPerfil, string> = {
+  cor_invalida: 'Escolha uma cor da paleta.',
+  cor_em_uso: 'Outro jogador desta temporada já usa essa cor.',
+  cor_secundaria_invalida: 'Escolha a segunda cor da paleta.',
+  padrao_invalido: 'Padrão de bandeira desconhecido.',
+  emblema_invalido: 'O emblema tem uma camada inválida.',
+  camadas_demais: 'O emblema pode ter no máximo 12 camadas.',
+  descricao_longa: 'A descrição pode ter no máximo 280 caracteres.',
 };

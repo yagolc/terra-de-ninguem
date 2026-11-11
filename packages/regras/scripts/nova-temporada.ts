@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { BALANCEAMENTO } from '../src/balanceamento.ts';
 import { escolherMelhorMapa, type MapaGerado, type Ponto2 } from '../src/mapa/gerador.ts';
-import { CORES_JOGADORES, grafoDeFronteiras } from '../src/territorios.ts';
+import { CORES_JOGADORES, escolherCor, grafoDeFronteiras } from '../src/territorios.ts';
 import { TIPOS_UNIDADE } from '../src/tipos.ts';
 import { totalUnidades } from '../src/util.ts';
 
@@ -19,7 +19,7 @@ const PASTA_SAIDA = `${RAIZ}supabase/.temp`;
 const CORES_TERRENO = { planicie: '#8a9a4b', floresta: '#3f6b3a', montanha: '#7d6f63' } as const;
 const NOMES_TERRENO = { planicie: 'planície', floresta: 'floresta', montanha: 'montanha' } as const;
 
-type Jogador = { id: string; nome: string };
+type Jogador = { id: string; nome: string; cor: string | null };
 
 function consultar<T>(sql: string): T[] {
   const saida = execSync(`npx supabase db query --linked "${sql.replace(/"/g, '\\"')}"`, {
@@ -41,7 +41,7 @@ const { values: opcoes } = parseArgs({
 // Contas bloqueadas (quem saiu do grupo: `auth.users.banned_until`) não ganham vaga. Numa linha só: no Windows a
 // quebra de linha corta o comando do `consultar`.
 const jogadores = consultar<Jogador>(
-  'select j.id, j.nome from public.jogadores j join auth.users u on u.id = j.id' +
+  'select j.id, j.nome, j.cor from public.jogadores j join auth.users u on u.id = j.id' +
     ' where u.banned_until is null or u.banned_until < now() order by j.criado_em',
 );
 const quantos = opcoes.jogadores ? Number(opcoes.jogadores) : jogadores.length;
@@ -53,6 +53,13 @@ const sementeBase = opcoes.semente ? Number(opcoes.semente) : Math.floor(Math.ra
 const { mapa, avaliacao } = escolherMelhorMapa({ sementeBase, jogadores: quantos });
 // Jogadores a mais (com --jogadores menor) entram depois como retardatários.
 const participantes = jogadores.slice(0, quantos);
+// Cada um mantém a cor do perfil; quem não tem cor ou repetiu a de alguém antes na lista ganha a primeira livre.
+const coresDosParticipantes: string[] = [];
+for (const j of participantes) {
+  const propria = j.cor?.toLowerCase();
+  const livre = propria && (CORES_JOGADORES as readonly string[]).includes(propria) && !coresDosParticipantes.includes(propria);
+  coresDosParticipantes.push(livre ? propria : escolherCor(coresDosParticipantes));
+}
 
 // ---------------------------------------------------------------------------
 // Resumo no terminal
@@ -127,7 +134,7 @@ function previaSvg(m: MapaGerado): string {
       return (
         `<polygon points="${pontos(t.poligono)}" fill="${CORES_TERRENO[t.terreno]}" stroke="#2a1f19" stroke-width="1"/>` +
         (jogador >= 0
-          ? `<circle cx="${cx}" cy="${cy - 6}" r="11" fill="${CORES_JOGADORES[jogador]}" stroke="#f1e6cf" stroke-width="2"/>` +
+          ? `<circle cx="${cx}" cy="${cy - 6}" r="11" fill="${coresDosParticipantes[jogador] ?? CORES_JOGADORES[jogador]}" stroke="#f1e6cf" stroke-width="2"/>` +
             `<text x="${cx}" y="${cy + 20}" class="jogador">${participantes[jogador]?.nome ?? `vaga ${jogador + 1}`}</text>`
           : `<text x="${cx}" y="${cy + 16}" class="tropas">${povoado ? (povoado.tipo === 'vila' ? '🏘 ' : '⚖ ') : ''}⚔ ${tropas}</text>`) +
         `<text x="${cx}" y="${cy + (jogador >= 0 ? 34 : 2)}" class="nome">${t.nome}</text>`
@@ -196,7 +203,7 @@ const valoresPovoados = mapa.povoados
   .map((p) => `(t, ${texto(idsTerritorios[p.indice]!)}, ${texto(p.tipo)})`)
   .join(',\n    ');
 const coresJogadores = participantes
-  .map((j, i) => `  update public.jogadores set cor = ${texto(CORES_JOGADORES[i]!)} where id = ${texto(j.id)};`)
+  .map((j, i) => `  update public.jogadores set cor = ${texto(coresDosParticipantes[i]!)} where id = ${texto(j.id)};`)
   .join('\n');
 
 // Um bloco DO roda tudo numa transação só: ou a temporada inteira é criada, ou nada muda.

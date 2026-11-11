@@ -9,6 +9,7 @@
 //      | { acao: 'cancelar_obra', pronto_em } | { acao: 'cancelar_treino', pronto_em } (devolvem tudo; pronto_em identifica o item)
 //      | { acao: 'melhorar_vila', territorio_id }
 //      | { acao: 'recrutar_heroi', nome, especialidade } | { acao: 'treinar_heroi' }
+//      | { acao: 'salvar_perfil', nome, cor, cor_secundaria, padrao, emblema, descricao } (não precisa de temporada ativa)
 //      (enviar_marcha aceita com_heroi: true para levar o herói, que precisa estar livre na origem)
 //      | { acao: 'marcar_relatorios_lidos' }
 // Publicar com: npx supabase functions deploy cidade --no-verify-jwt (o token é validado no código).
@@ -78,6 +79,7 @@ import {
   type Temporada,
 } from '../_compartilhado/cidade.ts';
 import { sql, type Transacao } from '../_compartilhado/db.ts';
+import { salvarPerfil } from '../_compartilhado/perfil.ts';
 import { garantirObjetivo } from '../_compartilhado/objetivos.ts';
 import { CORS, ErroDoJogo, resposta } from '../_compartilhado/http.ts';
 
@@ -403,6 +405,11 @@ async function executar(jogadorId: string, corpo: Record<string, unknown>): Prom
       await garantirObjetivo(tx, (await temporadaAtiva(tx)).id, jogadorId);
     });
     return { ok: true };
+  }
+  if (corpo.acao === 'salvar_perfil') {
+    // O perfil é do jogador, não da cidade: muda a qualquer hora, com ou sem temporada em andamento.
+    const perfil = await sql.begin((tx) => salvarPerfil(tx, jogadorId, corpo));
+    return { ok: true, ...perfil };
   }
   if (corpo.acao === 'marcar_relatorios_lidos') {
     await sql`update relatorios set lido_atacante = true where atacante_id = ${jogadorId} and not lido_atacante`;

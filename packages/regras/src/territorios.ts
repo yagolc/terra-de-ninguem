@@ -102,8 +102,23 @@ export function ligadosPorTerritoriosProprios<Id>(entrada: {
   return false;
 }
 
-/** Cores dos jogadores no mapa: bem diferentes entre si e do marrom dos territórios neutros. */
-export const CORES_JOGADORES = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e84393', '#f1c40f'] as const;
+/**
+ * Cores dos jogadores no mapa: bem diferentes entre si e do marrom dos territórios neutros. As 8 primeiras são as
+ * que a temporada distribui; as outras só aparecem quando alguém escolhe no perfil.
+ */
+export const CORES_JOGADORES = [
+  '#e74c3c',
+  '#3498db',
+  '#2ecc71',
+  '#f39c12',
+  '#9b59b6',
+  '#1abc9c',
+  '#e84393',
+  '#f1c40f',
+  '#f5f5f5',
+  '#3f51b5',
+  '#a3e635',
+] as const;
 
 /** Primeira cor da paleta que nenhum outro jogador da temporada usa (se todas estiverem em uso, repete). */
 export function escolherCor(usadas: readonly (string | null)[]): string {

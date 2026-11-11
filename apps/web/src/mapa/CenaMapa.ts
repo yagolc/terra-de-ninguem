@@ -1,6 +1,7 @@
 import { estoqueVila, totalRecursos } from '@terra/regras';
 import Phaser from 'phaser';
-import { COR_NEUTRA, corDoJogador, type DadosMapa, type TerritorioMapa } from '../lib/useMapa';
+import { bandeiraDoJogador, formasDoPadrao } from '../lib/bandeira';
+import { COR_NEUTRA, corDoJogador, type DadosMapa, type JogadorMapa, type TerritorioMapa } from '../lib/useMapa';
 
 /** Pixels por légua no "mundo" do Phaser; a câmera aplica o zoom por cima. */
 const ESCALA = 20;
@@ -260,14 +261,14 @@ export class CenaMapa extends Phaser.Scene {
     if (t.cidade_principal) {
       // Cidade: castelo com a bandeira do dono ao lado.
       this.rotulos.push(this.add.text(x + 9, y - 16, '🏰', { ...estilo, fontSize: '20px' }).setOrigin(0.5));
-      if (dono) this.desenharBandeira(x - 14, y - 14, corDoJogador(dono));
+      if (dono) this.desenharBandeira(x - 14, y - 14, dono);
       // Coroa sobre a bandeira do herdeiro do trono caído (vencedor da temporada anterior).
       if (dono && dono.id === this.opcoes.dados.herdeiroId) {
         this.rotulos.push(this.add.text(x - 3, y - 40, '👑', { ...estilo, fontSize: '16px', strokeThickness: 0 }).setOrigin(0.5));
       }
     } else if (dono) {
       // Território conquistado: a bandeira do dono no lugar do ícone de terreno.
-      this.desenharBandeira(x - 5, y - 14, corDoJogador(dono));
+      this.desenharBandeira(x - 5, y - 14, dono);
     } else if (ICONE_TERRENO[t.terreno]) {
       this.rotulos.push(this.add.text(x, y - 16, ICONE_TERRENO[t.terreno], { ...estilo, fontSize: '20px' }).setOrigin(0.5));
     }
@@ -315,19 +316,27 @@ export class CenaMapa extends Phaser.Scene {
     }
   }
 
-  /** Bandeirinha: mastro escuro e flâmula com rabo de andorinha na cor do jogador. (x, y) = base do mastro. */
-  private desenharBandeira(x: number, y: number, corHex: string) {
+  /**
+   * Bandeirinha do perfil do jogador (cor e padrão; o símbolo não caberia): mastro escuro e pano retangular.
+   * (x, y) = base do mastro.
+   */
+  private desenharBandeira(x: number, y: number, dono: JogadorMapa) {
     const g = this.camadaBandeiras!;
+    const bandeira = bandeiraDoJogador(dono);
     // Mastro escuro com borda clara, para destacar sobre a própria cor do território.
     g.lineStyle(5, 0xf1e6cf, 1);
     g.lineBetween(x, y + 12, x, y - 18);
     g.lineStyle(3, 0x1c1410, 1);
     g.lineBetween(x, y + 12, x, y - 18);
-    const flamula = toPoints([x, y - 18, x + 22, y - 18, x + 16, y - 11, x + 22, y - 4, x, y - 4]);
-    g.fillStyle(cor(corHex), 1);
-    g.fillPoints(flamula, true);
+    const [esq, topo, largura, altura] = [x, y - 18, 22, 14];
+    g.fillStyle(cor(bandeira.cor), 1);
+    g.fillRect(esq, topo, largura, altura);
+    g.fillStyle(cor(bandeira.corSecundaria), 1);
+    for (const forma of formasDoPadrao(bandeira.padrao)) {
+      g.fillPoints(toPoints(forma.map((v, i) => (i % 2 === 0 ? esq + v * largura : topo + v * altura))), true);
+    }
     g.lineStyle(2.5, 0xf1e6cf, 1);
-    g.strokePoints(flamula, true);
+    g.strokeRect(esq, topo, largura, altura);
   }
 
   private desenharDestaques() {
