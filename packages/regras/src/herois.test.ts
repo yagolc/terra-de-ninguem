@@ -85,14 +85,15 @@ describe('treino', () => {
   });
 
   it('só treina na cidade, livre, abaixo do máximo e com ouro', () => {
-    const treinar = (h: Heroi | null, r = RICO) => verificarTreinoHeroi({ heroi: h, cidadeTerritorioId: 'cidade', recursos: r, agora: AGORA });
+    const treinar = (h: Heroi | null, r = RICO) => verificarTreinoHeroi({ heroi: h, recursos: r, agora: AGORA });
     expect(treinar(heroi())).toEqual({ ok: true, nivelAlvo: 6, custo: custoTreinoHeroi(6), prontoEm: AGORA + tempoTreinoHeroiMs(6) });
     expect(treinar(null)).toEqual({ ok: false, motivo: 'sem_heroi' });
     expect(treinar(heroi({ nivel: H.nivelMaximo }))).toEqual({ ok: false, motivo: 'nivel_maximo' });
     expect(treinar(heroi({ treinoProntoEm: AGORA + 1 }))).toEqual({ ok: false, motivo: 'em_treino' });
     expect(treinar(heroi({ feridoAte: feridoAte(AGORA) }))).toEqual({ ok: false, motivo: 'ferido' });
-    expect(treinar(heroi({ territorioId: 'longe' }))).toEqual({ ok: false, motivo: 'fora_da_cidade' });
-    expect(treinar(heroi({ territorioId: null, marchaId: 'm' }))).toEqual({ ok: false, motivo: 'fora_da_cidade' });
+    // Treina em qualquer território onde estiver parado; só não em marcha.
+    expect(treinar(heroi({ territorioId: 'longe' })).ok).toBe(true);
+    expect(treinar(heroi({ territorioId: null, marchaId: 'm' }))).toEqual({ ok: false, motivo: 'em_marcha' });
     expect(treinar(heroi(), recursos())).toEqual({ ok: false, motivo: 'recursos_insuficientes' });
   });
 });

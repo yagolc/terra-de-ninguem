@@ -102,7 +102,7 @@ export const MENSAGENS_TREINO_HEROI: Record<MotivoRecusaTreinoHeroi, string> = {
   nivel_maximo: 'Seu herói já está no nível máximo.',
   em_treino: 'Seu herói já está treinando.',
   ferido: 'Seu herói está ferido e precisa se recuperar antes de treinar.',
-  fora_da_cidade: 'O herói só treina na cidade. Traga-o de volta com uma marcha de movimento.',
+  em_marcha: 'O herói está em marcha. Ele treina quando chegar a um território.',
   recursos_insuficientes: 'Recursos insuficientes.',
 };
 

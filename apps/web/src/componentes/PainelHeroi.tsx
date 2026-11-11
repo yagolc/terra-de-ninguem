@@ -112,7 +112,7 @@ function Status({ heroi, cidade, cidadeTerritorioId, nomeDoTerritorio, agora, oc
         ? 'na cidade'
         : `em ${(heroi.territorioId && nomeDoTerritorio(heroi.territorioId)) ?? 'um território'}`;
   const maximo = heroi.nivel >= H.nivelMaximo;
-  const v = verificarTreinoHeroi({ heroi, cidadeTerritorioId, recursos: cidade.recursos, agora });
+  const v = verificarTreinoHeroi({ heroi, recursos: cidade.recursos, agora });
   const custo = custoTreinoHeroi(heroi.nivel + 1);
   const faltaOuro = recursosQueFaltam(cidade.recursos, custo).ouro;
   const retrato = imagemDoHeroi(heroi.especialidade);

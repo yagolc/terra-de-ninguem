@@ -122,7 +122,7 @@ Com o Quartel construído, cada jogador recruta **um herói** por temporada (300
 | Saqueador | Carga de saque das tropas com ele (cidades e vilas) |
 | Intendente | Na cidade: toda a produção e o crescimento da população. Noutro território próprio: o dobro, só no recurso daquele território |
 
-Para subir de nível, ele treina na cidade pagando ouro (de 200 no nível 2 a ~5.100 no 10; ~15.000 no total) e fica ocupado durante o treino. Vai nas marchas de ataque e movimento junto com pelo menos 1 soldado. Se o exército dele perde, ou o território onde ele está perde uma defesa, ele fica ferido por 6 h (até a temporada 3: 12 h) e volta para a cidade. É secreto: os outros só o veem com batedor ou em relatório de batalha.
+Para subir de nível, ele treina pagando ouro, em qualquer território onde estiver parado (não em marcha; até a temporada 4, só na cidade), (de 200 no nível 2 a ~5.100 no 10; ~15.000 no total) e fica ocupado durante o treino. Vai nas marchas de ataque e movimento junto com pelo menos 1 soldado. Se o exército dele perde, ou o território onde ele está perde uma defesa, ele fica ferido por 6 h (até a temporada 3: 12 h) e volta para a cidade. É secreto: os outros só o veem com batedor ou em relatório de batalha.
 
 ## Ataques, defesa e proteções
 

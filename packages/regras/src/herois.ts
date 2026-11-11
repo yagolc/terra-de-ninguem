@@ -25,7 +25,7 @@ export type MotivoRecusaRecrutamento =
   | 'sem_populacao'
   | 'recursos_insuficientes';
 
-export type MotivoRecusaTreinoHeroi = 'sem_heroi' | 'nivel_maximo' | 'em_treino' | 'ferido' | 'fora_da_cidade' | 'recursos_insuficientes';
+export type MotivoRecusaTreinoHeroi = 'sem_heroi' | 'nivel_maximo' | 'em_treino' | 'ferido' | 'em_marcha' | 'recursos_insuficientes';
 
 /** Bônus da especialidade no nível dado (`herois.bonusPorNivel` de cada especialidade × nível). */
 export function bonusHeroi(nivel: number, especialidade: Especialidade): number {
@@ -94,11 +94,12 @@ export function tempoTreinoHeroiMs(nivelAlvo: number): number {
   return Math.round(minutosBase * crescimentoTempo ** (nivelAlvo - 2)) * MINUTO_MS;
 }
 
-/** Confere o treino: o herói está na cidade, livre, abaixo do nível máximo, e há ouro. */
+/**
+ * Confere o treino: o herói está parado num território (a cidade ou qualquer outro; em marcha, não), livre,
+ * abaixo do nível máximo, e há ouro (que sai da cidade). Até a temporada 4, só treinava na cidade.
+ */
 export function verificarTreinoHeroi(entrada: {
   heroi: Heroi | null;
-  /** Território da cidade principal do jogador. */
-  cidadeTerritorioId: string | null;
   recursos: Recursos;
   agora: number;
 }): Verificacao<{ nivelAlvo: number; custo: Recursos; prontoEm: number }, MotivoRecusaTreinoHeroi> {
@@ -107,7 +108,7 @@ export function verificarTreinoHeroi(entrada: {
   if (heroi.nivel >= BALANCEAMENTO.herois.nivelMaximo) return { ok: false, motivo: 'nivel_maximo' };
   if (heroiEmTreino(heroi, agora)) return { ok: false, motivo: 'em_treino' };
   if (heroiFerido(heroi, agora)) return { ok: false, motivo: 'ferido' };
-  if (heroi.territorioId === null || heroi.territorioId !== entrada.cidadeTerritorioId) return { ok: false, motivo: 'fora_da_cidade' };
+  if (heroi.territorioId === null) return { ok: false, motivo: 'em_marcha' };
   const nivelAlvo = heroi.nivel + 1;
   const custo = custoTreinoHeroi(nivelAlvo);
   if (!temRecursos(entrada.recursos, custo)) return { ok: false, motivo: 'recursos_insuficientes' };

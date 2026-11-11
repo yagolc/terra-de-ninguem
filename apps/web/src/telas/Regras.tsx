@@ -246,8 +246,9 @@ export default function Regras() {
         </ul>
         <p>
           O intendente rende sempre, mesmo parado na cidade; os outros só ajudam na marcha ou no território e arriscam ferimento, por
-          isso dão mais por nível. Para subir até o nível {B.herois.nivelMaximo}, ele treina na cidade pagando ouro (do nível 2 por {num(custoTreinoHeroi(2).ouro)} 🪙 ao nível{' '}
-          {B.herois.nivelMaximo} por {num(custoTreinoHeroi(B.herois.nivelMaximo).ouro)} 🪙); enquanto treina, fica ocupado.
+          isso dão mais por nível. Para subir até o nível {B.herois.nivelMaximo}, ele treina pagando ouro (do nível 2 por {num(custoTreinoHeroi(2).ouro)} 🪙 ao nível{' '}
+          {B.herois.nivelMaximo} por {num(custoTreinoHeroi(B.herois.nivelMaximo).ouro)} 🪙), em qualquer território onde estiver parado, menos
+          em marcha; enquanto treina, fica ocupado.
         </p>
         <p>
           Para levá-lo numa marcha, marque a opção ao mandar tropas do território onde ele está (ele nunca vai sozinho). Se o exército dele

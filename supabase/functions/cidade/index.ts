@@ -368,7 +368,7 @@ async function recrutarHeroi(tx: Transacao, temporada: Temporada, c: CidadeAvanc
 /** Começa o treino do herói: o nível sobe agora, mas ele fica ocupado na cidade até o fim. */
 async function treinarHeroi(tx: Transacao, c: CidadeAvancada, agora: number): Promise<number> {
   const heroi = c.carregada.heroi;
-  const v = verificarTreinoHeroi({ heroi, cidadeTerritorioId: c.carregada.territorioId, recursos: c.estado.recursos, agora });
+  const v = verificarTreinoHeroi({ heroi, recursos: c.estado.recursos, agora });
   if (!v.ok) throw new ErroDoJogo(MENSAGENS_TREINO_HEROI[v.motivo]);
   c.estado = { ...c.estado, recursos: subtrairRecursos(c.estado.recursos, v.custo) };
   await tx`update herois set nivel = ${v.nivelAlvo}, treino_pronto_em = ${new Date(v.prontoEm)} where id = ${heroi!.id}`;
