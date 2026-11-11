@@ -1,6 +1,7 @@
 import { estoqueVila, totalRecursos } from '@terra/regras';
 import Phaser from 'phaser';
 import { bandeiraDoJogador, formasDoPadrao } from '../lib/bandeira';
+import { chaveDaBandeira, svgDaBandeira } from '../lib/svgBandeira';
 import { COR_NEUTRA, corDoJogador, type DadosMapa, type JogadorMapa, type TerritorioMapa } from '../lib/useMapa';
 
 /** Pixels por légua no "mundo" do Phaser; a câmera aplica o zoom por cima. */
@@ -11,6 +12,8 @@ const ICONE_ESTRUTURA = { torre: '🗼', palicada: '🪵', entreposto: '🏪' } 
 const COR_AMEACA = 0xff4d3d;
 const COR_HORDA = 0x9b1b30;
 const ARRASTO_MINIMO = 6;
+/** Bandeirinha no mapa (3 × 2) e quantas vezes maior a imagem é desenhada, para ficar nítida no zoom. */
+const BANDEIRA = { largura: 27, altura: 18, nitidez: 4 } as const;
 
 const cor = (hex: string) => Phaser.Display.Color.HexStringToColor(hex).color;
 const toPoints = (xy: number[]) => xy.flatMap((v, i) => (i % 2 === 0 ? [new Phaser.Geom.Point(v, xy[i + 1]!)] : []));
@@ -33,7 +36,10 @@ export class CenaMapa extends Phaser.Scene {
   private camadaDestaque?: Phaser.GameObjects.Graphics;
   private camadaMarchas?: Phaser.GameObjects.Graphics;
   private camadaBandeiras?: Phaser.GameObjects.Graphics;
-  private rotulos: Phaser.GameObjects.Text[] = [];
+  private rotulos: (Phaser.GameObjects.Text | Phaser.GameObjects.Image)[] = [];
+  /** Bandeiras (imagem gerada do SVG do perfil) sendo carregadas, ou que falharam: não tenta de novo. */
+  private bandeirasCarregando = new Set<string>();
+  private redesenhoPendente = false;
   private arrastou = false;
   private mexeu = false;
   private distanciaPinca: number | null = null;
@@ -261,14 +267,14 @@ export class CenaMapa extends Phaser.Scene {
     if (t.cidade_principal) {
       // Cidade: castelo com a bandeira do dono ao lado.
       this.rotulos.push(this.add.text(x + 9, y - 16, '🏰', { ...estilo, fontSize: '20px' }).setOrigin(0.5));
-      if (dono) this.desenharBandeira(x - 14, y - 14, dono);
+      if (dono) this.desenharBandeira(x - 28, y - 14, dono);
       // Coroa sobre a bandeira do herdeiro do trono caído (vencedor da temporada anterior).
       if (dono && dono.id === this.opcoes.dados.herdeiroId) {
-        this.rotulos.push(this.add.text(x - 3, y - 40, '👑', { ...estilo, fontSize: '16px', strokeThickness: 0 }).setOrigin(0.5));
+        this.rotulos.push(this.add.text(x - 15, y - 42, '👑', { ...estilo, fontSize: '16px', strokeThickness: 0 }).setOrigin(0.5));
       }
     } else if (dono) {
       // Território conquistado: a bandeira do dono no lugar do ícone de terreno.
-      this.desenharBandeira(x - 5, y - 14, dono);
+      this.desenharBandeira(x - 12, y - 14, dono);
     } else if (ICONE_TERRENO[t.terreno]) {
       this.rotulos.push(this.add.text(x, y - 16, ICONE_TERRENO[t.terreno], { ...estilo, fontSize: '20px' }).setOrigin(0.5));
     }
@@ -278,7 +284,7 @@ export class CenaMapa extends Phaser.Scene {
     const estrutura = this.opcoes.dados.estruturas.get(t.id);
     if (estrutura) {
       // Selo redondo escuro para o ícone se destacar sobre qualquer cor de território.
-      const [ix, iy] = [x + (t.cidade_principal ? 32 : 22), y - 14];
+      const [ix, iy] = [x + (t.cidade_principal ? 32 : 28), y - 14];
       const emObra = estrutura.prontoEm !== null && estrutura.prontoEm > Date.now();
       const g = this.camadaBandeiras!;
       g.fillStyle(0x1c1410, emObra ? 0.55 : 0.9);
@@ -317,26 +323,57 @@ export class CenaMapa extends Phaser.Scene {
   }
 
   /**
-   * Bandeirinha do perfil do jogador (cor e padrão; o símbolo não caberia): mastro escuro e pano retangular.
-   * (x, y) = base do mastro.
+   * Bandeirinha do jogador, igual à do perfil (cor, padrão e emblema): mastro escuro e o pano, uma imagem gerada
+   * do SVG da bandeira. Enquanto a imagem carrega (só na primeira vez de cada bandeira), vai o pano só com cor e
+   * padrão. (x, y) = base do mastro.
    */
   private desenharBandeira(x: number, y: number, dono: JogadorMapa) {
     const g = this.camadaBandeiras!;
     const bandeira = bandeiraDoJogador(dono);
+    const { largura, altura } = BANDEIRA;
+    const [esq, topo] = [x, y - 20];
     // Mastro escuro com borda clara, para destacar sobre a própria cor do território.
     g.lineStyle(5, 0xf1e6cf, 1);
-    g.lineBetween(x, y + 12, x, y - 18);
+    g.lineBetween(x, y + 12, x, topo);
     g.lineStyle(3, 0x1c1410, 1);
-    g.lineBetween(x, y + 12, x, y - 18);
-    const [esq, topo, largura, altura] = [x, y - 18, 22, 14];
+    g.lineBetween(x, y + 12, x, topo);
+
+    const chave = chaveDaBandeira(bandeira);
+    if (this.textures.exists(chave)) {
+      this.rotulos.push(this.add.image(esq, topo, chave).setOrigin(0, 0).setDisplaySize(largura, altura));
+      return;
+    }
+    this.carregarBandeira(chave, svgDaBandeira(bandeira, largura * BANDEIRA.nitidez));
     g.fillStyle(cor(bandeira.cor), 1);
     g.fillRect(esq, topo, largura, altura);
     g.fillStyle(cor(bandeira.corSecundaria), 1);
     for (const forma of formasDoPadrao(bandeira.padrao)) {
       g.fillPoints(toPoints(forma.map((v, i) => (i % 2 === 0 ? esq + v * largura : topo + v * altura))), true);
     }
-    g.lineStyle(2.5, 0xf1e6cf, 1);
+    g.lineStyle(2, 0xf1e6cf, 1);
     g.strokeRect(esq, topo, largura, altura);
+  }
+
+  /** Transforma o SVG da bandeira em textura do Phaser e redesenha o mapa quando ficar pronta. */
+  private carregarBandeira(chave: string, svg: string) {
+    if (this.bandeirasCarregando.has(chave)) return;
+    this.bandeirasCarregando.add(chave);
+    const imagem = new Image();
+    imagem.onload = () => {
+      if (!this.sys.isActive()) return;
+      if (!this.textures.exists(chave)) this.textures.addImage(chave, imagem);
+      this.bandeirasCarregando.delete(chave);
+      // Várias bandeiras ficam prontas quase juntas: um redesenho só.
+      if (this.redesenhoPendente) return;
+      this.redesenhoPendente = true;
+      this.time.delayedCall(50, () => {
+        this.redesenhoPendente = false;
+        if (this.camadaMapa) this.desenhar();
+      });
+    };
+    // Se falhar, fica a bandeira só com cor e padrão (a chave segue marcada, para não tentar sem parar).
+    imagem.onerror = () => undefined;
+    imagem.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   }
 
   private desenharDestaques() {
