@@ -73,14 +73,28 @@ type Contexto = {
   /** Hordas bárbaras já resolvidas (públicas); a tela mostra as que atacaram o jogador. */
   hordas: Horda[];
   devolvidas: Devolvida[];
+  /** Territórios com cidade livre (muralha própria) e raça de cada jogador: entram na análise do batedor, como no mapa. */
+  cidadesLivres: Set<string>;
+  racas: Map<string, Raca>;
 };
 
 async function buscar(): Promise<{ relatorios: Relatorio[] } & Contexto> {
   if (!supabase) throw new Error('O Supabase não está configurado.');
   const { data: temporada } = await supabase.from('temporadas').select('id').eq('status', 'ativa').maybeSingle<{ id: string }>();
-  if (!temporada) return { relatorios: [], nomesTerritorios: new Map(), nomesJogadores: new Map(), reconhecimentos: [], hordas: [], devolvidas: [] };
+  if (!temporada) {
+    return {
+      relatorios: [],
+      nomesTerritorios: new Map(),
+      nomesJogadores: new Map(),
+      reconhecimentos: [],
+      hordas: [],
+      devolvidas: [],
+      cidadesLivres: new Set(),
+      racas: new Map(),
+    };
+  }
 
-  const [relatorios, territorios, jogadores, reconhecimentos, hordas] = await Promise.all([
+  const [relatorios, territorios, jogadores, reconhecimentos, hordas, cidadesLivres, racas] = await Promise.all([
     supabase
       .from('relatorios')
       .select('id, tipo, atacante_id, defensor_id, origem_id, territorio_id, vencedor, conquistou, dados, criado_em, lido_atacante, lido_defensor')
@@ -92,6 +106,13 @@ async function buscar(): Promise<{ relatorios: Relatorio[] } & Contexto> {
     supabase.from('jogadores').select('id, nome').returns<{ id: string; nome: string }[]>(),
     buscarReconhecimentos(temporada.id),
     buscarHordas(temporada.id, 30),
+    supabase
+      .from('povoados')
+      .select('territorio_id')
+      .eq('temporada_id', temporada.id)
+      .eq('tipo', 'cidade_livre')
+      .returns<{ territorio_id: string }[]>(),
+    supabase.rpc('racas_na_temporada', { p_temporada: temporada.id }),
   ]);
   if (!relatorios.data || !territorios.data || !jogadores.data) throw new Error('Não foi possível carregar os relatórios.');
   const batalhas = relatorios.data.filter((r): r is Relatorio => r.tipo !== 'devolvida');
@@ -117,6 +138,12 @@ async function buscar(): Promise<{ relatorios: Relatorio[] } & Contexto> {
     reconhecimentos,
     // Só as já resolvidas: a que vem aparece no mapa.
     hordas: hordas.filter((h) => !h.aCaminho),
+    cidadesLivres: new Set((cidadesLivres.data ?? []).map((p) => p.territorio_id)),
+    racas: new Map(
+      ((racas.data ?? []) as { jogador_id: string; raca: Raca | null }[]).flatMap((r): [string, Raca][] =>
+        r.raca ? [[r.jogador_id, r.raca]] : [],
+      ),
+    ),
   };
 }
 

@@ -16,7 +16,7 @@ export default function Relatorios({ sessao }: { sessao: Session }) {
   if (erro) return <p className="p-6 text-center text-pergaminho-escuro">{erro}</p>;
   if (!estado) return <p className="p-6 text-center text-pergaminho-escuro">Buscando os relatórios…</p>;
 
-  const { relatorios, nomesTerritorios, nomesJogadores, reconhecimentos, hordas, devolvidas } = estado;
+  const { relatorios, nomesTerritorios, nomesJogadores, reconhecimentos, hordas, devolvidas, cidadesLivres, racas } = estado;
   // Batalhas, batedores e hordas bárbaras contra o jogador numa lista só, do mais recente para o mais antigo.
   const itens = [
     ...relatorios.map((r) => ({ tipo: 'batalha' as const, quando: Date.parse(r.criado_em), r })),
@@ -111,7 +111,13 @@ export default function Relatorios({ sessao }: { sessao: Session }) {
                   </button>
                   {aberto === chave && (
                     <div className="border-t border-couro px-4 pb-4 pt-3">
-                      <InfoReconhecimento reconhecimento={rec} agora={Date.now()} nomeDono={dono} />
+                      <InfoReconhecimento
+                        reconhecimento={rec}
+                        agora={Date.now()}
+                        nomeDono={dono}
+                        cidadeLivre={cidadesLivres.has(rec.territorioId)}
+                        racaDono={rec.donoId ? racas.get(rec.donoId) : undefined}
+                      />
                     </div>
                   )}
                 </li>
