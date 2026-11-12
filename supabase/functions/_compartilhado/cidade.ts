@@ -46,7 +46,8 @@ export async function temporadaAtiva(tx: Transacao): Promise<Temporada> {
 
 /**
  * Território onde nasce a cidade: o reservado para o jogador na criação da temporada ou, para quem
- * chegou depois, a vaga inicial (ou o território) livre mais distante de todos. `null` sem mapa.
+ * chegou depois, a vaga inicial livre mais distante de todos. Sem vaga inicial livre, a temporada está
+ * cheia (o mapa é feito para `BALANCEAMENTO.mapa.jogadoresMaximo`). `null` sem mapa.
  */
 async function territorioInicial(tx: Transacao, temporadaId: string, jogadorId: string): Promise<string | null> {
   const [reservado] = await tx<{ id: string }[]>`
@@ -64,10 +65,8 @@ async function territorioInicial(tx: Transacao, temporadaId: string, jogadorId: 
   const grafo = grafoDeFronteiras(fronteiras.map((f) => [f.territorio_a, f.territorio_b] as const));
   const ocupadosOuReservados = new Set(territorios.filter((t) => t.ocupado).map((t) => t.id));
   const vagas = territorios.filter((t) => t.vaga_inicial && !t.ocupado).map((t) => t.id);
-  const livre =
-    escolherTerritorioLivre({ todos: vagas, grafo, ocupadosOuReservados }) ??
-    escolherTerritorioLivre({ todos: territorios.map((t) => t.id), grafo, ocupadosOuReservados });
-  if (!livre) throw new ErroDoJogo('O mapa desta temporada está cheio. Aguarde a próxima temporada.', 409);
+  const livre = escolherTerritorioLivre({ todos: vagas, grafo, ocupadosOuReservados });
+  if (!livre) throw new ErroDoJogo('Esta temporada está cheia. Você entra na próxima, quando o mapa for refeito.', 409);
   return livre;
 }
 
