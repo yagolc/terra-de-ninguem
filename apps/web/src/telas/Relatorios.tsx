@@ -53,8 +53,10 @@ export default function Relatorios({ sessao }: { sessao: Session }) {
                         {!d.lido && <span className="ml-2 rounded bg-ouro px-1.5 py-0.5 text-[10px] font-bold text-noite">NOVO</span>}
                       </span>
                       <span className="block text-sm text-pergaminho-escuro">
-                        Enquanto marchavam, o território virou de {novoDono}, e na proteção de iniciante ninguém ataca jogadores. Os{' '}
-                        {total} soldados voltam para {nomeTerritorio(d.origemId)}.
+                        {d.motivo === 'pacto'
+                          ? `Enquanto marchavam, você fez um pacto de não agressão com ${novoDono}.`
+                          : `Enquanto marchavam, o território virou de ${novoDono}, e na proteção de iniciante ninguém ataca jogadores.`}{' '}
+                        Os {total} soldados voltam para {nomeTerritorio(d.origemId)}.
                       </span>
                       <span className="block text-xs text-pergaminho-escuro">{quando.format(new Date(d.criadoEm))}</span>
                     </span>

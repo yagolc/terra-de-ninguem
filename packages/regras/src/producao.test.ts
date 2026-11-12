@@ -20,7 +20,7 @@ function cidadeProdutora(mudancas: Partial<EstadoCidade> = {}): EstadoCidade {
   return {
     ...cidadeInicial(INICIO),
     populacao: 30,
-    predios: { centro: 3, casa: 2, fazenda: 2, serraria: 2, mercado: 1, armazem: 2, quartel: 1, muralha: 0 },
+    predios: { centro: 3, casa: 2, fazenda: 2, serraria: 2, mercado: 1, armazem: 2, quartel: 1, muralha: 0, pombal: 0 },
     trabalhadores: { comida: 10, madeira: 8, ouro: 3 },
     recursos: { comida: 100, madeira: 100, ouro: 50 },
     ...mudancas,
@@ -47,7 +47,7 @@ describe('producaoHora', () => {
 
   it('ignora trabalhadores acima das vagas e prédios não construídos', () => {
     const cidade = cidadeProdutora({
-      predios: { centro: 1, casa: 0, fazenda: 1, serraria: 0, mercado: 0, armazem: 0, quartel: 0, muralha: 0 },
+      predios: { centro: 1, casa: 0, fazenda: 1, serraria: 0, mercado: 0, armazem: 0, quartel: 0, muralha: 0, pombal: 0 },
       trabalhadores: { comida: 50, madeira: 5, ouro: 5 },
     });
     const p = producaoHora(cidade);
@@ -142,7 +142,7 @@ describe('atualizarCidade', () => {
 describe('avancarCidade', () => {
   const semFazenda = (): EstadoCidade =>
     cidadeProdutora({
-      predios: { centro: 2, casa: 1, fazenda: 0, serraria: 0, mercado: 0, armazem: 0, quartel: 0, muralha: 0 },
+      predios: { centro: 2, casa: 1, fazenda: 0, serraria: 0, mercado: 0, armazem: 0, quartel: 0, muralha: 0, pombal: 0 },
       trabalhadores: { comida: 5, madeira: 0, ouro: 0 },
       recursos: recursos({ comida: 0 }),
     });
@@ -208,7 +208,7 @@ describe('avancarCidade com treino', () => {
 
   it('aplica obra e lotes na ordem em que terminam', () => {
     const cidade = cidadeProdutora({
-      predios: { centro: 2, casa: 1, fazenda: 0, serraria: 0, mercado: 0, armazem: 0, quartel: 1, muralha: 0 },
+      predios: { centro: 2, casa: 1, fazenda: 0, serraria: 0, mercado: 0, armazem: 0, quartel: 1, muralha: 0, pombal: 0 },
       trabalhadores: { comida: 5, madeira: 0, ouro: 0 },
       recursos: recursos({ comida: 0 }),
       populacao: 100,
@@ -229,7 +229,7 @@ describe('avancarCidade com treino', () => {
   it('conclui várias obras da fila em sequência, cada uma no seu tempo', () => {
     // Fazenda pronta em 1 h e evoluída de novo em 2 h: produz 60/h por 1 h e 66/h por 1 h.
     const cidade = cidadeProdutora({
-      predios: { centro: 3, casa: 1, fazenda: 0, serraria: 0, mercado: 0, armazem: 0, quartel: 0, muralha: 0 },
+      predios: { centro: 3, casa: 1, fazenda: 0, serraria: 0, mercado: 0, armazem: 0, quartel: 0, muralha: 0, pombal: 0 },
       trabalhadores: { comida: 5, madeira: 0, ouro: 0 },
       recursos: recursos({ comida: 0 }),
     });
@@ -281,7 +281,7 @@ describe('alocação de trabalhadores', () => {
 });
 
 describe('tempoProximoHabitanteMs', () => {
-  const PREDIOS = { centro: 5, casa: 5, fazenda: 2, serraria: 2, mercado: 1, armazem: 2, quartel: 1, muralha: 0 };
+  const PREDIOS = { centro: 5, casa: 5, fazenda: 2, serraria: 2, mercado: 1, armazem: 2, quartel: 1, muralha: 0, pombal: 0 };
   const comCasa5 = (mudancas: Partial<EstadoCidade>) => cidadeProdutora({ predios: PREDIOS, ...mudancas });
   it('conta o que falta até o próximo inteiro, na taxa da casa', () => {
     const cidade = comCasa5({ populacao: 30.25 });

@@ -52,9 +52,13 @@ export type Relatorio = {
   lido_defensor: boolean;
 };
 
-/** Tropas que voltaram sem lutar: o alvo virou de um jogador na proteção de iniciante (só o atacante vê). */
+/**
+ * Tropas que voltaram sem lutar (só o atacante vê): o alvo virou de um jogador na proteção de iniciante, ou o
+ * dono fez um pacto de não agressão com o atacante enquanto a marcha andava.
+ */
 export type Devolvida = {
   id: string;
+  motivo: 'protecao_iniciante' | 'pacto';
   territorioId: string;
   origemId: string;
   novoDonoId: string | null;
@@ -119,9 +123,10 @@ async function buscar(): Promise<{ relatorios: Relatorio[] } & Contexto> {
   const devolvidas = relatorios.data
     .filter((r) => r.tipo === 'devolvida')
     .map((r): Devolvida => {
-      const dados = r.dados as unknown as { novoDonoId?: string; tropas?: Exercito };
+      const dados = r.dados as unknown as { motivo?: string; novoDonoId?: string; tropas?: Exercito };
       return {
         id: r.id,
+        motivo: dados.motivo === 'pacto' ? 'pacto' : 'protecao_iniciante',
         territorioId: r.territorio_id,
         origemId: r.origem_id,
         novoDonoId: dados.novoDonoId ?? null,

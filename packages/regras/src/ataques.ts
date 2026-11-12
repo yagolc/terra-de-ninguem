@@ -16,7 +16,8 @@ export type MotivoRecusaAtaque =
   | 'tropas_insuficientes'
   | 'cidade_nao_conquistavel'
   | 'protecao_iniciante'
-  | 'alvo_com_escudo';
+  | 'alvo_com_escudo'
+  | 'pacto_nao_agressao';
 
 /** Até quando vale a proteção de iniciante da temporada (ms). */
 export function fimProtecaoIniciante(inicioTemporada: number): number {
@@ -30,8 +31,8 @@ export function escudoAte(agora: number): number {
 
 /**
  * Confere um ataque antes de a marcha sair. Só se ataca a partir de um território próprio e contra um
- * vizinho dele; jogadores ficam protegidos no começo da temporada e enquanto tiverem escudo; a cidade
- * principal pode ser saqueada, mas nunca conquistada.
+ * vizinho dele; jogadores ficam protegidos no começo da temporada, enquanto tiverem escudo e enquanto durar
+ * um pacto de não agressão com o atacante; a cidade principal pode ser saqueada, mas nunca conquistada.
  */
 export function verificarAtaque(entrada: {
   tipo: TipoAtaque;
@@ -47,6 +48,8 @@ export function verificarAtaque(entrada: {
   inicioTemporada: number;
   /** Fim do escudo do dono do alvo, se houver. */
   escudoDoAlvoAte: number | null;
+  /** Fim do pacto de não agressão entre o atacante e o dono do alvo, se houver. */
+  pactoComAlvoAte?: number | null;
   agora: number;
 }): Verificacao<object, MotivoRecusaAtaque> {
   const { tipo, enviar, disponiveis, alvo, agora } = entrada;
@@ -64,6 +67,9 @@ export function verificarAtaque(entrada: {
   }
   if (alvo.donoId && entrada.escudoDoAlvoAte !== null && agora < entrada.escudoDoAlvoAte) {
     return { ok: false, motivo: 'alvo_com_escudo' };
+  }
+  if (alvo.donoId && entrada.pactoComAlvoAte != null && agora < entrada.pactoComAlvoAte) {
+    return { ok: false, motivo: 'pacto_nao_agressao' };
   }
   return { ok: true };
 }

@@ -5,6 +5,7 @@ import type { MotivoRecusaEstrada, MotivoRecusaEstrutura } from './estruturas.ts
 import type { MotivoRecusaMissao } from './missoes.ts';
 import type { MotivoRecusaNome } from './nome.ts';
 import type { MotivoRecusaPerfil } from './perfil.ts';
+import type { MotivoRecusaCarta, MotivoRecusaRespostaPacto } from './pombos.ts';
 import type { MotivoRecusaRecrutamento, MotivoRecusaTreinoHeroi } from './herois.ts';
 import type { MotivoRecusaVila } from './povoados.ts';
 import type { MotivoRecusaEvolucao } from './predios.ts';
@@ -42,6 +43,7 @@ export const MENSAGENS_ATAQUE: Record<MotivoRecusaAtaque, string> = {
   cidade_nao_conquistavel: 'Cidades principais podem ser saqueadas, mas nunca conquistadas.',
   protecao_iniciante: 'Nas primeiras 48 horas da temporada ninguém ataca jogadores. Os territórios neutros já podem ser atacados.',
   alvo_com_escudo: 'Esse jogador perdeu uma defesa há pouco e está protegido por um escudo.',
+  pacto_nao_agressao: 'Você tem um pacto de não agressão com esse jogador. Espere o pacto acabar para atacá-lo.',
 };
 
 export const MENSAGENS_MOVIMENTO: Record<MotivoRecusaMovimento, string> = {
@@ -104,6 +106,23 @@ export const MENSAGENS_TREINO_HEROI: Record<MotivoRecusaTreinoHeroi, string> = {
   ferido: 'Seu herói está ferido e precisa se recuperar antes de treinar.',
   em_marcha: 'O herói está em marcha. Ele treina quando chegar a um território.',
   recursos_insuficientes: 'Recursos insuficientes.',
+};
+
+export const MENSAGENS_CARTA: Record<MotivoRecusaCarta, string> = {
+  sem_pombal: 'Construa um Pombal para mandar cartas.',
+  sem_pombos: 'Todos os seus pombos estão voando. Espere um chegar ou evolua o Pombal.',
+  destinatario_invalido: 'Escolha outro jogador desta temporada.',
+  carta_vazia: 'Escreva a carta ou faça uma proposta.',
+  texto_longo: 'A carta pode ter no máximo 500 letras.',
+  proposta_invalida: 'Proposta desconhecida.',
+  horas_invalidas: 'O pacto dura de 1 a 12 horas.',
+};
+
+export const MENSAGENS_RESPOSTA_PACTO: Record<MotivoRecusaRespostaPacto, string> = {
+  sem_proposta: 'Essa carta não traz proposta para você.',
+  ainda_voando: 'A carta ainda não chegou.',
+  ja_respondida: 'Essa proposta já foi respondida.',
+  proposta_expirada: 'A proposta expirou. Peça outra a quem mandou.',
 };
 
 export const MENSAGENS_NOME: Record<MotivoRecusaNome, string> = {

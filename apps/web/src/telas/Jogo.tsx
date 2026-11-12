@@ -4,7 +4,9 @@ import IndicadorEscudo from '../componentes/IndicadorEscudo';
 import NavegacaoInferior, { ABAS, type Aba } from '../componentes/NavegacaoInferior';
 import { supabase } from '../lib/supabase';
 import { buscarMarchasVistas } from '../lib/useMapa';
+import { contarCartasNaoLidas } from '../lib/useCartas';
 import { contarNaoLidos } from '../lib/useRelatorios';
+import Cartas from './Cartas';
 import Cidade from './Cidade';
 import FimDeTemporada from './FimDeTemporada';
 import Fundacao from './Fundacao';
@@ -22,7 +24,13 @@ function abaDoEndereco(): Aba {
   if (location.hash === '#objetivo') return 'objetivo';
   if (location.hash === '#regras') return 'regras';
   if (location.hash.startsWith('#perfil')) return 'perfil';
+  if (location.hash.startsWith('#cartas')) return 'cartas';
   return 'cidade';
+}
+
+/** `#cartas=<id>` abre a aba Cartas com uma carta para esse jogador. */
+function cartaParaDoEndereco(): string | null {
+  return location.hash.startsWith('#cartas=') ? decodeURIComponent(location.hash.slice('#cartas='.length)) : null;
 }
 
 /** `#perfil=<id>` abre o perfil de outro jogador; `#perfil`, o próprio (null). */
@@ -35,6 +43,7 @@ export default function Jogo({ sessao }: { sessao: Session }) {
   const [aba, setAba] = useState<Aba>(abaDoEndereco);
   const [nome, setNome] = useState<string | null>(null);
   const [perfilDe, setPerfilDe] = useState<string | null>(perfilDoEndereco);
+  const [cartaPara, setCartaPara] = useState<string | null>(cartaParaDoEndereco);
   // undefined = carregando; null = nenhuma temporada ativa (mostra o fim da última).
   const [temporada, setTemporada] = useState<number | null | undefined>(undefined);
   const [temporadaId, setTemporadaId] = useState<string | null>(null);
@@ -45,6 +54,7 @@ export default function Jogo({ sessao }: { sessao: Session }) {
   // Fim do escudo do próprio jogador (null = sem escudo).
   const [escudoAte, setEscudoAte] = useState<number | null>(null);
   const [naoLidos, setNaoLidos] = useState(0);
+  const [cartasNaoLidas, setCartasNaoLidas] = useState(0);
   // Marchas inimigas que as torres do jogador avistam (aviso vermelho na aba Mapa).
   const [ameacas, setAmeacas] = useState(0);
 
@@ -55,6 +65,18 @@ export default function Jogo({ sessao }: { sessao: Session }) {
       return;
     }
     const conferir = () => void contarNaoLidos(sessao.user.id).then(setNaoLidos);
+    conferir();
+    const t = setInterval(conferir, 60_000);
+    return () => clearInterval(t);
+  }, [aba, sessao.user.id]);
+
+  // Cartas que chegaram e respostas a propostas: confere ao trocar de aba e a cada minuto (pombos chegam a qualquer hora).
+  useEffect(() => {
+    if (aba === 'cartas') {
+      setCartasNaoLidas(0);
+      return;
+    }
+    const conferir = () => void contarCartasNaoLidas(sessao.user.id).then(setCartasNaoLidas);
     conferir();
     const t = setInterval(conferir, 60_000);
     return () => clearInterval(t);
@@ -88,6 +110,7 @@ export default function Jogo({ sessao }: { sessao: Session }) {
     const aoMudarEndereco = () => {
       setAba(abaDoEndereco());
       setPerfilDe(perfilDoEndereco());
+      setCartaPara(cartaParaDoEndereco());
     };
     addEventListener('hashchange', aoMudarEndereco);
     return () => removeEventListener('hashchange', aoMudarEndereco);
@@ -131,6 +154,7 @@ export default function Jogo({ sessao }: { sessao: Session }) {
     location.hash = nova;
     setAba(nova);
     setPerfilDe(null);
+    setCartaPara(null);
   }
 
   return (
@@ -169,6 +193,9 @@ export default function Jogo({ sessao }: { sessao: Session }) {
                 {item.icone} {item.rotulo}
                 {item.id === 'relatorios' && naoLidos > 0 && (
                   <span className="ml-1.5 rounded-full bg-sangue px-1.5 text-[11px] font-bold text-pergaminho">{naoLidos}</span>
+                )}
+                {item.id === 'cartas' && cartasNaoLidas > 0 && (
+                  <span className="ml-1.5 rounded-full bg-sangue px-1.5 text-[11px] font-bold text-pergaminho">{cartasNaoLidas}</span>
                 )}
                 {item.id === 'mapa' && ameacas > 0 && (
                   <span className="ml-1.5 rounded-full bg-sangue px-1.5 text-[11px] font-bold text-pergaminho">⚠️ {ameacas}</span>
@@ -216,6 +243,8 @@ export default function Jogo({ sessao }: { sessao: Session }) {
           <Objetivo sessao={sessao} />
         ) : aba === 'relatorios' ? (
           <Relatorios sessao={sessao} />
+        ) : aba === 'cartas' ? (
+          <Cartas sessao={sessao} para={cartaPara} />
         ) : (
           <Suspense fallback={<div className="grid h-full place-items-center text-pergaminho-escuro">Abrindo o mapa…</div>}>
             <Mapa sessao={sessao} />
@@ -223,7 +252,7 @@ export default function Jogo({ sessao }: { sessao: Session }) {
         )}
       </main>
 
-      {temporada !== null && fundada && <NavegacaoInferior aba={aba} onMudar={irPara} naoLidos={naoLidos} ameacas={ameacas} />}
+      {temporada !== null && fundada && <NavegacaoInferior aba={aba} onMudar={irPara} naoLidos={naoLidos} cartasNaoLidas={cartasNaoLidas} ameacas={ameacas} />}
     </div>
   );
 }

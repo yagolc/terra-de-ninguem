@@ -95,6 +95,14 @@ export default function Perfil({ jogadorId, meuId, onNomeMudou }: Props) {
               ✏️ Editar perfil
             </button>
           )}
+          {!meu && atual && (
+            <a
+              href={`#cartas=${encodeURIComponent(jogadorId)}`}
+              className="mt-2 inline-block rounded-lg border border-ouro/60 px-4 py-2 text-sm font-semibold text-ouro hover:bg-ouro/10"
+            >
+              🕊️ Enviar carta
+            </a>
+          )}
         </div>
       </section>
 

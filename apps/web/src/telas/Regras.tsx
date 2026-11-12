@@ -305,10 +305,26 @@ export default function Regras() {
         </p>
       </Secao>
 
+      <Secao icone="🕊️" titulo="Pombos e pactos">
+        <p>
+          O <b>{PREDIOS.pombal.nome}</b> ({custo(B.predios.pombal.custoBase)} no nível 1, até o nível {B.predios.pombal.nivelMaximo}) solta
+          pombos-correio que levam cartas até a cidade de outro jogador, na aba <b>Cartas</b>. O pombo voa {B.pombos.velocidade} léguas
+          por hora no nível 1 (+{pct(B.pombos.bonusVelocidadePorNivel)} por nível), então quanto mais longe, mais a carta demora. Cada
+          nível dá {B.pombos.pombosPorNivel} pombos, e cada carta ainda voando ocupa um. Só quem manda e quem recebe leem a carta.
+        </p>
+        <p>
+          Uma carta pode levar uma proposta de <b>pacto de não agressão</b> de {B.pombos.pacto.horasMinimas} a{' '}
+          {B.pombos.pacto.horasMaximas} horas. Quem recebe tem {B.pombos.pacto.validadePropostaHoras} h para aceitar ou recusar (não
+          precisa de Pombal para responder). Aceito, o pacto vale na hora: nenhum dos dois consegue mandar ataque contra o outro, e as
+          marchas que já estavam a caminho voltam sem lutar. Reconhecimento continua liberado. Os pactos são secretos: os outros
+          jogadores não sabem quem fez pacto com quem.
+        </p>
+      </Secao>
+
       <Secao icone="🤝" titulo="Diplomacia">
         <p>
-          Alianças, tréguas e traições são combinadas entre vocês, fora do jogo. Nenhum acordo é garantido pelas regras, e os objetivos
-          são secretos até o fim: confie com cuidado. Alianças dentro do jogo chegam numa próxima fase.
+          Alianças e traições são combinadas entre vocês. Fora o pacto de não agressão, nenhum acordo é garantido pelas regras, e os
+          objetivos são secretos até o fim: confie com cuidado.
         </p>
       </Secao>
     </div>

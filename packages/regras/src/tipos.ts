@@ -7,7 +7,7 @@ export type TipoUnidade = (typeof TIPOS_UNIDADE)[number];
 /** Quantidade de unidades por tipo. */
 export type Exercito = Record<TipoUnidade, number>;
 
-export const TIPOS_PREDIO = ['centro', 'casa', 'fazenda', 'serraria', 'mercado', 'armazem', 'quartel', 'muralha'] as const;
+export const TIPOS_PREDIO = ['centro', 'casa', 'fazenda', 'serraria', 'mercado', 'armazem', 'quartel', 'muralha', 'pombal'] as const;
 export type TipoPredio = (typeof TIPOS_PREDIO)[number];
 /** Nível de cada prédio da cidade; 0 = ainda não construído. */
 export type NiveisPredios = Record<TipoPredio, number>;

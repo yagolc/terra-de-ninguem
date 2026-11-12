@@ -13,6 +13,7 @@ export * from './mensagens.ts';
 export * from './missoes.ts';
 export * from './nome.ts';
 export * from './perfil.ts';
+export * from './pombos.ts';
 export * from './objetivos.ts';
 export * from './povoados.ts';
 export * from './predios.ts';

@@ -50,6 +50,7 @@ export const BALANCEAMENTO = {
     armazem: { custoBase: { comida: 0, madeira: 80, ouro: 0 }, tempoBaseMin: 3, nivelMaximo: 10 },
     quartel: { custoBase: { comida: 0, madeira: 120, ouro: 20 }, tempoBaseMin: 6, nivelMaximo: 10 },
     muralha: { custoBase: { comida: 0, madeira: 100, ouro: 30 }, tempoBaseMin: 5, nivelMaximo: 10 },
+    pombal: { custoBase: { comida: 30, madeira: 60, ouro: 20 }, tempoBaseMin: 3, nivelMaximo: 5 },
   } satisfies Record<TipoPredio, ConfigPredio>,
   crescimentoCusto: 1.5,
   /** Obras que podem esperar na fila da cidade (feitas uma depois da outra). */
@@ -178,6 +179,21 @@ export const BALANCEAMENTO = {
 
   marcha: {
     duracaoMinimaMin: 10,
+  },
+
+  /** Pombos-correio: cartas entre jogadores, que voam da cidade de um à do outro, e propostas de pacto. */
+  pombos: {
+    /** Léguas por hora com o Pombal no nível 1 (a cavalaria anda 40). */
+    velocidade: 60,
+    /** Velocidade a mais por nível do Pombal acima do 1 (0,25 = +25% por nível). */
+    bonusVelocidadePorNivel: 0.25,
+    /** Cartas voando ao mesmo tempo por nível do Pombal. */
+    pombosPorNivel: 2,
+    duracaoMinimaMin: 2,
+    /** Letras de uma carta (a tabela `cartas` tem o mesmo `check`). */
+    tamanhoTexto: 500,
+    /** Pacto de não agressão: dura de 1 a 12 horas desde o aceite; a proposta pode ser respondida por algumas horas depois de chegar. */
+    pacto: { horasMinimas: 1, horasMaximas: 12, validadePropostaHoras: 6 },
   },
 
   /** Estruturas dos territórios: pagas com comida e ouro, uma por território, destruídas se o território for conquistado. */

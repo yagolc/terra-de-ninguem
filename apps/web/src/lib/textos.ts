@@ -27,6 +27,7 @@ export const PREDIOS: Record<TipoPredio, { nome: string; icone: string; descrica
   armazem: { nome: 'Armazém', icone: '📦', descricao: 'Guarda mais recursos e protege uma parte contra saques.' },
   quartel: { nome: 'Quartel', icone: '⚔️', descricao: 'Treina lanceiros, arqueiros e cavalaria.' },
   muralha: { nome: 'Muralha', icone: '🧱', descricao: 'Bônus de defesa para a cidade.' },
+  pombal: { nome: 'Pombal', icone: '🕊️', descricao: 'Pombos-correio levam cartas e propostas de pacto aos outros jogadores.' },
 };
 
 export const UNIDADES_INFO: Record<TipoUnidade, { nome: string; plural: string; icone: string; descricao: string }> = {

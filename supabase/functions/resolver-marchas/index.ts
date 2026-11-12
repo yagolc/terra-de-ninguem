@@ -41,6 +41,7 @@ import { avancarAteAgora, carregarCidade, grupoEm, salvarCidade, type CidadeAvan
 import { sql, type Transacao } from '../_compartilhado/db.ts';
 import { heroiNoRelatorio, heroiNoTerritorio, posicionarHeroi, type HeroiSalvo } from '../_compartilhado/herois.ts';
 import { atualizarPlacar } from '../_compartilhado/objetivos.ts';
+import { fimDoPacto } from '../_compartilhado/pombos.ts';
 import { resposta } from '../_compartilhado/http.ts';
 import { cuidarDasHordas } from './hordas.ts';
 
@@ -136,14 +137,22 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
     await concluir(tx, m.id);
     return;
   }
-  // Se o alvo virou de um jogador durante a proteção de iniciante, não há batalha: as tropas voltam para casa,
-  // com um relatório só para o atacante explicando por quê.
-  if (destino.dono_id && (await emProtecaoIniciante(tx, m.temporada_id, agora))) {
+  // Se o alvo virou de um jogador durante a proteção de iniciante, ou o dono fez um pacto de não agressão com o
+  // atacante enquanto a marcha andava, não há batalha: as tropas voltam para casa, com um relatório só para o
+  // atacante explicando por quê.
+  const motivoDevolucao = !destino.dono_id
+    ? null
+    : (await emProtecaoIniciante(tx, m.temporada_id, agora))
+      ? 'protecao_iniciante'
+      : (await fimDoPacto(tx, m.temporada_id, m.jogador_id, destino.dono_id, agora)) !== null
+        ? 'pacto'
+        : null;
+  if (motivoDevolucao) {
     await tx`
       insert into relatorios (temporada_id, marcha_id, tipo, atacante_id, defensor_id, origem_id, territorio_id,
                               vencedor, conquistou, dados)
       values (${m.temporada_id}, ${m.id}, 'devolvida', ${m.jogador_id}, null, ${m.origem_id}, ${destino.id}, null, false,
-              ${tx.json({ motivo: 'protecao_iniciante', novoDonoId: destino.dono_id, tropas: atacanteDaMarcha })})`;
+              ${tx.json({ motivo: motivoDevolucao, novoDonoId: destino.dono_id, tropas: atacanteDaMarcha })})`;
     await mandarDeVolta(
       tx,
       m,

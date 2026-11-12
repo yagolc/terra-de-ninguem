@@ -89,5 +89,5 @@ export function crescimentoPopulacaoHora(nivelCasa: number): number {
 
 /** Cidade recém-fundada: só o Centro da Cidade nível 1, como no GDD. */
 export function prediosIniciais(): NiveisPredios {
-  return { centro: 1, casa: 0, fazenda: 0, serraria: 0, mercado: 0, armazem: 0, quartel: 0, muralha: 0 };
+  return { centro: 1, casa: 0, fazenda: 0, serraria: 0, mercado: 0, armazem: 0, quartel: 0, muralha: 0, pombal: 0 };
 }

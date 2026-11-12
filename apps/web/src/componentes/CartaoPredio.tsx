@@ -8,11 +8,13 @@ import {
   limitePopulacao,
   nivelArmazemNecessario,
   niveisProjetados,
+  pombosDoPombal,
   producaoHora,
   protecaoArmazem,
   recursosQueFaltam,
   tempoEvolucaoMs,
   vagasTrabalho,
+  velocidadePombo,
   verificarEvolucao,
   type EstadoCidade,
   type Obra,
@@ -48,6 +50,8 @@ function efeito(tipo: TipoPredio, cidade: EstadoCidade, bonus: Recursos): string
         : `Treina ${Math.round(Math.min(BALANCEAMENTO.treino.reducaoMaxima, BALANCEAMENTO.treino.reducaoPorNivelQuartel * (nivel - 1)) * 100)}% mais rápido · painel Exército`;
     case 'muralha':
       return `+${Math.round(BALANCEAMENTO.batalha.bonusMuralhaPorNivel * nivel * 100)}% de defesa na cidade`;
+    case 'pombal':
+      return `${pombosDoPombal(nivel)} pombos · voam ${Math.round(velocidadePombo(nivel))} léguas/h · aba Cartas`;
   }
 }
 

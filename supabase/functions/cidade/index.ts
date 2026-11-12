@@ -11,11 +11,14 @@
 //      | { acao: 'recrutar_heroi', nome, especialidade } | { acao: 'treinar_heroi' }
 //      | { acao: 'salvar_perfil', nome, cor, cor_secundaria, padrao, emblema, descricao } (não precisa de temporada ativa)
 //      (enviar_marcha aceita com_heroi: true para levar o herói, que precisa estar livre na origem)
-//      | { acao: 'marcar_relatorios_lidos' }
+//      | { acao: 'enviar_carta', destinatario_id, texto, proposta?: 'nao_agressao', horas_pacto? } (precisa de Pombal)
+//      | { acao: 'responder_pacto', carta_id, aceitar }
+//      | { acao: 'marcar_relatorios_lidos' } | { acao: 'marcar_cartas_lidas' }
 // Publicar com: npx supabase functions deploy cidade --no-verify-jwt (o token é validado no código).
 import {
   MENSAGENS_ALOCACAO,
   MENSAGENS_ATAQUE,
+  MENSAGENS_CARTA,
   MENSAGENS_CANCELAMENTO,
   MENSAGENS_ESTRADA,
   MENSAGENS_ESTRUTURA,
@@ -24,6 +27,7 @@ import {
   MENSAGENS_MOVIMENTO,
   MENSAGENS_RECONHECIMENTO,
   MENSAGENS_RECRUTAMENTO,
+  MENSAGENS_RESPOSTA_PACTO,
   MENSAGENS_TREINO,
   MENSAGENS_TREINO_HEROI,
   MENSAGENS_VILA,
@@ -35,6 +39,7 @@ import {
   cancelarObra,
   cancelarTreino,
   duracaoMarchaMs,
+  duracaoVooMs,
   efeitosRaca,
   duracaoReconhecimentoMs,
   estradaPronta,
@@ -49,6 +54,7 @@ import {
   totalUnidades,
   verificarAlocacao,
   verificarAtaque,
+  verificarCarta,
   verificarEstrada,
   verificarEstrutura,
   verificarEvolucao,
@@ -57,6 +63,7 @@ import {
   verificarReconhecimento,
   verificarRecrutamento,
   verificarResgateMissao,
+  verificarRespostaPacto,
   verificarTreinoHeroi,
   verificarTreino,
   type Recursos,
@@ -80,6 +87,7 @@ import {
 } from '../_compartilhado/cidade.ts';
 import { sql, type Transacao } from '../_compartilhado/db.ts';
 import { salvarPerfil } from '../_compartilhado/perfil.ts';
+import { fimDoPacto } from '../_compartilhado/pombos.ts';
 import { garantirObjetivo } from '../_compartilhado/objetivos.ts';
 import { CORS, ErroDoJogo, resposta } from '../_compartilhado/http.ts';
 
@@ -198,6 +206,7 @@ async function enviarMarcha(
     jogadorId,
     inicioTemporada: temporada.inicio,
     escudoDoAlvoAte: escudo ? escudo.ate.getTime() : null,
+    pactoComAlvoAte: destino.dono_id ? await fimDoPacto(tx, temporada.id, jogadorId, destino.dono_id, agora) : null,
     agora,
   });
   if (!v.ok) throw new ErroDoJogo(MENSAGENS_ATAQUE[v.motivo]);
@@ -397,6 +406,71 @@ async function melhorarVila(tx: Transacao, temporada: Temporada, c: CidadeAvanca
   return v.nivelAlvo;
 }
 
+/** Manda uma carta (com ou sem proposta de pacto): o pombo sai da cidade do jogador e voa até a do destinatário. */
+async function enviarCarta(tx: Transacao, temporada: Temporada, c: CidadeAvancada, corpo: Record<string, unknown>, agora: number): Promise<number> {
+  const jogadorId = c.carregada.jogadorId;
+  const destinatarioId = String(corpo.destinatario_id ?? '');
+  if (!UUID.test(destinatarioId)) throw new ErroDoJogo(MENSAGENS_CARTA.destinatario_invalido);
+  const cidades = await tx<{ jogador_id: string; x: number; y: number }[]>`
+    select c.jogador_id, t.x, t.y from cidades c join territorios t on t.id = c.territorio_id
+     where c.temporada_id = ${temporada.id} and c.jogador_id in (${jogadorId}, ${destinatarioId})`;
+  const origem = cidades.find((l) => l.jogador_id === jogadorId);
+  const destino = cidades.find((l) => l.jogador_id === destinatarioId);
+  // A cidade do jogador está travada (carregarCidade), então dois envios juntos não passam do limite de pombos.
+  const [voando] = await tx<{ n: number }[]>`
+    select count(*)::int as n from cartas where remetente_id = ${jogadorId} and chega_em > ${new Date(agora)}`;
+  const nivelPombal = c.estado.predios.pombal;
+  const v = verificarCarta({
+    nivelPombal,
+    emVoo: voando?.n ?? 0,
+    remetenteId: jogadorId,
+    destinatarioId,
+    destinatarioNaTemporada: !!destino && destinatarioId !== jogadorId,
+    texto: corpo.texto,
+    proposta: corpo.proposta,
+    horasPacto: corpo.horas_pacto,
+  });
+  if (!v.ok) throw new ErroDoJogo(MENSAGENS_CARTA[v.motivo]);
+  if (!origem || !destino) throw new ErroDoJogo('Sua cidade não tem território nesta temporada.', 409);
+  const chegada = agora + duracaoVooMs(origem, destino, nivelPombal);
+  await tx`
+    insert into cartas (temporada_id, remetente_id, destinatario_id, texto, proposta, horas_pacto, enviada_em, chega_em)
+    values (${temporada.id}, ${jogadorId}, ${destinatarioId}, ${v.texto}, ${v.proposta}, ${v.horasPacto},
+            ${new Date(agora)}, ${new Date(chegada)})`;
+  return chegada;
+}
+
+/** Aceita ou recusa a proposta de pacto de uma carta recebida. Aceito, o pacto vale a partir de agora. */
+async function responderPacto(tx: Transacao, temporada: Temporada, jogadorId: string, corpo: Record<string, unknown>, agora: number) {
+  const cartaId = String(corpo.carta_id ?? '');
+  if (!UUID.test(cartaId)) throw new ErroDoJogo(MENSAGENS_RESPOSTA_PACTO.sem_proposta);
+  const [carta] = await tx<
+    { destinatario_id: string; proposta: 'nao_agressao' | null; horas_pacto: number | null; chega_em: Date; resposta: string | null }[]
+  >`
+    select destinatario_id, proposta, horas_pacto, chega_em, resposta from cartas
+     where id = ${cartaId} and temporada_id = ${temporada.id} for update`;
+  if (!carta) throw new ErroDoJogo(MENSAGENS_RESPOSTA_PACTO.sem_proposta);
+  const aceitar = corpo.aceitar === true;
+  const v = verificarRespostaPacto({
+    carta: {
+      destinatarioId: carta.destinatario_id,
+      proposta: carta.proposta,
+      horasPacto: carta.horas_pacto,
+      chegaEm: carta.chega_em.getTime(),
+      respondida: carta.resposta !== null,
+    },
+    jogadorId,
+    aceitar,
+    agora,
+  });
+  if (!v.ok) throw new ErroDoJogo(MENSAGENS_RESPOSTA_PACTO[v.motivo]);
+  await tx`
+    update cartas set resposta = ${aceitar ? 'aceita' : 'recusada'}, respondida_em = ${new Date(agora)},
+                      pacto_ate = ${v.pactoAte === null ? null : new Date(v.pactoAte)}
+     where id = ${cartaId}`;
+  return v.pactoAte;
+}
+
 async function executar(jogadorId: string, corpo: Record<string, unknown>): Promise<Record<string, unknown>> {
   if (corpo.acao === 'entrar') {
     // Funda a cidade (se ainda não houver) e sorteia o objetivo secreto (se ainda não houver).
@@ -415,6 +489,11 @@ async function executar(jogadorId: string, corpo: Record<string, unknown>): Prom
     await sql`update relatorios set lido_atacante = true where atacante_id = ${jogadorId} and not lido_atacante`;
     await sql`update relatorios set lido_defensor = true where defensor_id = ${jogadorId} and not lido_defensor`;
     await sql`update reconhecimentos set lido = true where jogador_id = ${jogadorId} and not lido and disponivel_em <= now()`;
+    return { ok: true };
+  }
+  if (corpo.acao === 'marcar_cartas_lidas') {
+    await sql`update cartas set lida = true where destinatario_id = ${jogadorId} and not lida and chega_em <= now()`;
+    await sql`update cartas set resposta_vista = true where remetente_id = ${jogadorId} and resposta is not null and not resposta_vista`;
     return { ok: true };
   }
 
@@ -498,6 +577,15 @@ async function executar(jogadorId: string, corpo: Record<string, unknown>): Prom
       }
       case 'treinar_heroi': {
         resultado.pronto_em = new Date(await treinarHeroi(tx, c, agora)).toISOString();
+        break;
+      }
+      case 'enviar_carta': {
+        resultado.chega_em = new Date(await enviarCarta(tx, temporada, c, corpo, agora)).toISOString();
+        break;
+      }
+      case 'responder_pacto': {
+        const ate = await responderPacto(tx, temporada, jogadorId, corpo, agora);
+        resultado.pacto_ate = ate === null ? null : new Date(ate).toISOString();
         break;
       }
       case 'enviar_marcha': {

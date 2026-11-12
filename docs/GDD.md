@@ -55,6 +55,7 @@ A cidade começa com Centro da Cidade nível 1, e ele limita o nível máximo de
 | Armazém | Capacidade de estoque e proteção contra saque | Sim |
 | Quartel | Treina unidades | Sim |
 | Muralha | Bônus de defesa da cidade | Sim |
+| Pombal | Pombos-correio: cartas e propostas de pacto (até o nível 5) | Desde a temporada 4 |
 | Torre de vigia | Revela ataques chegando | Fase 2 |
 | Embaixada | Permite criar e entrar em alianças | Fase 2 |
 
@@ -156,6 +157,10 @@ Para os bárbaros não acabarem no 4º dia: depois da proteção de iniciante, a
 Para quem começa devagar não ficar para trás antes da primeira guerra, a tela Cidade mostra missões curtas, cada uma com um prêmio em recursos (pego uma vez, quando a missão está cumprida, até o limite do armazém): Casa nível 2, construir o Quartel, ter 5 soldados, mandar um batedor, conquistar o primeiro território, Armazém nível 3, fazer uma estrutura ou estrada e recrutar um herói. Somadas, dão cerca de 600 de comida, 700 de madeira e 310 de ouro.
 
 ## Diplomacia e alianças
+
+**Pombos e pactos (desde a temporada 4):** o Pombal solta pombos-correio que levam cartas (até 500 letras) da cidade de um jogador à de outro, a 60 léguas/h no nível 1 (+25% por nível): de ~10 min para o vizinho a pouco mais de 1 h para o outro lado do mapa. Cada nível dá 2 pombos, e cada carta ainda voando ocupa um. Só quem manda e quem recebe leem. A carta pode levar uma proposta de **pacto de não agressão** de 1 a 12 horas; quem recebe tem 6 h para aceitar ou recusar (sem precisar de Pombal). Aceito, vale na hora: nenhum dos dois manda ataque contra o outro, e marchas que já estavam a caminho voltam sem lutar (relatório "devolvida"). Reconhecimento continua liberado. Os pactos são secretos e não podem ser rompidos: acabam sozinhos, no máximo 12 h depois.
+
+O plano original abaixo (alianças, traição pública, chat) continua para uma fase futura.
 
 As relações são formais no sistema, mas trair continua sendo possível, e isso tem custo.
 
