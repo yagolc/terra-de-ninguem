@@ -117,7 +117,12 @@ async function mandarDeVolta(
   if (heroi) await posicionarHeroi(tx, heroi.id, { territorioId: null, marchaId: volta!.id });
 }
 
-async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
+/**
+ * Batalha na chegada. `retomada`: era um movimento para um território próprio que caiu enquanto as tropas
+ * andavam; elas lutam para tomá-lo de volta, como uma conquista (o escudo de quem mandou não se quebra,
+ * porque ele não escolheu atacar).
+ */
+async function resolverAtaque(tx: Transacao, m: Marcha, agora: number, retomada = false) {
   const destino = await territorio(tx, m.destino_id);
   const atacanteDaMarcha = tropasDa(m);
   const tipo = m.tipo as 'saque' | 'conquista';
@@ -354,6 +359,7 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number) {
               povoado: povoado ? { tipo: povoado.tipo, nivel: povoado.nivel } : null,
               vilaZerada,
               milicia,
+              retomada,
               heroiAtacante: heroiAtacante ? heroiNoRelatorio(heroiAtacante, !atacanteVenceu) : null,
               racaAtacante: atacante.carregada.raca,
               racaDefensor: defensor?.carregada.raca ?? null,
@@ -439,6 +445,16 @@ async function resolverMarcha(id: string): Promise<boolean> {
          for update skip locked`;
     if (!m) return false;
     const agora = Date.now();
+    // Movimento para um território que caiu no caminho: as tropas lutam para retomá-lo (conquista). A cidade
+    // principal de outro jogador nunca é conquistada; nesse caso (e no retorno) elas vão para a própria cidade.
+    if (m.tipo === 'movimento') {
+      const [alvo] = await tx<{ dono_id: string | null; cidade_principal: boolean }[]>`
+        select dono_id, cidade_principal from territorios where id = ${m.destino_id}`;
+      if (alvo && alvo.dono_id !== m.jogador_id && !alvo.cidade_principal) {
+        await resolverAtaque(tx, { ...m, tipo: 'conquista' }, agora, true);
+        return true;
+      }
+    }
     // Retorno e movimento: as tropas chegam a um território próprio (ou à cidade, se ele foi perdido).
     if (m.tipo === 'retorno' || m.tipo === 'movimento') await resolverRetorno(tx, m, agora);
     else if (m.tipo === 'reconhecimento') await resolverReconhecimento(tx, m, agora);

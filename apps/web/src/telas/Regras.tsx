@@ -146,7 +146,8 @@ export default function Regras() {
         </p>
         <p>
           <b>Mover tropas:</b> no painel de um território seu, leve soldados para outro território seu, desde que haja um caminho só por
-          territórios seus. Não tem batalha.
+          territórios seus. Não tem batalha, a não ser que o destino seja tomado enquanto as tropas andam: aí, ao chegar, elas lutam para
+          retomá-lo, como numa conquista (precisa de 1,5× a defesa). Isso não quebra o seu escudo.
         </p>
       </Secao>
 

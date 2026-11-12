@@ -41,6 +41,11 @@ export default function DetalheRelatorio({ relatorio, nomeDefensor }: { relatori
 
   return (
     <div className="space-y-3 text-sm">
+      {d.retomada && (
+        <p className="rounded-lg border border-couro bg-noite/60 px-3 py-2">
+          🔁 As tropas iam como reforço, mas o território caiu enquanto marchavam. Ao chegar, lutaram para retomá-lo.
+        </p>
+      )}
       <table className="w-full">
         <thead>
           <tr className="text-xs text-pergaminho-escuro">

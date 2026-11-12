@@ -20,6 +20,8 @@ export type DadosBatalha = {
   vilaZerada?: boolean;
   /** A milícia da cidade livre se juntou ao conquistador. */
   milicia?: boolean;
+  /** Era um movimento para um território próprio que caiu no caminho: as tropas lutaram para retomá-lo. */
+  retomada?: boolean;
   /** Heróis de cada lado (ausentes antes dos heróis); `ferido` = perdeu a batalha. */
   heroiAtacante?: HeroiNoRelatorio | null;
   heroiDefensor?: HeroiNoRelatorio | null;

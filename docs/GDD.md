@@ -138,6 +138,7 @@ Ataques podem chegar sem aviso a qualquer hora. Três proteções evitam que alg
 
 - **Ninguém perde tudo:** o saque leva no máximo 30% do estoque desprotegido, e o armazém guarda uma parte fora do alcance.
 - **Escudo pós-derrota:** depois de um ataque pesado, a cidade fica protegida por algumas horas.
+- **Reforço que chega tarde (desde a temporada 4):** se o território de destino de um movimento é tomado enquanto as tropas andam, elas lutam ao chegar para retomá-lo, como numa conquista. Não quebra o escudo de quem mandou, porque ele não escolheu atacar. Antes, elas iam direto para a cidade, sem aviso.
 - **Proteção de iniciante:** nas primeiras 48 horas da temporada, ninguém ataca jogadores.
 - **Cidade principal nunca é eliminada:** pode ser saqueada, mas não conquistada.
 
