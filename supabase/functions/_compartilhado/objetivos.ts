@@ -36,8 +36,8 @@ async function sortearPara(tx: Transacao, temporadaId: string, jogadorId: string
      group by r.id order by r.indice`;
   if (regioes.length === 0) return null;
   // Onde fica a cidade: "duas regiões" sai perto dela e "velha rixa" só mira raças de vizinhos próximos.
-  const territorios = await tx<{ id: string; regiao_id: string }[]>`
-    select id, regiao_id from territorios where temporada_id = ${temporadaId}`;
+  const territorios = await tx<{ id: string; regiao_id: string; vaga_inicial: boolean }[]>`
+    select id, regiao_id, vaga_inicial from territorios where temporada_id = ${temporadaId}`;
   const fronteiras = (
     await tx<{ territorio_a: string; territorio_b: string }[]>`
       select territorio_a, territorio_b from fronteiras where temporada_id = ${temporadaId}`
@@ -50,6 +50,11 @@ async function sortearPara(tx: Transacao, temporadaId: string, jogadorId: string
         territorios: territorios.map((t) => ({ id: t.id, regiaoId: t.regiao_id })),
         fronteiras,
         cidadeTerritorioId: minha.territorio_id,
+        // Vagas iniciais (de quem ainda vai chegar) e cidades já fundadas: onde haverá outro jogador.
+        outrasCidades: [
+          ...territorios.filter((t) => t.vaga_inicial).map((t) => t.id),
+          ...cidades.flatMap((c) => (c.jogador_id !== jogadorId && c.territorio_id ? [c.territorio_id] : [])),
+        ],
       })
     : null;
   const racasRivais = minha?.territorio_id

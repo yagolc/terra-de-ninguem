@@ -8,7 +8,7 @@ Lista das mudanças para mandar aos jogadores. Cada temporada nova ganha uma se�
 
 - **Objetivo cumprido precisa ser mantido por 4 h seguidas.** Cumprir não encerra mais a temporada na hora. Enquanto o relógio corre, todos veem no mapa e na tela Objetivo **quem** cumpriu e quanto falta (o objetivo continua secreto), e essa pessoa fica **sem escudo**: perder uma defesa não dá escudo novo. Se deixar de cumprir, o relógio zera. Vale para todos os objetivos secretos. Nesse tempo os **pactos de não agressão** dela também acabam, e ninguém consegue fechar um novo com ela (acesso militar continua valendo). (As temporadas 2, 3 e 4 acabaram em 6, 4 e 2,5 dias, sem chance de reação.)
 - **Fronteiras de ferro** pede também a **Muralha da cidade no nível 10**, além dos territórios guarnecidos.
-- **Duas regiões** sai perto de você: uma é sempre a região da sua cidade e a outra, uma região vizinha a ela.
+- **Duas regiões** sai perto de você: uma é sempre a região da sua cidade e a outra, uma região vizinha a ela, que começa a pelo menos 2 fronteiras da sua cidade e tem a cidade de outro jogador (para não ser fácil demais).
 - **Velha rixa** só mira a raça de um vizinho, com a cidade a até 4 fronteiras da sua. Sem vizinho de outra raça, ela não é sorteada.
 
 ### Diplomacia

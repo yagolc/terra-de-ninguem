@@ -169,6 +169,11 @@ export const BALANCEAMENTO = {
     rixaTerritorios: 10,
     /** "Velha rixa" só mira raças de vizinhos: jogadores com a cidade a até tantas fronteiras (desde a temporada 5). */
     rixaDistanciaMaxima: 4,
+    /**
+     * "Duas regiões": a região vizinha da cidade precisa começar a pelo menos tantas fronteiras dela e ter a cidade
+     * inicial de outro jogador (desde a temporada 5), para não sair uma dupla fácil demais.
+     */
+    vizinhaDistanciaMinima: 2,
   },
 
   pontos: {

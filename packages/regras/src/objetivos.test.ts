@@ -84,6 +84,24 @@ describe('objetivos perto da cidade', () => {
     expect(vistas).toBeGreaterThan(0);
   });
 
+  it('a vizinha precisa começar a 2 fronteiras e ter a cidade de outro jogador; sem nenhuma assim, qualquer vizinha', () => {
+    // Cidade em r2-b: r3 encosta (1 fronteira), r1 começa a 2 (r2-b → r2-a → r1-b). r2+r1 = 11 e r2+r3 = 10 cabem.
+    const sorteadas = (outrasCidades: string[]) => {
+      const cidade = vizinhancaDaCidade({ territorios, fronteiras, cidadeTerritorioId: 'r2-b', outrasCidades })!;
+      const vistas = new Set<string>();
+      for (let s = 1; s <= 400; s++) {
+        const o = sortearObjetivo({ semente: s, regioes: REGIOES, totalTerritorios: TOTAL, jaSorteados: [], cidade });
+        if (o.tipo === 'duas_regioes') vistas.add([...o.regioes].sort().join('+'));
+      }
+      return [...vistas].sort();
+    };
+    expect(BALANCEAMENTO.objetivos.vizinhaDistanciaMinima).toBe(2);
+    // Outras cidades em r1 e r3: só r1 serve (r3 encosta na cidade).
+    expect(sorteadas(['r1-a', 'r3-b', 'r2-b'])).toEqual(['r1+r2']);
+    // Só em r3 (perto demais): nenhuma vizinha serve, então vale qualquer uma.
+    expect(sorteadas(['r3-b'])).toEqual(['r1+r2', 'r2+r3']);
+  });
+
   it('sem dupla com a região da cidade no tamanho certo, sai a dupla mais perto', () => {
     // r4 (4 territórios) com r3 ou r5 (5) dá 9 de 30: pequeno demais. Cidade em r4: vale a dupla mais perto.
     const cidade = vizinhancaDaCidade({ territorios, fronteiras, cidadeTerritorioId: 'r4-a' })!;

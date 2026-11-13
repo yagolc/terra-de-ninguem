@@ -182,7 +182,7 @@ O gerador de mapa divide os territórios em 5 ou 6 regiões, o equivalente aos c
 
 | Objetivo secreto | Origem | Exemplo |
 | --- | --- | --- |
-| Dominar duas regiões específicas | War (continentes) | Conquiste a Floresta do Norte e as Montanhas de Ferro. Desde a temporada 5, uma delas é a região da cidade do jogador e a outra, uma vizinha (se nenhuma dupla assim tiver o tamanho certo, a dupla mais perto). Na temporada 4 o Khiraz-Dúm tirou duas regiões a 5 e 7 fronteiras, nenhuma a dele |
+| Dominar duas regiões específicas | War (continentes) | Conquiste a Floresta do Norte e as Montanhas de Ferro. Desde a temporada 5, uma delas é a região da cidade do jogador e a outra, uma vizinha que comece a pelo menos 2 fronteiras da cidade e tenha a cidade inicial de outro jogador (sem nenhuma assim, qualquer vizinha; se nenhuma dupla com vizinha tiver o tamanho certo, a dupla mais perto). Na temporada 4 o Khiraz-Dúm tirou duas regiões a 5 e 7 fronteiras, nenhuma a dele |
 | Dominar mais da metade do mapa | War (24 territórios) | Cerca de 55% dos territórios |
 | Dominar territórios bem defendidos ("Fronteiras de ferro") | War (18 territórios com 2 exércitos) | 10 territórios com 7 soldados em cada e, desde a temporada 5, a Muralha da cidade no nível 10 (até a temporada 3: 8 com 6, sem Muralha). Decidiu as temporadas 3 e 4, em 4 e 2,5 dias |
 | Velha rixa (substitui "derrubar um rival" desde a temporada 3) | War (destruir um exército) | Conquiste 10 territórios diferentes de jogadores de uma raça, ou deixe todos eles só com a cidade principal. Desde a temporada 5, só raças de vizinhos (cidade a até 4 fronteiras); sem vizinho de outra raça, não é sorteada. Na temporada 4 o Gustavo mirou a única humana, a 8 fronteiras |

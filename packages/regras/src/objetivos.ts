@@ -354,6 +354,8 @@ export function relogioDoObjetivo(entrada: {
 
 /** Onde fica a cidade do jogador no mapa, para sortear objetivos que ele consiga alcançar. */
 export type VizinhancaDaCidade = {
+  /** Regiões com a cidade inicial (vaga ou cidade fundada) de outro jogador. */
+  regioesComOutraCidade: ReadonlySet<string>;
   regiao: string;
   /** Regiões que fazem fronteira (atravessável) com a região da cidade. */
   regioesVizinhas: readonly string[];
@@ -366,6 +368,8 @@ export function vizinhancaDaCidade(entrada: {
   territorios: readonly { id: string; regiaoId: string }[];
   fronteiras: readonly (readonly [string, string])[];
   cidadeTerritorioId: string;
+  /** Territórios das cidades iniciais dos outros jogadores (vagas iniciais e cidades já fundadas). */
+  outrasCidades?: readonly string[];
 }): VizinhancaDaCidade | null {
   const regiaoDe = new Map(entrada.territorios.map((t) => [t.id, t.regiaoId]));
   const regiao = regiaoDe.get(entrada.cidadeTerritorioId);
@@ -384,19 +388,33 @@ export function vizinhancaDaCidade(entrada: {
     if (d === undefined) continue;
     distanciaDasRegioes.set(t.regiaoId, Math.min(distanciaDasRegioes.get(t.regiaoId) ?? Infinity, d));
   }
-  return { regiao, regioesVizinhas: [...vizinhas].sort(), distanciaDasRegioes };
+  const regioesComOutraCidade = new Set(
+    (entrada.outrasCidades ?? []).flatMap((id) => {
+      const r = id === entrada.cidadeTerritorioId ? undefined : regiaoDe.get(id);
+      return r ? [r] : [];
+    }),
+  );
+  return { regiao, regioesVizinhas: [...vizinhas].sort(), distanciaDasRegioes, regioesComOutraCidade };
 }
 
 /**
- * "Duas regiões" perto da cidade: as duplas com a região da cidade e uma vizinha dela; se nenhuma servir, as de
- * menor distância somada. Sem cidade, todas.
+ * "Duas regiões" perto da cidade, mas não fácil: a região da cidade e uma vizinha dela que comece a pelo menos
+ * `objetivos.vizinhaDistanciaMinima` fronteiras e tenha a cidade de outro jogador. Sem nenhuma assim, qualquer
+ * vizinha; sem vizinha no tamanho certo, as duplas de menor distância somada. Sem cidade, todas.
  */
 function duplasPerto(duplas: [string, string][], cidade: VizinhancaDaCidade | undefined): [string, string][] {
   if (!cidade || duplas.length === 0) return duplas;
-  const comCasa = duplas.filter(([a, b]) => {
-    const outra = a === cidade.regiao ? b : b === cidade.regiao ? a : null;
+  const outraDe = ([a, b]: [string, string]) => (a === cidade.regiao ? b : b === cidade.regiao ? a : null);
+  const comCasa = duplas.filter((d) => {
+    const outra = outraDe(d);
     return outra !== null && cidade.regioesVizinhas.includes(outra);
   });
+  const minima = BALANCEAMENTO.objetivos.vizinhaDistanciaMinima;
+  const disputadas = comCasa.filter((d) => {
+    const outra = outraDe(d)!;
+    return (cidade.distanciaDasRegioes.get(outra) ?? 0) >= minima && cidade.regioesComOutraCidade.has(outra);
+  });
+  if (disputadas.length > 0) return disputadas;
   if (comCasa.length > 0) return comCasa;
   const distancia = ([a, b]: [string, string]) =>
     (cidade.distanciaDasRegioes.get(a) ?? Infinity) + (cidade.distanciaDasRegioes.get(b) ?? Infinity);
