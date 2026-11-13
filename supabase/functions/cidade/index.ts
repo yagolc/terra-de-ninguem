@@ -11,7 +11,7 @@
 //      | { acao: 'recrutar_heroi', nome, especialidade } | { acao: 'treinar_heroi' }
 //      | { acao: 'salvar_perfil', nome, cor, cor_secundaria, padrao, emblema, descricao } (não precisa de temporada ativa)
 //      (enviar_marcha aceita com_heroi: true para levar o herói, que precisa estar livre na origem)
-//      | { acao: 'enviar_carta', destinatario_id, texto, proposta?: 'nao_agressao', horas_pacto? } (precisa de Pombal)
+//      | { acao: 'enviar_carta', destinatario_id, texto, proposta?: 'nao_agressao' | 'acesso_militar', horas_pacto? } (precisa de Pombal)
 //      | { acao: 'responder_pacto', carta_id, aceitar }
 //      | { acao: 'marcar_relatorios_lidos' } | { acao: 'marcar_cartas_lidas' }
 // Publicar com: npx supabase functions deploy cidade --no-verify-jwt (o token é validado no código).
@@ -35,6 +35,7 @@ import {
   TIPOS_ESTRUTURA,
   TIPOS_PREDIO,
   TIPOS_UNIDADE,
+  alcancaOAlvo,
   bonusHeroi,
   cancelarObra,
   cancelarTreino,
@@ -43,7 +44,6 @@ import {
   efeitosRaca,
   duracaoReconhecimentoMs,
   estradaPronta,
-  grafoDeFronteiras,
   habitantesLivres,
   heroiDisponivel,
   ligadosPorTerritoriosProprios,
@@ -71,6 +71,7 @@ import {
   type TipoEstrutura,
   type TipoPovoado,
   type TipoPredio,
+  type TipoProposta,
   type TipoUnidade,
 } from '../../../packages/regras/src/index.ts';
 import { jogadorDaRequisicao } from '../_compartilhado/auth.ts';
@@ -87,7 +88,7 @@ import {
 } from '../_compartilhado/cidade.ts';
 import { sql, type Transacao } from '../_compartilhado/db.ts';
 import { salvarPerfil } from '../_compartilhado/perfil.ts';
-import { fimDoPacto } from '../_compartilhado/pombos.ts';
+import { fimDoPacto, terrasParaMarchar } from '../_compartilhado/pombos.ts';
 import { garantirObjetivo } from '../_compartilhado/objetivos.ts';
 import { CORS, ErroDoJogo, resposta } from '../_compartilhado/http.ts';
 
@@ -144,23 +145,16 @@ async function enviarMarcha(
   const grupo = c.grupos.find((g) => g.territorioId === origemId);
   const jogadorId = c.carregada.jogadorId;
 
-  // Movimento: entre territórios próprios ligados por territórios próprios, sem batalha.
+  // Movimento: entre territórios próprios ligados por territórios próprios (ou de quem deu acesso militar), sem batalha.
   if (corpo.tipo === 'movimento') {
-    const proprios = await tx<{ id: string }[]>`select id from territorios where temporada_id = ${temporada.id} and dono_id = ${jogadorId}`;
-    const fronteiras = await tx<{ territorio_a: string; territorio_b: string }[]>`
-      select territorio_a, territorio_b from fronteiras where temporada_id = ${temporada.id}`;
+    const terras = await terrasParaMarchar(tx, temporada.id, jogadorId, agora);
     const v = verificarMovimento({
       enviar,
       disponiveis: grupo?.tropas ?? mapearExercito(() => 0),
       origemDoJogador: origem.dono_id === jogadorId,
       destinoDoJogador: destino.dono_id === jogadorId,
       mesmoTerritorio: origemId === destinoId,
-      ligados: ligadosPorTerritoriosProprios({
-        grafo: grafoDeFronteiras(fronteiras.map((f) => [f.territorio_a, f.territorio_b] as const)),
-        origem: origemId,
-        destino: destinoId,
-        proprios: new Set(proprios.map((p) => p.id)),
-      }),
+      ligados: ligadosPorTerritoriosProprios({ ...terras, origem: origemId, destino: destinoId }),
     });
     if (!v.ok) throw new ErroDoJogo(MENSAGENS_MOVIMENTO[v.motivo]);
     const { heroiId, bonusVelocidade } = heroiDaMarcha(c, corpo, origemId, agora);
@@ -187,10 +181,9 @@ async function enviarMarcha(
   if (!TIPOS_ATAQUE.includes(tipo)) throw new ErroDoJogo('Tipo de ataque desconhecido.');
   if (origemId === destinoId) throw new ErroDoJogo('Território desconhecido.');
 
-  const [fronteira] = await tx`
-    select 1 from fronteiras
-     where (territorio_a = ${origemId} and territorio_b = ${destinoId})
-        or (territorio_a = ${destinoId} and territorio_b = ${origemId})`;
+  // Vizinho da origem ou, com acesso militar, vizinho das terras de quem deu o acesso (menos as do dono do alvo).
+  const terras = await terrasParaMarchar(tx, temporada.id, jogadorId, agora, destino.dono_id);
+  const alcanca = alcancaOAlvo({ ...terras, origem: origemId, alvo: destinoId });
   const [escudo] = destino.dono_id
     ? await tx<{ ate: Date }[]>`
         select ate from protecoes where temporada_id = ${temporada.id} and jogador_id = ${destino.dono_id} and tipo = 'escudo'`
@@ -201,7 +194,7 @@ async function enviarMarcha(
     enviar,
     disponiveis: grupo?.tropas ?? mapearExercito(() => 0),
     origemDoJogador: origem.dono_id === jogadorId,
-    vizinhos: !!fronteira,
+    vizinhos: alcanca,
     alvo: { donoId: destino.dono_id, cidadePrincipal: destino.cidade_principal },
     jogadorId,
     inicioTemporada: temporada.inicio,
@@ -241,15 +234,14 @@ async function enviarReconhecimento(
   const origem = territorios.find((t) => t.id === origemId);
   const destino = territorios.find((t) => t.id === destinoId);
   if (!origem || !destino) throw new ErroDoJogo('Território desconhecido.');
-  const [fronteira] = await tx`
-    select 1 from fronteiras
-     where (territorio_a = ${origemId} and territorio_b = ${destinoId})
-        or (territorio_a = ${destinoId} and territorio_b = ${origemId})`;
 
   const jogadorId = c.carregada.jogadorId;
+  // Como o ataque: vizinho da origem ou, com acesso militar, das terras de quem deu o acesso.
+  const terras = await terrasParaMarchar(tx, temporada.id, jogadorId, agora, destino.dono_id);
+  const alcanca = alcancaOAlvo({ ...terras, origem: origemId, alvo: destinoId });
   const v = verificarReconhecimento({
     origemDoJogador: origem.dono_id === jogadorId,
-    vizinhos: !!fronteira,
+    vizinhos: alcanca,
     alvoProprio: destino.dono_id === jogadorId,
     ouro: c.estado.recursos.ouro,
   });
@@ -445,7 +437,7 @@ async function responderPacto(tx: Transacao, temporada: Temporada, jogadorId: st
   const cartaId = String(corpo.carta_id ?? '');
   if (!UUID.test(cartaId)) throw new ErroDoJogo(MENSAGENS_RESPOSTA_PACTO.sem_proposta);
   const [carta] = await tx<
-    { destinatario_id: string; proposta: 'nao_agressao' | null; horas_pacto: number | null; chega_em: Date; resposta: string | null }[]
+    { destinatario_id: string; proposta: TipoProposta | null; horas_pacto: number | null; chega_em: Date; resposta: string | null }[]
   >`
     select destinatario_id, proposta, horas_pacto, chega_em, resposta from cartas
      where id = ${cartaId} and temporada_id = ${temporada.id} for update`;

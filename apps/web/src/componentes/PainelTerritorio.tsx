@@ -3,6 +3,7 @@ import { COR_NEUTRA, corDoJogador, type DadosMapa } from '../lib/useMapa';
 import { imagemDaEstrutura } from '../lib/arte';
 import { ESTRUTURAS_INFO, RACAS_INFO, RECURSOS_INFO, TERRENOS_INFO, TITULO_HERDEIRO, UNIDADES_INFO, formatarDuracao } from '../lib/textos';
 import { useState } from 'react';
+import { origensQueAlcancam } from '../lib/corredor';
 import { chamarFuncao } from '../lib/funcoes';
 import InfoReconhecimento from './InfoReconhecimento';
 import PainelConstrucao from './PainelConstrucao';
@@ -50,7 +51,10 @@ export default function PainelTerritorio({
   const terreno = TERRENOS_INFO[t.terreno];
   const bonus = Math.round(BALANCEAMENTO.mapa.bonusTerritorio * 100);
   const minhas = dados.minhasTropas.get(t.id);
-  const podeAtacar = !meu && origensPossiveis(dados, t.id, meuId).length > 0;
+  // De onde um ataque ou batedor chega: vizinhos e, com acesso militar, pelas terras de quem deu o acesso.
+  const alcancam = meu ? [] : origensQueAlcancam(dados, t.id, meuId, agora);
+  const alcancavel = alcancam.length > 0;
+  const podeAtacar = !meu && origensPossiveis(dados, t.id, meuId, agora).length > 0;
   const fimEscudo = t.dono_id ? dados.escudos.get(t.dono_id) : undefined;
   const escudo = fimEscudo && fimEscudo > agora ? fimEscudo : null;
   const reconhecimento = dados.reconhecimentos.get(t.id);
@@ -62,10 +66,8 @@ export default function PainelTerritorio({
   const vindo = torre ? dados.marchasVistas.filter((m) => m.destinoId === t.id) : [];
 
   async function enviarBatedor() {
-    // Sai do território próprio vizinho mais perto do alvo.
-    const origem = vizinhos
-      .filter((v) => v.dono_id === meuId)
-      .sort((a, b) => Math.hypot(a.x - t!.x, a.y - t!.y) - Math.hypot(b.x - t!.x, b.y - t!.y))[0];
+    // Sai do território próprio vizinho mais perto do alvo (ou, sem vizinho, do mais perto pelo acesso militar).
+    const origem = alcancam[0];
     if (!origem) return;
     setEnviandoBatedor(true);
     setErroBatedor(null);
@@ -236,7 +238,7 @@ export default function PainelTerritorio({
         />
       )}
 
-      {!meu && vizinhoDoMeu && (
+      {!meu && alcancavel && (
         <div>
           <button
             onClick={() => void enviarBatedor()}
@@ -261,13 +263,17 @@ export default function PainelTerritorio({
             ⚔️ Atacar
           </button>
           <p className="mt-1.5 text-xs text-pergaminho-escuro">
-            {!vizinhoDoMeu
-              ? 'Só dá para atacar territórios vizinhos aos seus.'
+            {!alcancavel
+              ? 'Só dá para atacar territórios vizinhos aos seus (ou às terras de quem te deu acesso militar).'
               : !podeAtacar
-                ? 'Faz fronteira com você, mas não há tropas suas nos territórios vizinhos.'
+                ? vizinhoDoMeu
+                  ? 'Faz fronteira com você, mas não há tropas suas nos territórios vizinhos.'
+                  : 'Dá para chegar pelo acesso militar, mas não há tropas suas nos territórios de onde se chega.'
                 : escudo
                   ? `${dono?.nome} está com escudo por mais ${formatarDuracao(escudo - agora)}.`
-                  : 'Faz fronteira com você.'}
+                  : vizinhoDoMeu
+                    ? 'Faz fronteira com você.'
+                    : '🚪 Dá para chegar pelo acesso militar.'}
           </p>
         </div>
       )}

@@ -9,6 +9,7 @@ import {
   type TipoEstrutura,
   type TipoMissao,
   type TipoPredio,
+  type TipoProposta,
   type TipoUnidade,
 } from '@terra/regras';
 
@@ -16,6 +17,21 @@ export const TERRENOS_INFO: Record<Terreno, { nome: string; icone: string; efeit
   planicie: { nome: 'Planície', icone: '🌾', efeito: 'sem bônus de defesa' },
   floresta: { nome: 'Floresta', icone: '🌲', efeito: 'arqueiros defendem melhor' },
   montanha: { nome: 'Montanha', icone: '⛰️', efeito: 'bônus de defesa geral' },
+};
+
+/** Propostas que uma carta pode levar: ícone, nome e o que valem enquanto durarem. */
+export const PROPOSTAS_INFO: Record<TipoProposta, { icone: string; nome: string; efeito: string }> = {
+  nao_agressao: {
+    icone: '🤝',
+    nome: 'Pacto de não agressão',
+    efeito: 'Nenhum dos dois pode atacar o outro enquanto durar. Marchas que já estavam a caminho voltam sem lutar.',
+  },
+  acesso_militar: {
+    icone: '🚪',
+    nome: 'Acesso militar',
+    efeito:
+      'As tropas de cada um atravessam as terras do outro: para mover tropas entre seus territórios e para atacar ou mandar batedor a quem faz fronteira com elas (nunca o próprio dono das terras). As tropas não param lá.',
+  },
 };
 
 export const PREDIOS: Record<TipoPredio, { nome: string; icone: string; descricao: string }> = {

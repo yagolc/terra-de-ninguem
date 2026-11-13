@@ -1,10 +1,10 @@
 import type { Session } from '@supabase/supabase-js';
-import { pactoEntre, pombosDoPombal } from '@terra/regras';
+import { TIPOS_PROPOSTA, pactoEntre, pombosDoPombal } from '@terra/regras';
 import { useEffect, useState } from 'react';
 import FormularioCarta from '../componentes/FormularioCarta';
 import ItemCarta from '../componentes/ItemCarta';
 import { chamarFuncao } from '../lib/funcoes';
-import { PREDIOS, formatarDuracao } from '../lib/textos';
+import { PREDIOS, PROPOSTAS_INFO, formatarDuracao } from '../lib/textos';
 import { useCartas } from '../lib/useCartas';
 
 type Props = {
@@ -13,7 +13,7 @@ type Props = {
   para: string | null;
 };
 
-/** Tela Cartas: pombos-correio entre jogadores e propostas de pacto de não agressão. */
+/** Tela Cartas: pombos-correio entre jogadores e propostas de pacto de não agressão e de acesso militar. */
 export default function Cartas({ sessao, para }: Props) {
   const meuId = sessao.user.id;
   const { estado, erro, recarregar } = useCartas(meuId);
@@ -38,12 +38,16 @@ export default function Cartas({ sessao, para }: Props) {
   const { cartas, correspondentes, nomes, minhaCidade, nivelPombal } = estado;
   const emVoo = cartas.filter((c) => c.remetenteId === meuId && c.chegaEm > agora).length;
   const pactos = cartas.flatMap((c) =>
-    c.pactoAte !== null ? [{ jogadores: [c.remetenteId, c.destinatarioId] as const, ate: c.pactoAte }] : [],
+    c.pactoAte !== null && c.proposta
+      ? [{ jogadores: [c.remetenteId, c.destinatarioId] as const, ate: c.pactoAte, tipo: c.proposta }]
+      : [],
   );
-  const pactosAtivos = correspondentes.flatMap((j) => {
-    const ate = pactoEntre(pactos, meuId, j.id, agora);
-    return ate === null ? [] : [{ nome: j.nome, ate }];
-  });
+  const pactosAtivos = TIPOS_PROPOSTA.flatMap((tipo) =>
+    correspondentes.flatMap((j) => {
+      const ate = pactoEntre(pactos, meuId, j.id, agora, tipo);
+      return ate === null ? [] : [{ tipo, nome: j.nome, ate }];
+    }),
+  );
   // O RLS já esconde as recebidas que ainda voam; as mandadas aparecem desde a saída do pombo.
   const visiveis = cartas.filter((c) => c.remetenteId === meuId || c.chegaEm <= agora);
 
@@ -85,8 +89,8 @@ export default function Cartas({ sessao, para }: Props) {
       {pactosAtivos.length > 0 && (
         <ul className="space-y-1 rounded-xl border border-[#9fd39a]/50 bg-[#9fd39a]/10 p-3 text-sm">
           {pactosAtivos.map((p) => (
-            <li key={p.nome}>
-              🤝 Pacto de não agressão com <b>{p.nome}</b>: falta {formatarDuracao(p.ate - agora)}
+            <li key={`${p.tipo}-${p.nome}`}>
+              {PROPOSTAS_INFO[p.tipo].icone} {PROPOSTAS_INFO[p.tipo].nome} com <b>{p.nome}</b>: falta {formatarDuracao(p.ate - agora)}
             </li>
           ))}
         </ul>
@@ -118,7 +122,7 @@ export default function Cartas({ sessao, para }: Props) {
       {visiveis.length === 0 ? (
         <p className="rounded-xl border border-couro bg-carvao/90 p-4 text-sm text-pergaminho-escuro">
           Nenhuma carta ainda. Os pombos levam suas mensagens até a cidade do outro jogador: quanto mais longe, mais demora. Uma carta
-          pode levar uma proposta de pacto de não agressão.
+          pode levar uma proposta de pacto de não agressão ou de acesso militar.
         </p>
       ) : (
         <ul className="space-y-2">

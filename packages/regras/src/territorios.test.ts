@@ -7,6 +7,7 @@ import {
   escolherCor,
   escolherTerritorioLivre,
   grafoDeFronteiras,
+  alcancaOAlvo,
   ligadosPorTerritoriosProprios,
 } from './territorios.ts';
 
@@ -63,6 +64,39 @@ describe('ligadosPorTerritoriosProprios', () => {
 
   it('origem ou destino alheio não está ligado', () => {
     expect(ligadosPorTerritoriosProprios({ grafo: LINHA, origem: 'a', destino: 'b', proprios: new Set(['a']) })).toBe(false);
+  });
+
+  it('com acesso militar, atravessa as terras de quem deu o acesso, mas não termina nelas', () => {
+    const proprios = new Set(['a', 'e']);
+    const corredor = new Set(['b', 'c', 'd']);
+    expect(ligadosPorTerritoriosProprios({ grafo: LINHA, origem: 'a', destino: 'e', proprios, corredor })).toBe(true);
+    expect(ligadosPorTerritoriosProprios({ grafo: LINHA, origem: 'a', destino: 'c', proprios, corredor })).toBe(false);
+    expect(ligadosPorTerritoriosProprios({ grafo: LINHA, origem: 'a', destino: 'e', proprios, corredor: new Set(['b', 'd']) })).toBe(false);
+  });
+});
+
+describe('alcancaOAlvo (acesso militar)', () => {
+  // a é do jogador; b e c, de quem deu o acesso; d é o alvo; e, outro território.
+  it('sem corredor, só o vizinho da origem', () => {
+    const vazio = new Set<string>();
+    expect(alcancaOAlvo({ grafo: LINHA, origem: 'a', alvo: 'b', proprios: new Set(['a']), corredor: vazio })).toBe(true);
+    expect(alcancaOAlvo({ grafo: LINHA, origem: 'a', alvo: 'c', proprios: new Set(['a']), corredor: vazio })).toBe(false);
+  });
+
+  it('atravessa o corredor e ataca o vizinho dele', () => {
+    const entrada = { grafo: LINHA, origem: 'a', proprios: new Set(['a']), corredor: new Set(['b', 'c']) };
+    expect(alcancaOAlvo({ ...entrada, alvo: 'd' })).toBe(true);
+    expect(alcancaOAlvo({ ...entrada, alvo: 'e' })).toBe(false);
+  });
+
+  it('o caminho pode passar por terras próprias antes do corredor, mas não por terra alheia', () => {
+    expect(alcancaOAlvo({ grafo: LINHA, origem: 'a', alvo: 'e', proprios: new Set(['a', 'b']), corredor: new Set(['c', 'd']) })).toBe(true);
+    expect(alcancaOAlvo({ grafo: LINHA, origem: 'a', alvo: 'e', proprios: new Set(['a']), corredor: new Set(['c', 'd']) })).toBe(false);
+  });
+
+  it('o alvo não serve de passagem e território próprio não é alvo', () => {
+    expect(alcancaOAlvo({ grafo: LINHA, origem: 'a', alvo: 'b', proprios: new Set(['a', 'b']), corredor: new Set(['c']) })).toBe(false);
+    expect(alcancaOAlvo({ grafo: LINHA, origem: 'a', alvo: 'd', proprios: new Set(['a']), corredor: new Set(['c']) })).toBe(false);
   });
 });
 

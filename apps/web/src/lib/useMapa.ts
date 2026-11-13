@@ -6,6 +6,7 @@ import {
   type Especialidade,
   type Exercito,
   type Heroi,
+  type Pacto,
   type Raca,
   type Recurso,
   type Recursos,
@@ -153,6 +154,8 @@ export type DadosMapa = {
   herdeiroId: string | null;
   /** Quem cumpriu o objetivo secreto e quando vence se mantiver. */
   objetivosCumpridos: { jogadorId: string; venceEm: number }[];
+  /** Acessos militares aceitos e ainda em vigor do próprio jogador (o RLS só mostra as cartas dele). */
+  acessosMilitares: Pacto[];
 };
 
 export const COR_NEUTRA = '#6b5a48';
@@ -279,6 +282,7 @@ async function buscarMapa(): Promise<DadosMapa | null> {
     hordas,
     barreiras,
     relogios,
+    acessos,
   ] = await Promise.all([
     supabase.from('regioes').select('id, indice, nome, terreno').eq('temporada_id', temporada.id).returns<RegiaoMapa[]>(),
     supabase
@@ -367,6 +371,13 @@ async function buscarMapa(): Promise<DadosMapa | null> {
       .eq('temporada_id', temporada.id)
       .not('objetivo_desde', 'is', null)
       .returns<{ jogador_id: string; objetivo_desde: string }[]>(),
+    supabase
+      .from('cartas')
+      .select('remetente_id, destinatario_id, pacto_ate')
+      .eq('temporada_id', temporada.id)
+      .eq('proposta', 'acesso_militar')
+      .gt('pacto_ate', new Date().toISOString())
+      .returns<{ remetente_id: string; destinatario_id: string; pacto_ate: string }[]>(),
   ]);
   if (
     !regioes.data ||
@@ -462,6 +473,11 @@ async function buscarMapa(): Promise<DadosMapa | null> {
       ),
     ),
     herdeiroId: anterior.data?.[0]?.vencedor_id ?? null,
+    acessosMilitares: (acessos.data ?? []).map((a) => ({
+      jogadores: [a.remetente_id, a.destinatario_id] as const,
+      ate: Date.parse(a.pacto_ate),
+      tipo: 'acesso_militar' as const,
+    })),
     objetivosCumpridos: (relogios.data ?? []).map((r) => ({
       jogadorId: r.jogador_id,
       venceEm:

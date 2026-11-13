@@ -14,6 +14,7 @@ import {
   type TipoAtaque,
 } from '@terra/regras';
 import { useState } from 'react';
+import { origensQueAlcancam, quemDaPassagem } from '../lib/corredor';
 import { chamarFuncao } from '../lib/funcoes';
 import OpcaoHeroi from './OpcaoHeroi';
 import InfoReconhecimento from './InfoReconhecimento';
@@ -29,11 +30,12 @@ type Props = {
   onEnviado: (mensagem: string) => void;
 };
 
-/** Territórios do jogador vizinhos do alvo e com tropas paradas: de onde o ataque pode sair. */
-export function origensPossiveis(dados: DadosMapa, alvoId: string, meuId: string) {
-  return (dados.vizinhos.get(alvoId) ?? [])
-    .map((id) => dados.territorios.find((t) => t.id === id)!)
-    .filter((t) => t && t.dono_id === meuId && totalUnidades(dados.minhasTropas.get(t.id) ?? exercito()) > 0);
+/**
+ * Territórios do jogador com tropas paradas de onde o ataque pode sair: os vizinhos do alvo e, com acesso militar,
+ * os que chegam até ele pelas terras de quem deu o acesso.
+ */
+export function origensPossiveis(dados: DadosMapa, alvoId: string, meuId: string, agora: number) {
+  return origensQueAlcancam(dados, alvoId, meuId, agora).filter((t) => totalUnidades(dados.minhasTropas.get(t.id) ?? exercito()) > 0);
 }
 
 /** Um dos dois botões de envio (saquear ou conquistar), com o que ele faz logo abaixo do rótulo. */
@@ -65,7 +67,8 @@ const horario = new Intl.DateTimeFormat('pt-BR', { weekday: 'short', hour: '2-di
 
 export default function PainelAtaque({ dados, alvoId, meuId, agora, onVoltar, onEnviado }: Props) {
   const alvo = dados.territorios.find((t) => t.id === alvoId)!;
-  const origens = origensPossiveis(dados, alvoId, meuId);
+  const origens = origensPossiveis(dados, alvoId, meuId, agora);
+  const vizinhosDoAlvo = dados.vizinhos.get(alvoId) ?? [];
   const [origemId, setOrigemId] = useState(origens[0]?.id ?? '');
   const [enviar, setEnviar] = useState<Exercito>(exercito());
   const [enviando, setEnviando] = useState<TipoAtaque | null>(null);
@@ -85,7 +88,7 @@ export default function PainelAtaque({ dados, alvoId, meuId, agora, onVoltar, on
     enviar,
     disponiveis,
     origemDoJogador: origem?.dono_id === meuId,
-    vizinhos: (dados.vizinhos.get(alvoId) ?? []).includes(origemId),
+    vizinhos: origens.some((o) => o.id === origemId),
     alvo: { donoId: alvo.dono_id, cidadePrincipal: alvo.cidade_principal },
     jogadorId: meuId,
     inicioTemporada: dados.temporada.inicio,
@@ -108,6 +111,10 @@ export default function PainelAtaque({ dados, alvoId, meuId, agora, onVoltar, on
         : 'Leva o estoque da vila, até o que as tropas carregam.'
       : 'Aqui não há o que levar: só derrota os defensores.';
   const soldados = totalUnidades(enviar);
+  const pelaPassagem = !!origem && !vizinhosDoAlvo.includes(origemId);
+  const nomesDaPassagem = pelaPassagem
+    ? quemDaPassagem(dados, alvoId, meuId, agora).map((id) => dados.jogadores.get(id)?.nome ?? 'aliado')
+    : [];
 
   async function confirmar(tipo: TipoAtaque) {
     setEnviando(tipo);
@@ -164,7 +171,8 @@ export default function PainelAtaque({ dados, alvoId, meuId, agora, onVoltar, on
 
       {origens.length === 0 ? (
         <p className="text-sm text-pergaminho-escuro">
-          Você não tem tropas em nenhum território vizinho. Treine tropas no Quartel da sua cidade.
+          Você não tem tropas em nenhum território vizinho (nem que chegue até aqui pelo acesso militar). Treine tropas no
+          Quartel da sua cidade.
         </p>
       ) : (
         <>
@@ -181,10 +189,17 @@ export default function PainelAtaque({ dados, alvoId, meuId, agora, onVoltar, on
               {origens.map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.nome}
+                  {vizinhosDoAlvo.includes(o.id) ? '' : ' (pelo acesso militar)'}
                 </option>
               ))}
             </select>
           </label>
+          {pelaPassagem && (
+            <p className="rounded-lg bg-noite/60 px-3 py-2 text-sm">
+              🚪 Pelo acesso militar: as tropas atravessam as terras de {nomesDaPassagem.join(' e ')} até o alvo. A marcha leva o
+              tempo da distância toda.
+            </p>
+          )}
 
           <ul className="space-y-2">
             {TIPOS_UNIDADE.map((t) => (

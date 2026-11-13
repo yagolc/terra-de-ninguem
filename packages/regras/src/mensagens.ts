@@ -36,7 +36,8 @@ export const MENSAGENS_TREINO: Record<MotivoRecusaTreino, string> = {
 
 export const MENSAGENS_ATAQUE: Record<MotivoRecusaAtaque, string> = {
   origem_invalida: 'As tropas precisam sair de um território seu.',
-  nao_vizinho: 'Só dá para atacar um território vizinho ao de onde as tropas saem.',
+  nao_vizinho:
+    'Só dá para atacar um território vizinho ao de onde as tropas saem ou, com acesso militar, vizinho às terras de quem deu o acesso.',
   alvo_proprio: 'Esse território já é seu.',
   sem_tropas: 'Escolha quantas tropas vão marchar.',
   tropas_insuficientes: 'Você não tem tantas tropas nesse território.',
@@ -50,14 +51,15 @@ export const MENSAGENS_MOVIMENTO: Record<MotivoRecusaMovimento, string> = {
   origem_invalida: 'As tropas precisam sair de um território seu.',
   destino_invalido: 'Só dá para mover tropas para um território seu. Para tomar outro, use Atacar.',
   mesmo_territorio: 'Escolha outro território como destino.',
-  sem_caminho: 'O destino não está ligado à origem por territórios seus: as tropas teriam de atravessar terra alheia.',
+  sem_caminho:
+    'O destino não está ligado à origem por territórios seus (ou de quem te deu acesso militar): as tropas teriam de atravessar terra alheia.',
   sem_tropas: 'Escolha quantas tropas vão se mover.',
   tropas_insuficientes: 'Você não tem tantas tropas nesse território.',
 };
 
 export const MENSAGENS_RECONHECIMENTO: Record<MotivoRecusaReconhecimento, string> = {
   origem_invalida: 'O batedor precisa sair de um território seu.',
-  nao_vizinho: 'O batedor só alcança territórios vizinhos aos seus.',
+  nao_vizinho: 'O batedor só alcança territórios vizinhos aos seus ou, com acesso militar, vizinhos às terras de quem deu o acesso.',
   alvo_proprio: 'Esse território já é seu: você já sabe o que tem lá.',
   ouro_insuficiente: 'Falta ouro para pagar o batedor.',
 };

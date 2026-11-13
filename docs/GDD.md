@@ -55,7 +55,7 @@ A cidade começa com Centro da Cidade nível 1, e ele limita o nível máximo de
 | Armazém | Capacidade de estoque e proteção contra saque | Sim |
 | Quartel | Treina unidades | Sim |
 | Muralha | Bônus de defesa da cidade | Sim |
-| Pombal | Pombos-correio: cartas e propostas de pacto (até o nível 5) | Desde a temporada 4 |
+| Pombal | Pombos-correio: cartas e propostas de pacto e de acesso militar (até o nível 5) | Desde a temporada 4 |
 | Torre de vigia | Revela ataques chegando | Fase 2 |
 | Embaixada | Permite criar e entrar em alianças | Fase 2 |
 
@@ -160,6 +160,8 @@ Para quem começa devagar não ficar para trás antes da primeira guerra, a tela
 ## Diplomacia e alianças
 
 **Pombos e pactos (desde a temporada 4):** o Pombal solta pombos-correio que levam cartas (até 500 letras) da cidade de um jogador à de outro, a 60 léguas/h no nível 1 (+25% por nível): de ~10 min para o vizinho a pouco mais de 1 h para o outro lado do mapa. Cada nível dá 2 pombos, e cada carta ainda voando ocupa um. Só quem manda e quem recebe leem. A carta pode levar uma proposta de **pacto de não agressão** de 1 a 12 horas; quem recebe tem 6 h para aceitar ou recusar (sem precisar de Pombal). Aceito, vale na hora: nenhum dos dois manda ataque contra o outro, e marchas que já estavam a caminho voltam sem lutar (relatório "devolvida"). Reconhecimento continua liberado. Os pactos são secretos e não podem ser rompidos: acabam sozinhos, no máximo 12 h depois.
+
+**Acesso militar (desde a temporada 5):** a carta também pode propor acesso militar, de 1 a 12 horas, com as mesmas regras de resposta. Aceito, vale para os dois lados: as tropas de cada um atravessam as terras do outro, como corredor. Serve para mover tropas entre territórios próprios e para atacar ou mandar batedor a um território que faz fronteira com o corredor, saindo de qualquer território próprio ligado a ele por terras próprias ou do corredor. A marcha leva o tempo da distância em linha reta da origem ao alvo. As tropas não param no corredor nem o defendem (estacionar foi descartado por complicar a batalha). O corredor nunca serve para atacar o próprio dono das terras: contra ele, só da própria fronteira, como sempre. Marchas já enviadas seguem se o acesso acabar. É secreto, não se rompe e não impede ataques entre os dois (para isso há o pacto de não agressão). Motivo: deixar um aliado alcançar um inimigo que não faz fronteira com ele, o que dá peso à diplomacia.
 
 O plano original abaixo (alianças, traição pública, chat) continua para uma fase futura.
 

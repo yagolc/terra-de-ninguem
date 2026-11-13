@@ -324,12 +324,20 @@ export default function Regras() {
           marchas que já estavam a caminho voltam sem lutar. Reconhecimento continua liberado. Os pactos são secretos: os outros
           jogadores não sabem quem fez pacto com quem.
         </p>
+        <p>
+          A carta também pode propor <b>acesso militar</b>, com as mesmas horas e o mesmo prazo para responder. Aceito, as tropas de
+          cada um atravessam as terras do outro: para mover tropas entre seus territórios e para atacar ou mandar batedor a um
+          território que faz fronteira com as terras dele, mesmo longe das suas. A marcha leva o tempo da distância toda. As tropas
+          não param lá nem ajudam a defender, e o corredor nunca serve para atacar o próprio dono das terras. Marchas que já saíram
+          seguem mesmo se o acesso acabar. Também é secreto e não se rompe, e não impede ataques entre os dois: para isso, combine
+          também um pacto de não agressão.
+        </p>
       </Secao>
 
       <Secao icone="🤝" titulo="Diplomacia">
         <p>
-          Alianças e traições são combinadas entre vocês. Fora o pacto de não agressão, nenhum acordo é garantido pelas regras, e os
-          objetivos são secretos até o fim: confie com cuidado.
+          Alianças e traições são combinadas entre vocês. Fora o pacto de não agressão e o acesso militar, nenhum acordo é garantido
+          pelas regras, e os objetivos são secretos até o fim: confie com cuidado.
         </p>
       </Secao>
     </div>

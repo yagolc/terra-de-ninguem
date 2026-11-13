@@ -14,6 +14,7 @@ import {
   type Exercito,
 } from '@terra/regras';
 import { useState } from 'react';
+import { terrasParaMarchar } from '../lib/corredor';
 import { chamarFuncao } from '../lib/funcoes';
 import OpcaoHeroi from './OpcaoHeroi';
 import type { DadosMapa } from '../lib/useMapa';
@@ -30,15 +31,12 @@ type Props = {
 
 const horario = new Intl.DateTimeFormat('pt-BR', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
 
-/** Move tropas de um território próprio para outro, andando só por territórios próprios. */
+/** Move tropas de um território próprio para outro, andando só por territórios próprios (ou de quem deu acesso militar). */
 export default function PainelMovimento({ dados, origemId, meuId, agora, onVoltar, onEnviado }: Props) {
   const origem = dados.territorios.find((t) => t.id === origemId)!;
-  const proprios = new Set(dados.territorios.filter((t) => t.dono_id === meuId).map((t) => t.id));
+  const terras = terrasParaMarchar(dados, meuId, agora);
   const destinos = dados.territorios.filter(
-    (t) =>
-      t.id !== origemId &&
-      t.dono_id === meuId &&
-      ligadosPorTerritoriosProprios({ grafo: dados.vizinhos, origem: origemId, destino: t.id, proprios }),
+    (t) => t.id !== origemId && t.dono_id === meuId && ligadosPorTerritoriosProprios({ ...terras, origem: origemId, destino: t.id }),
   );
   const [destinoId, setDestinoId] = useState(destinos.find((t) => t.cidade_principal)?.id ?? destinos[0]?.id ?? '');
   const [enviar, setEnviar] = useState<Exercito>(exercito());
@@ -54,7 +52,7 @@ export default function PainelMovimento({ dados, origemId, meuId, agora, onVolta
     origemDoJogador: origem.dono_id === meuId,
     destinoDoJogador: destino?.dono_id === meuId,
     mesmoTerritorio: destinoId === origemId,
-    ligados: !!destino && ligadosPorTerritoriosProprios({ grafo: dados.vizinhos, origem: origemId, destino: destinoId, proprios }),
+    ligados: !!destino && ligadosPorTerritoriosProprios({ ...terras, origem: origemId, destino: destinoId }),
   });
   const heroi = dados.heroi;
   const comHeroi = levarHeroi && heroi?.territorioId === origemId;
@@ -100,7 +98,8 @@ export default function PainelMovimento({ dados, origemId, meuId, agora, onVolta
 
       {destinos.length === 0 ? (
         <p className="text-sm text-pergaminho-escuro">
-          Nenhum outro território seu está ligado a este por territórios seus. Conquiste o caminho primeiro.
+          Nenhum outro território seu está ligado a este por territórios seus. Conquiste o caminho primeiro ou peça acesso
+          militar a quem está no meio (numa carta).
         </p>
       ) : (
         <>

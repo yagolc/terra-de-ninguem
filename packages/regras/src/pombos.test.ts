@@ -4,6 +4,7 @@ import { BALANCEAMENTO } from './balanceamento.ts';
 import {
   duracaoVooMs,
   pactoEntre,
+  parceirosDeAcesso,
   pombosDoPombal,
   validadeDaProposta,
   velocidadePombo,
@@ -116,6 +117,24 @@ describe('pacto em vigor', () => {
     expect(pactoEntre(pactos, 'b', 'a', 15)).toBe(20);
     expect(pactoEntre(pactos, 'a', 'b', 20)).toBeNull();
     expect(pactoEntre(pactos, 'b', 'c', 5)).toBeNull();
+  });
+
+  it('acesso militar não conta como não agressão, e cada um vê o outro como parceiro', () => {
+    const comAcesso = [...pactos, { jogadores: ['b', 'c'] as const, ate: 40, tipo: 'acesso_militar' as const }];
+    expect(pactoEntre(comAcesso, 'b', 'c', 5)).toBeNull();
+    expect(pactoEntre(comAcesso, 'c', 'b', 5, 'acesso_militar')).toBe(40);
+    expect(parceirosDeAcesso(comAcesso, 'b', 5)).toEqual(['c']);
+    expect(parceirosDeAcesso(comAcesso, 'c', 5)).toEqual(['b']);
+    expect(parceirosDeAcesso(comAcesso, 'a', 5)).toEqual([]);
+    expect(parceirosDeAcesso(comAcesso, 'b', 40)).toEqual([]);
+  });
+
+  it('a carta aceita propor acesso militar com as mesmas horas do pacto', () => {
+    expect(verificarCarta({ ...CARTA, proposta: 'acesso_militar', horasPacto: 12 })).toMatchObject({
+      ok: true,
+      proposta: 'acesso_militar',
+      horasPacto: 12,
+    });
   });
 
   it('barra o ataque contra o parceiro, mas não contra territórios neutros', () => {

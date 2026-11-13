@@ -1,5 +1,5 @@
 import { validadeDaProposta } from '@terra/regras';
-import { formatarDuracao } from '../lib/textos';
+import { PROPOSTAS_INFO, formatarDuracao } from '../lib/textos';
 import type { Carta } from '../lib/useCartas';
 
 const quando = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -14,7 +14,7 @@ type Props = {
   onEscrever: (paraId: string) => void;
 };
 
-/** Uma carta da lista: recebida ou mandada, com a proposta de pacto e a resposta. */
+/** Uma carta da lista: recebida ou mandada, com a proposta (não agressão ou acesso militar) e a resposta. */
 export default function ItemCarta({ carta, meuId, nomes, agora, ocupado, onResponderPacto, onEscrever }: Props) {
   const recebida = carta.destinatarioId === meuId;
   const outro = recebida ? carta.remetenteId : carta.destinatarioId;
@@ -48,8 +48,10 @@ export default function ItemCarta({ carta, meuId, nomes, agora, ocupado, onRespo
           {carta.proposta && (
             <div className="space-y-2 rounded-lg border border-couro bg-noite/60 px-3 py-2 text-sm">
               <p>
-                🤝 <b>Pacto de não agressão</b> por {carta.horasPacto} {carta.horasPacto === 1 ? 'hora' : 'horas'}
+                {PROPOSTAS_INFO[carta.proposta].icone} <b>{PROPOSTAS_INFO[carta.proposta].nome}</b> por {carta.horasPacto}{' '}
+                {carta.horasPacto === 1 ? 'hora' : 'horas'}
               </p>
+              {carta.resposta === null && <p className="text-xs text-pergaminho-escuro">{PROPOSTAS_INFO[carta.proposta].efeito}</p>}
               {carta.resposta === 'aceita' && carta.pactoAte !== null && (
                 <p className="text-[#9fd39a]">
                   Aceito.{' '}

@@ -75,31 +75,58 @@ export function escolherTerritorioLivre<Id>(entrada: {
   return melhor;
 }
 
+/** Territórios alcançados a partir da origem andando só pelos permitidos (a origem conta). */
+function alcancaveis<Id>(grafo: Map<Id, Id[]>, origem: Id, permitido: (id: Id) => boolean): Set<Id> {
+  const visitados = new Set<Id>([origem]);
+  const fila = [origem];
+  while (fila.length > 0) {
+    const atual = fila.pop()!;
+    for (const vizinho of grafo.get(atual) ?? []) {
+      if (permitido(vizinho) && !visitados.has(vizinho)) {
+        visitados.add(vizinho);
+        fila.push(vizinho);
+      }
+    }
+  }
+  return visitados;
+}
+
 /**
  * A origem chega ao destino andando só por territórios do jogador (sem atravessar terra alheia)?
- * Usado para mover tropas entre territórios próprios.
+ * Usado para mover tropas entre territórios próprios. `corredor`: territórios de quem deu acesso militar ao
+ * jogador, por onde as tropas também podem passar (origem e destino continuam tendo de ser do jogador).
  */
 export function ligadosPorTerritoriosProprios<Id>(entrada: {
   grafo: Map<Id, Id[]>;
   origem: Id;
   destino: Id;
   proprios: ReadonlySet<Id>;
+  corredor?: ReadonlySet<Id>;
 }): boolean {
-  const { grafo, origem, destino, proprios } = entrada;
+  const { grafo, origem, destino, proprios, corredor } = entrada;
   if (!proprios.has(origem) || !proprios.has(destino)) return false;
-  const visitados = new Set<Id>([origem]);
-  const fila = [origem];
-  while (fila.length > 0) {
-    const atual = fila.pop()!;
-    if (atual === destino) return true;
-    for (const vizinho of grafo.get(atual) ?? []) {
-      if (proprios.has(vizinho) && !visitados.has(vizinho)) {
-        visitados.add(vizinho);
-        fila.push(vizinho);
-      }
-    }
-  }
-  return false;
+  return alcancaveis(grafo, origem, (id) => proprios.has(id) || !!corredor?.has(id)).has(destino);
+}
+
+/**
+ * Um ataque (ou batedor) que sai da origem alcança o alvo? Sem acesso militar, só se o alvo faz fronteira com a
+ * origem. Com acesso, também se as tropas, andando só por terras do jogador e do `corredor` (territórios de quem
+ * deu o acesso, menos os do dono do alvo), chegam a um território do corredor que faz fronteira com o alvo.
+ */
+export function alcancaOAlvo<Id>(entrada: {
+  grafo: Map<Id, Id[]>;
+  origem: Id;
+  alvo: Id;
+  proprios: ReadonlySet<Id>;
+  corredor: ReadonlySet<Id>;
+}): boolean {
+  const { grafo, origem, alvo, proprios, corredor } = entrada;
+  if (!proprios.has(origem) || proprios.has(alvo)) return false;
+  const vizinhosDoAlvo = grafo.get(alvo) ?? [];
+  if (vizinhosDoAlvo.includes(origem)) return true;
+  if (corredor.size === 0) return false;
+  const caminho = alcancaveis(grafo, origem, (id) => id !== alvo && (proprios.has(id) || corredor.has(id)));
+  return vizinhosDoAlvo.some((v) => corredor.has(v) && caminho.has(v));
 }
 
 /**

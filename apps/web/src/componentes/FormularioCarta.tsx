@@ -1,7 +1,7 @@
-import { BALANCEAMENTO, MENSAGENS_CARTA, duracaoVooMs, pombosDoPombal, verificarCarta } from '@terra/regras';
+import { BALANCEAMENTO, MENSAGENS_CARTA, TIPOS_PROPOSTA, duracaoVooMs, pombosDoPombal, verificarCarta, type TipoProposta } from '@terra/regras';
 import { useState } from 'react';
 import { chamarFuncao } from '../lib/funcoes';
-import { formatarDuracao } from '../lib/textos';
+import { PROPOSTAS_INFO, formatarDuracao } from '../lib/textos';
 import type { Correspondente } from '../lib/useCartas';
 
 const P = BALANCEAMENTO.pombos;
@@ -19,11 +19,11 @@ type Props = {
   onFechar: () => void;
 };
 
-/** Escrever uma carta: para quem, o texto e, se quiser, uma proposta de pacto de não agressão. */
+/** Escrever uma carta: para quem, o texto e, se quiser, uma proposta (pacto de não agressão ou acesso militar). */
 export default function FormularioCarta({ meuId, correspondentes, minhaCidade, nivelPombal, emVoo, para, onEnviada, onFechar }: Props) {
   const [destinatarioId, setDestinatarioId] = useState(para ?? '');
   const [texto, setTexto] = useState('');
-  const [propor, setPropor] = useState(false);
+  const [proposta, setProposta] = useState<TipoProposta | null>(null);
   const [horas, setHoras] = useState(6);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -36,8 +36,8 @@ export default function FormularioCarta({ meuId, correspondentes, minhaCidade, n
     destinatarioId,
     destinatarioNaTemporada: !!destino,
     texto,
-    proposta: propor ? 'nao_agressao' : null,
-    horasPacto: propor ? horas : null,
+    proposta,
+    horasPacto: proposta ? horas : null,
   });
   const voo = destino?.cidade && minhaCidade ? duracaoVooMs(minhaCidade, destino.cidade, nivelPombal) : null;
   // Motivos que dependem só do que o jogador ainda vai escrever não aparecem como erro.
@@ -51,7 +51,7 @@ export default function FormularioCarta({ meuId, correspondentes, minhaCidade, n
         acao: 'enviar_carta',
         destinatario_id: destinatarioId,
         texto,
-        ...(propor ? { proposta: 'nao_agressao', horas_pacto: horas } : {}),
+        ...(proposta ? { proposta, horas_pacto: horas } : {}),
       });
       onEnviada();
     } catch (e) {
@@ -102,17 +102,34 @@ export default function FormularioCarta({ meuId, correspondentes, minhaCidade, n
       </label>
 
       <div className="space-y-2 rounded-lg border border-couro bg-noite/60 p-3">
-        <label className="flex items-start gap-2 text-sm">
-          <input type="checkbox" checked={propor} onChange={(e) => setPropor(e.target.checked)} className="mt-1 accent-[#d4a64a]" />
-          <span>
-            <b>🤝 Propor pacto de não agressão</b>
-            <span className="block text-xs text-pergaminho-escuro">
-              Se aceitar, nenhum dos dois pode atacar o outro enquanto o pacto durar. Marchas que já estavam a caminho voltam sem lutar.
-              A proposta vale por {P.pacto.validadePropostaHoras} h depois de chegar.
-            </span>
-          </span>
-        </label>
-        {propor && (
+        <span className="block text-sm text-pergaminho-escuro">Proposta</span>
+        {([null, ...TIPOS_PROPOSTA] as const).map((tipo) => (
+          <label key={tipo ?? 'nenhuma'} className="flex items-start gap-2 text-sm">
+            <input
+              type="radio"
+              name="proposta"
+              checked={proposta === tipo}
+              onChange={() => setProposta(tipo)}
+              className="mt-1 accent-[#d4a64a]"
+            />
+            {tipo === null ? (
+              <span>Só a carta, sem proposta</span>
+            ) : (
+              <span>
+                <b>
+                  {PROPOSTAS_INFO[tipo].icone} Propor {PROPOSTAS_INFO[tipo].nome.toLowerCase()}
+                </b>
+                <span className="block text-xs text-pergaminho-escuro">Se aceitar: {PROPOSTAS_INFO[tipo].efeito}</span>
+              </span>
+            )}
+          </label>
+        ))}
+        {proposta && (
+          <p className="pl-6 text-xs text-pergaminho-escuro">
+            A proposta vale por {P.pacto.validadePropostaHoras} h depois de chegar. Aceita, não se rompe até o fim.
+          </p>
+        )}
+        {proposta && (
           <label className="flex items-center gap-2 pl-6 text-sm">
             Duração:
             <select

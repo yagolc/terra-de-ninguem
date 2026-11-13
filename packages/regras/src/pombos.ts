@@ -1,9 +1,10 @@
-// Pombos-correio: cartas entre jogadores e pactos de não agressão (GDD: "Pombal e pactos").
+// Pombos-correio: cartas entre jogadores, pactos de não agressão e acesso militar (GDD: "Pombal e pactos").
 import { BALANCEAMENTO } from './balanceamento.ts';
 import { distancia } from './marcha.ts';
 import { HORA_MS, MINUTO_MS } from './util.ts';
 
-export const TIPOS_PROPOSTA = ['nao_agressao'] as const;
+/** `nao_agressao`: nenhum dos dois ataca o outro. `acesso_militar`: as tropas de cada um atravessam as terras do outro. */
+export const TIPOS_PROPOSTA = ['nao_agressao', 'acesso_militar'] as const;
 export type TipoProposta = (typeof TIPOS_PROPOSTA)[number];
 
 type Ponto = { x: number; y: number };
@@ -116,16 +117,34 @@ export function verificarRespostaPacto(entrada: {
   return { ok: true, pactoAte: entrada.aceitar ? agora + carta.horasPacto * HORA_MS : null };
 }
 
-/** Um pacto aceito: os dois jogadores e quando acaba (ms). */
-export type Pacto = { jogadores: readonly [string, string]; ate: number };
+/** Um pacto aceito: os dois jogadores e quando acaba (ms). Sem `tipo`, é de não agressão. */
+export type Pacto = { jogadores: readonly [string, string]; ate: number; tipo?: TipoProposta };
 
-/** Fim do pacto de não agressão em vigor entre dois jogadores (o que dura mais, se houver dois), ou null. */
-export function pactoEntre(pactos: readonly Pacto[], a: string, b: string, agora: number): number | null {
+/** Fim do pacto do tipo (não agressão, se omitido) em vigor entre dois jogadores (o que dura mais), ou null. */
+export function pactoEntre(
+  pactos: readonly Pacto[],
+  a: string,
+  b: string,
+  agora: number,
+  tipo: TipoProposta = 'nao_agressao',
+): number | null {
   let fim: number | null = null;
   for (const p of pactos) {
     const [x, y] = p.jogadores;
     const mesmoPar = (x === a && y === b) || (x === b && y === a);
-    if (mesmoPar && p.ate > agora && (fim === null || p.ate > fim)) fim = p.ate;
+    if (mesmoPar && (p.tipo ?? 'nao_agressao') === tipo && p.ate > agora && (fim === null || p.ate > fim)) fim = p.ate;
   }
   return fim;
+}
+
+/** Jogadores que têm acesso militar em vigor com `jogadorId` (as terras deles viram corredor para ele). */
+export function parceirosDeAcesso(pactos: readonly Pacto[], jogadorId: string, agora: number): string[] {
+  const parceiros = new Set<string>();
+  for (const p of pactos) {
+    if (p.tipo !== 'acesso_militar' || p.ate <= agora) continue;
+    const [x, y] = p.jogadores;
+    if (x === jogadorId) parceiros.add(y);
+    else if (y === jogadorId) parceiros.add(x);
+  }
+  return [...parceiros].sort();
 }
