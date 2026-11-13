@@ -13,6 +13,7 @@ import FimDeTemporada from './FimDeTemporada';
 import Fundacao from './Fundacao';
 import Objetivo from './Objetivo';
 import Perfil from './Perfil';
+import Feedback from './Feedback';
 import Loja from './Loja';
 import Regras from './Regras';
 import Relatorios from './Relatorios';
@@ -26,6 +27,7 @@ function abaDoEndereco(): Aba {
   if (location.hash === '#objetivo') return 'objetivo';
   if (location.hash === '#regras') return 'regras';
   if (location.hash === '#loja') return 'loja';
+  if (location.hash.startsWith('#feedback')) return 'feedback';
   if (location.hash.startsWith('#perfil')) return 'perfil';
   if (location.hash.startsWith('#cartas')) return 'cartas';
   return 'cidade';
@@ -34,6 +36,12 @@ function abaDoEndereco(): Aba {
 /** `#cartas=<id>` abre a aba Cartas com uma carta para esse jogador. */
 function cartaParaDoEndereco(): string | null {
   return location.hash.startsWith('#cartas=') ? decodeURIComponent(location.hash.slice('#cartas='.length)) : null;
+}
+
+/** `#feedback=<numero>` abre a aba Feedback com esse relato aberto. */
+function reporteDoEndereco(): number | null {
+  const n = location.hash.startsWith('#feedback=') ? Number(location.hash.slice('#feedback='.length)) : NaN;
+  return Number.isInteger(n) && n > 0 ? n : null;
 }
 
 /** `#perfil=<id>` abre o perfil de outro jogador; `#perfil`, o próprio (null). */
@@ -47,6 +55,9 @@ export default function Jogo({ sessao }: { sessao: Session }) {
   const [nome, setNome] = useState<string | null>(null);
   const [perfilDe, setPerfilDe] = useState<string | null>(perfilDoEndereco);
   const [cartaPara, setCartaPara] = useState<string | null>(cartaParaDoEndereco);
+  const [reporteAberto, setReporteAberto] = useState<number | null>(reporteDoEndereco);
+  // Aba de onde o jogador foi para o Feedback (vai junto no relato de bug).
+  const [abaAnterior, setAbaAnterior] = useState<Aba>('cidade');
   // undefined = carregando; null = nenhuma temporada ativa (mostra o fim da última).
   const [temporada, setTemporada] = useState<number | null | undefined>(undefined);
   const [temporadaId, setTemporadaId] = useState<string | null>(null);
@@ -114,6 +125,7 @@ export default function Jogo({ sessao }: { sessao: Session }) {
       setAba(abaDoEndereco());
       setPerfilDe(perfilDoEndereco());
       setCartaPara(cartaParaDoEndereco());
+      setReporteAberto(reporteDoEndereco());
     };
     addEventListener('hashchange', aoMudarEndereco);
     return () => removeEventListener('hashchange', aoMudarEndereco);
@@ -154,6 +166,7 @@ export default function Jogo({ sessao }: { sessao: Session }) {
   }, [carregarEntrada]);
 
   function irPara(nova: Aba) {
+    if (nova === 'feedback' && aba !== 'feedback') setAbaAnterior(aba);
     location.hash = nova;
     setAba(nova);
     setPerfilDe(null);
@@ -208,6 +221,14 @@ export default function Jogo({ sessao }: { sessao: Session }) {
           </nav>
           <div className="flex items-center gap-2">
             <button
+              onClick={() => irPara('feedback')}
+              aria-current={aba === 'feedback' ? 'page' : undefined}
+              title="Relatar bug ou sugerir ideia"
+              className={`rounded-lg border px-3 py-1.5 text-sm ${aba === 'feedback' ? 'border-ouro text-ouro' : 'border-couro text-pergaminho-escuro hover:text-pergaminho'}`}
+            >
+              💬<span className="hidden sm:inline"> Feedback</span>
+            </button>
+            <button
               onClick={() => irPara('loja')}
               aria-current={aba === 'loja' ? 'page' : undefined}
               title="Loja de gemas"
@@ -240,6 +261,8 @@ export default function Jogo({ sessao }: { sessao: Session }) {
           <Regras />
         ) : aba === 'loja' ? (
           <Loja />
+        ) : aba === 'feedback' ? (
+          <Feedback meuId={sessao.user.id} numeroAberto={reporteAberto} abaDeOrigem={abaAnterior} />
         ) : aba === 'perfil' ? (
           <Perfil jogadorId={perfilDe ?? sessao.user.id} meuId={sessao.user.id} onNomeMudou={setNome} />
         ) : temporada === undefined ? null : temporada === null ? (

@@ -11,7 +11,7 @@ import { sql, type Transacao } from './db.ts';
  * O que aparece na notificação: título, texto, aba que abre ao tocar e `tag` (avisos com a mesma tag se substituem).
  * Tipo `loja` (pedido de gemas, gemas creditadas) vai para todo aparelho inscrito, sem depender dos tipos escolhidos.
  */
-export type Aviso = { jogadorId: string; tipo: TipoAviso | 'loja'; titulo: string; corpo: string; url: string; tag: string };
+export type Aviso = { jogadorId: string; tipo: TipoAviso | 'loja' | 'sistema'; titulo: string; corpo: string; url: string; tag: string };
 type Inscricao = { id: string; jogador_id: string; endpoint: string; p256dh: string; auth: string; tipos: string[] };
 
 const SITE = 'https://terra-de-ninguem.vercel.app';
@@ -293,6 +293,51 @@ export async function coletarAvisos(tx: Transacao, agora: number): Promise<Aviso
     }
   }
 
+  // Feedback: relato novo para os organizadores; mudança de status ou resposta para quem relatou.
+  const NOME_STATUS: Record<string, string> = {
+    novo: 'novo',
+    em_analise: 'em análise',
+    planejado: 'planejado',
+    em_andamento: 'em andamento',
+    resolvido: 'resolvido ✅',
+    nao_sera_feito: 'não será feito',
+    duplicado: 'duplicado',
+  };
+  const reportesNovos = await tx<{ numero: number; tipo: string; titulo: string; gravidade: string | null; jogador_id: string; autor: string }[]>`
+    update reportes r set avisado = true
+     where not r.avisado
+    returning r.numero, r.tipo, r.titulo, r.gravidade, r.jogador_id, (select nome from jogadores where id = r.jogador_id) as autor`;
+  if (reportesNovos.length > 0) {
+    const organizadores = await tx<{ jogador_id: string }[]>`select jogador_id from organizadores`;
+    for (const r of reportesNovos) {
+      for (const o of organizadores) {
+        if (o.jogador_id === r.jogador_id) continue;
+        avisos.push({
+          jogadorId: o.jogador_id,
+          tipo: 'sistema',
+          titulo: r.tipo === 'bug' ? `🐞 Bug #${r.numero}${r.gravidade === 'critica' ? ' (crítico)' : ''} de ${r.autor}` : `💡 Sugestão #${r.numero} de ${r.autor}`,
+          corpo: resumo(r.titulo),
+          url: `/#feedback=${r.numero}`,
+          tag: `reporte-${r.numero}`,
+        });
+      }
+    }
+  }
+  const reportesAtualizados = await tx<{ numero: number; jogador_id: string; titulo: string; status: string; resposta: string | null }[]>`
+    update reportes r set status_avisado = true
+     where not r.status_avisado
+    returning r.numero, r.jogador_id, r.titulo, r.status, r.resposta`;
+  for (const r of reportesAtualizados) {
+    avisos.push({
+      jogadorId: r.jogador_id,
+      tipo: 'sistema',
+      titulo: `📋 #${r.numero} agora está ${NOME_STATUS[r.status] ?? r.status}`,
+      corpo: resumo(r.resposta ? `${r.titulo}: ${r.resposta}` : r.titulo),
+      url: `/#feedback=${r.numero}`,
+      tag: `reporte-status-${r.numero}`,
+    });
+  }
+
   // Loja: presente de gemas, para quem recebeu.
   const presentes = await tx<{ id: string; destinatario_id: string; gemas: number; remetente: string }[]>`
     update presentes_gemas p set avisado = true
@@ -374,7 +419,7 @@ export async function enviarAvisos(avisos: Aviso[]): Promise<number> {
     select id, jogador_id, endpoint, p256dh, auth, tipos from inscricoes_avisos where jogador_id = any(${jogadores}::uuid[])`;
   const envios = avisos.flatMap((a) =>
     inscricoes
-      .filter((i) => i.jogador_id === a.jogadorId && (a.tipo === 'loja' || i.tipos.includes(a.tipo)))
+      .filter((i) => i.jogador_id === a.jogadorId && (a.tipo === 'loja' || a.tipo === 'sistema' || i.tipos.includes(a.tipo)))
       .map((i) => mandar(i, { ...a, urgente: a.tipo === 'ataque' || a.tipo === 'horda' || a.tipo === 'objetivo' })),
   );
   const resultados = await Promise.all(envios);

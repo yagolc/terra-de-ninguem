@@ -386,6 +386,15 @@ export const BALANCEAMENTO = {
     resgateMaximo: 5000,
   },
 
+  /** Feedback (bugs e sugestões): tamanho dos campos e limite de envios por jogador. */
+  reportes: {
+    tituloMinimo: 5,
+    tituloMaximo: 80,
+    textoMaximo: 2000,
+    respostaMaxima: 1000,
+    porHora: 5,
+  },
+
   reconhecimento: {
     /** Custo de mandar um batedor. */
     custoOuro: 20,

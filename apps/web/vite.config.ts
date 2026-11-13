@@ -4,6 +4,8 @@ import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+  // Versão do site (commit publicado pela Vercel, ou "local"): vai junto nos relatos de bug da aba Feedback.
+  define: { __VERSAO__: JSON.stringify(process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? 'local') },
   plugins: [
     react(),
     tailwindcss(),

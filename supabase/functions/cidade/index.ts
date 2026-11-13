@@ -19,6 +19,8 @@
 //        (avisos no celular deste aparelho; não precisam de temporada ativa)
 //      | { acao: 'pedir_gemas', gemas } | { acao: 'cancelar_pedido_gemas', codigo } (loja; não precisam de temporada ativa)
 //      | { acao: 'comprar_item', item, variante?, pedido? } | { acao: 'usar_titulo', titulo } (loja; sem temporada, menos itens de temporada)
+//      | { acao: 'enviar_reporte', tipo, area, titulo, descricao?, gravidade?, passos?, esperado?, aconteceu?, contexto }
+//      | { acao: 'votar_reporte', reporte_id } | { acao: 'atualizar_reporte', reporte_id, status, resposta } (só organizador)
 //      | { acao: 'escolher_pet', tipo } | { acao: 'pedir_resgate', dono_id, ouro } | { acao: 'libertar_pet', dono_id } | { acao: 'pagar_resgate' }
 //      | { acao: 'publicar_arauto', texto } | { acao: 'presentear_gemas', destinatario_id, gemas }
 //      | { acao: 'terminar_obra', pronto_em } (gasta gemas para terminar na hora a obra que está sendo feita)
@@ -106,6 +108,7 @@ import {
 import { sql, type Transacao } from '../_compartilhado/db.ts';
 import { comprarItem, presentearGemas, publicarArauto, usarTitulo } from '../_compartilhado/loja.ts';
 import { escolherPet, libertarPet, pagarResgate, pedirResgate } from '../_compartilhado/pets.ts';
+import { atualizarReporte, enviarReporte, votarReporte } from '../_compartilhado/reportes.ts';
 import { salvarPerfil } from '../_compartilhado/perfil.ts';
 import { fimDoPacto, terrasParaMarchar } from '../_compartilhado/pombos.ts';
 import { testarAviso } from '../_compartilhado/avisos.ts';
@@ -601,6 +604,15 @@ async function executar(jogadorId: string, corpo: Record<string, unknown>): Prom
   }
   if (corpo.acao === 'comprar_item') {
     return { ok: true, ...(await sql.begin((tx) => comprarItem(tx, jogadorId, corpo))) };
+  }
+  if (corpo.acao === 'enviar_reporte') {
+    return { ok: true, ...(await sql.begin((tx) => enviarReporte(tx, jogadorId, corpo))) };
+  }
+  if (corpo.acao === 'votar_reporte') {
+    return { ok: true, ...(await sql.begin((tx) => votarReporte(tx, jogadorId, corpo.reporte_id))) };
+  }
+  if (corpo.acao === 'atualizar_reporte') {
+    return { ok: true, ...(await sql.begin((tx) => atualizarReporte(tx, jogadorId, corpo))) };
   }
   if (corpo.acao === 'escolher_pet') {
     return { ok: true, ...(await sql.begin((tx) => escolherPet(tx, jogadorId, corpo.tipo))) };

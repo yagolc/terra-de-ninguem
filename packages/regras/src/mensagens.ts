@@ -14,6 +14,7 @@ import type { MotivoRecusaRecrutamento, MotivoRecusaTreinoHeroi } from './herois
 import type { MotivoRecusaVila } from './povoados.ts';
 import type { MotivoRecusaEvolucao } from './predios.ts';
 import type { MotivoRecusaReconhecimento } from './reconhecimento.ts';
+import type { MotivoRecusaAtualizacaoReporte, MotivoRecusaReporte } from './reportes.ts';
 import type { MotivoRecusaAlocacao } from './producao.ts';
 import type { MotivoRecusaTreino } from './treino.ts';
 
@@ -199,6 +200,23 @@ export const MENSAGENS_PET: Record<MotivoRecusaPet, string> = {
   preco_invalido: `Peça de 1 a ${BALANCEAMENTO.pets.resgateMaximo} de ouro.`,
   sem_preco: 'Quem sequestrou ainda não pediu um resgate.',
   ouro_insuficiente: 'Você não tem o ouro do resgate.',
+};
+
+export const MENSAGENS_REPORTE: Record<MotivoRecusaReporte, string> = {
+  tipo_invalido: 'Escolha se é um bug ou uma sugestão.',
+  area_invalida: 'Escolha a parte do jogo.',
+  gravidade_invalida: 'Diga o quanto o bug atrapalha.',
+  titulo_curto: `O título precisa de pelo menos ${BALANCEAMENTO.reportes.tituloMinimo} letras.`,
+  titulo_longo: `O título pode ter no máximo ${BALANCEAMENTO.reportes.tituloMaximo} letras.`,
+  texto_vazio: 'Conte o que aconteceu (bug) ou como seria a ideia (sugestão).',
+  texto_longo: `Cada campo pode ter no máximo ${BALANCEAMENTO.reportes.textoMaximo} letras.`,
+  envios_demais: 'Muitos envios em pouco tempo. Tente de novo daqui a pouco.',
+};
+
+export const MENSAGENS_ATUALIZACAO_REPORTE: Record<MotivoRecusaAtualizacaoReporte, string> = {
+  nao_organizador: 'Só o organizador muda o status.',
+  status_invalido: 'Status desconhecido.',
+  resposta_longa: `A resposta pode ter no máximo ${BALANCEAMENTO.reportes.respostaMaxima} letras.`,
 };
 
 export const MENSAGENS_TITULO: Record<'titulo_nao_comprado', string> = {

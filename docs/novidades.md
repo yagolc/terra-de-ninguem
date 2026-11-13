@@ -4,6 +4,10 @@ Lista das mudanças para mandar aos jogadores. Cada temporada nova ganha uma se�
 
 ## Temporada 6
 
+### Feedback
+
+- **Aba Feedback** (💬 no alto da tela): relate bugs e sugira ideias. Cada relato ganha um número e um status (novo, em análise, planejado, em andamento, resolvido…), e você recebe um aviso quando ele muda. Vote 👍 nos dos outros ("também aconteceu comigo" / "também quero"): os mais votados vêm primeiro.
+
 ### Loja de gemas
 
 - **Gemas** (💎) se compram por Pix na loja (botão 💎 no alto da tela) (1 gema = R$ 1; pacotes de 2, 4, 8, 16 e 32). Escolha o pacote, pague pelo QR Code ou pelo Pix copia e cola e as gemas entram quando o organizador conferir o pagamento.
