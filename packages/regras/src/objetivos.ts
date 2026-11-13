@@ -2,6 +2,7 @@
 import { geradorComSemente } from './aleatorio.ts';
 import { BALANCEAMENTO } from './balanceamento.ts';
 import { fimProtecaoIniciante } from './ataques.ts';
+import { distanciasNoGrafo, grafoDeFronteiras } from './territorios.ts';
 import type { Raca } from './tipos.ts';
 import { HORA_MS } from './util.ts';
 
@@ -62,6 +63,11 @@ export function sortearObjetivo(entrada: {
   jaSorteados: Objetivo[];
   /** Vilas do mapa (para "senhor das vilas"). */
   vilasNoMapa?: number;
+  /**
+   * Onde fica a cidade do jogador (`vizinhancaDaCidade`). Com ela, "duas regiões" sai da região da cidade mais uma
+   * vizinha (ou, se nenhuma dupla assim tiver o tamanho certo, da dupla mais perto). Sem ela, qualquer dupla.
+   */
+  cidade?: VizinhancaDaCidade;
 }): Objetivo {
   const { regioes, totalTerritorios, jaSorteados } = entrada;
   const aleatorio = geradorComSemente(entrada.semente);
@@ -78,7 +84,10 @@ export function sortearObjetivo(entrada: {
     }
   }
   const duplasUsadas = new Set(jaSorteados.flatMap((o) => (o.tipo === 'duas_regioes' ? [[...o.regioes].sort().join('|')] : [])));
-  const duplasLivres = duplas.filter((d) => !duplasUsadas.has([...d].sort().join('|')));
+  const duplasLivres = duplasPerto(
+    duplas.filter((d) => !duplasUsadas.has([...d].sort().join('|'))),
+    entrada.cidade,
+  );
   const racasUsadas = new Set(jaSorteados.flatMap((o) => (o.tipo === 'velha_rixa' ? [o.raca] : [])));
   const racasRivais = [...new Set(entrada.racasRivais ?? [])].sort();
   const racasLivres = racasRivais.filter((r) => !racasUsadas.has(r));
@@ -341,4 +350,76 @@ export function relogioDoObjetivo(entrada: {
   const desde = entrada.segurandoDesde ?? entrada.agora;
   const venceEm = Math.max(desde, fimProtecaoIniciante(entrada.inicioTemporada)) + BALANCEAMENTO.objetivos.segurarHoras * HORA_MS;
   return { segurandoDesde: desde, venceEm, venceu: entrada.agora >= venceEm };
+}
+
+/** Onde fica a cidade do jogador no mapa, para sortear objetivos que ele consiga alcançar. */
+export type VizinhancaDaCidade = {
+  regiao: string;
+  /** Regiões que fazem fronteira (atravessável) com a região da cidade. */
+  regioesVizinhas: readonly string[];
+  /** Menor distância, em fronteiras, da cidade até algum território de cada região. */
+  distanciaDasRegioes: ReadonlyMap<string, number>;
+};
+
+/** Calcula a vizinhança da cidade a partir dos territórios (com a região) e das fronteiras do mapa. */
+export function vizinhancaDaCidade(entrada: {
+  territorios: readonly { id: string; regiaoId: string }[];
+  fronteiras: readonly (readonly [string, string])[];
+  cidadeTerritorioId: string;
+}): VizinhancaDaCidade | null {
+  const regiaoDe = new Map(entrada.territorios.map((t) => [t.id, t.regiaoId]));
+  const regiao = regiaoDe.get(entrada.cidadeTerritorioId);
+  if (!regiao) return null;
+  const vizinhas = new Set<string>();
+  for (const [a, b] of entrada.fronteiras) {
+    const ra = regiaoDe.get(a);
+    const rb = regiaoDe.get(b);
+    if (ra === regiao && rb && rb !== regiao) vizinhas.add(rb);
+    if (rb === regiao && ra && ra !== regiao) vizinhas.add(ra);
+  }
+  const distancias = distanciasNoGrafo(grafoDeFronteiras(entrada.fronteiras), [entrada.cidadeTerritorioId]);
+  const distanciaDasRegioes = new Map<string, number>();
+  for (const t of entrada.territorios) {
+    const d = distancias.get(t.id);
+    if (d === undefined) continue;
+    distanciaDasRegioes.set(t.regiaoId, Math.min(distanciaDasRegioes.get(t.regiaoId) ?? Infinity, d));
+  }
+  return { regiao, regioesVizinhas: [...vizinhas].sort(), distanciaDasRegioes };
+}
+
+/**
+ * "Duas regiões" perto da cidade: as duplas com a região da cidade e uma vizinha dela; se nenhuma servir, as de
+ * menor distância somada. Sem cidade, todas.
+ */
+function duplasPerto(duplas: [string, string][], cidade: VizinhancaDaCidade | undefined): [string, string][] {
+  if (!cidade || duplas.length === 0) return duplas;
+  const comCasa = duplas.filter(([a, b]) => {
+    const outra = a === cidade.regiao ? b : b === cidade.regiao ? a : null;
+    return outra !== null && cidade.regioesVizinhas.includes(outra);
+  });
+  if (comCasa.length > 0) return comCasa;
+  const distancia = ([a, b]: [string, string]) =>
+    (cidade.distanciaDasRegioes.get(a) ?? Infinity) + (cidade.distanciaDasRegioes.get(b) ?? Infinity);
+  const menor = Math.min(...duplas.map(distancia));
+  return duplas.filter((d) => distancia(d) === menor);
+}
+
+/**
+ * Raças-alvo da "velha rixa" para o jogador: as dos outros jogadores (de raça diferente da dele) com a cidade a
+ * até `objetivos.rixaDistanciaMaxima` fronteiras. Vazia se não houver vizinho assim (aí a rixa não é sorteada).
+ */
+export function racasVizinhas(entrada: {
+  fronteiras: readonly (readonly [string, string])[];
+  cidadeTerritorioId: string;
+  minhaRaca: Raca | null;
+  outros: readonly { territorioId: string; raca: Raca | null }[];
+}): Raca[] {
+  const distancias = distanciasNoGrafo(grafoDeFronteiras(entrada.fronteiras), [entrada.cidadeTerritorioId]);
+  const maxima = BALANCEAMENTO.objetivos.rixaDistanciaMaxima;
+  const racas = new Set<Raca>();
+  for (const o of entrada.outros) {
+    const d = distancias.get(o.territorioId);
+    if (o.raca && o.raca !== entrada.minhaRaca && d !== undefined && d <= maxima) racas.add(o.raca);
+  }
+  return [...racas].sort();
 }

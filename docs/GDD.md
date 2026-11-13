@@ -180,10 +180,10 @@ O gerador de mapa divide os territórios em 5 ou 6 regiões, o equivalente aos c
 
 | Objetivo secreto | Origem | Exemplo |
 | --- | --- | --- |
-| Dominar duas regiões específicas | War (continentes) | Conquiste a Floresta do Norte e as Montanhas de Ferro |
+| Dominar duas regiões específicas | War (continentes) | Conquiste a Floresta do Norte e as Montanhas de Ferro. Desde a temporada 5, uma delas é a região da cidade do jogador e a outra, uma vizinha (se nenhuma dupla assim tiver o tamanho certo, a dupla mais perto). Na temporada 4 o Khiraz-Dúm tirou duas regiões a 5 e 7 fronteiras, nenhuma a dele |
 | Dominar mais da metade do mapa | War (24 territórios) | Cerca de 55% dos territórios |
 | Dominar territórios bem defendidos ("Fronteiras de ferro") | War (18 territórios com 2 exércitos) | 10 territórios com 7 soldados em cada e, desde a temporada 5, a Muralha da cidade no nível 10 (até a temporada 3: 8 com 6, sem Muralha). Decidiu as temporadas 3 e 4, em 4 e 2,5 dias |
-| Velha rixa (substitui "derrubar um rival" desde a temporada 3) | War (destruir um exército) | Conquiste 10 territórios diferentes de jogadores de uma raça, ou deixe todos eles só com a cidade principal |
+| Velha rixa (substitui "derrubar um rival" desde a temporada 3) | War (destruir um exército) | Conquiste 10 territórios diferentes de jogadores de uma raça, ou deixe todos eles só com a cidade principal. Desde a temporada 5, só raças de vizinhos (cidade a até 4 fronteiras); sem vizinho de outra raça, não é sorteada. Na temporada 4 o Gustavo mirou a única humana, a 8 fronteiras |
 | Senhor das vilas (substitui "alcançar população X" desde a temporada 4) | Próprio do jogo | Tenha metade das vilas do mapa (4 de 8 com 8 jogadores, 3 de 6 com 6) no nível 3 ao mesmo tempo. A população era fácil demais e se resolvia junto com o mestre construtor, sem sair de casa |
 | Senhor da guerra | Próprio do jogo | Vença 50 batalhas contra outros jogadores, atacando ou defendendo (até a temporada 3: 30) |
 | Mestre construtor | Próprio do jogo | 3 prédios da cidade no nível 10 (cerca de 40 h de obra somadas, contando o Centro) |

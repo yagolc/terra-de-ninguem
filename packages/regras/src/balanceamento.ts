@@ -167,6 +167,8 @@ export const BALANCEAMENTO = {
     segurarHoras: 4,
     /** "Velha rixa": territórios diferentes conquistados de jogadores da raça rival. */
     rixaTerritorios: 10,
+    /** "Velha rixa" só mira raças de vizinhos: jogadores com a cidade a até tantas fronteiras (desde a temporada 5). */
+    rixaDistanciaMaxima: 4,
   },
 
   pontos: {

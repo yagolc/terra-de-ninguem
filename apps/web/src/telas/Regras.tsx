@@ -218,7 +218,9 @@ export default function Regras() {
         </ul>
         <p>
           O objetivo secreto <b>⚔️ Velha rixa</b> pede {B.objetivos.rixaTerritorios} territórios diferentes conquistados de jogadores de
-          uma raça (cada território conta uma vez só), ou deixar todos eles só com a cidade principal.
+          uma raça (cada território conta uma vez só), ou deixar todos eles só com a cidade principal. A raça é sempre a de um vizinho,
+          com a cidade a até {B.objetivos.rixaDistanciaMaxima} fronteiras da sua. Já o objetivo de <b>duas regiões</b> sempre inclui a
+          região da sua cidade e uma vizinha dela.
         </p>
       </Secao>
 

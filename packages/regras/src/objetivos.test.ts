@@ -13,6 +13,8 @@ import {
   sortearObjetivo,
   vencedorPorPontos,
   type Objetivo,
+  racasVizinhas,
+  vizinhancaDaCidade,
   type SituacaoJogador,
   relogioDoObjetivo,
 } from './objetivos.ts';
@@ -47,6 +49,67 @@ function situacao(mudancas: Partial<SituacaoJogador> = {}): SituacaoJogador {
     ...mudancas,
   };
 }
+
+describe('objetivos perto da cidade', () => {
+  // Uma fileira de regiões r1–r6, cada uma com 2 territórios (rX-a e rX-b), ligadas em linha: r1 — r2 — ... — r6.
+  const territorios = REGIOES.flatMap((r) => [
+    { id: `${r.id}-a`, regiaoId: r.id },
+    { id: `${r.id}-b`, regiaoId: r.id },
+  ]);
+  const fronteiras: [string, string][] = [];
+  for (let i = 1; i <= 6; i++) {
+    fronteiras.push([`r${i}-a`, `r${i}-b`]);
+    if (i < 6) fronteiras.push([`r${i}-b`, `r${i + 1}-a`]);
+  }
+
+  it('a vizinhança sabe a região da cidade, as vizinhas e a distância de cada região', () => {
+    const v = vizinhancaDaCidade({ territorios, fronteiras, cidadeTerritorioId: 'r3-a' })!;
+    expect(v.regiao).toBe('r3');
+    expect(v.regioesVizinhas).toEqual(['r2', 'r4']);
+    expect(v.distanciaDasRegioes.get('r3')).toBe(0);
+    expect(v.distanciaDasRegioes.get('r2')).toBe(1);
+    expect(v.distanciaDasRegioes.get('r6')).toBe(6);
+  });
+
+  it('"duas regiões" sai da região da cidade mais uma vizinha (300 sorteios)', () => {
+    const cidade = vizinhancaDaCidade({ territorios, fronteiras, cidadeTerritorioId: 'r3-a' })!;
+    let vistas = 0;
+    for (let s = 1; s <= 300; s++) {
+      const o = sortearObjetivo({ semente: s, regioes: REGIOES, totalTerritorios: TOTAL, jaSorteados: [], cidade });
+      if (o.tipo !== 'duas_regioes') continue;
+      vistas++;
+      expect(o.regioes).toContain('r3');
+      expect(o.regioes.some((r) => r === 'r2' || r === 'r4')).toBe(true);
+    }
+    expect(vistas).toBeGreaterThan(0);
+  });
+
+  it('sem dupla com a região da cidade no tamanho certo, sai a dupla mais perto', () => {
+    // r4 (4 territórios) com r3 ou r5 (5) dá 9 de 30: pequeno demais. Cidade em r4: vale a dupla mais perto.
+    const cidade = vizinhancaDaCidade({ territorios, fronteiras, cidadeTerritorioId: 'r4-a' })!;
+    for (let s = 1; s <= 300; s++) {
+      const o = sortearObjetivo({ semente: s, regioes: REGIOES, totalTerritorios: TOTAL, jaSorteados: [], cidade });
+      if (o.tipo !== 'duas_regioes') continue;
+      const soma = o.regioes.reduce((t, r) => t + cidade.distanciaDasRegioes.get(r)!, 0);
+      // r3 e r5 estão a 1 fronteira de r4-a e a 2 (r4-a → r4-b → r5-a); r2+r3, r3+r5... a menor soma possível.
+      expect(soma).toBeLessThanOrEqual(3);
+    }
+  });
+
+  it('"velha rixa" só mira raças de vizinhos próximos', () => {
+    const maxima = BALANCEAMENTO.objetivos.rixaDistanciaMaxima;
+    const outros = [
+      { territorioId: 'r3-b', raca: 'orc' as const }, // 1 fronteira
+      { territorioId: 'r1-a', raca: 'anao' as const }, // 4 fronteiras de r3-a
+      { territorioId: 'r6-b', raca: 'humano' as const }, // longe
+      { territorioId: 'r4-a', raca: 'elfo' as const }, // vizinho, mas da minha raça
+    ];
+    const racas = racasVizinhas({ fronteiras, cidadeTerritorioId: 'r3-a', minhaRaca: 'elfo', outros });
+    expect(maxima).toBe(4);
+    expect(racas).toEqual(['anao', 'orc']);
+    expect(racasVizinhas({ fronteiras, cidadeTerritorioId: 'r6-b', minhaRaca: 'humano', outros: outros.slice(0, 2) })).toEqual([]);
+  });
+});
 
 describe('sortearObjetivo', () => {
   it('a mesma semente sorteia o mesmo objetivo', () => {

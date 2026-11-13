@@ -5,9 +5,11 @@ import {
   monopolioComercial,
   objetivoMetadeDoMapa,
   pontuar,
+  racasVizinhas,
   relogioDoObjetivo,
   sementeDeTexto,
   sortearObjetivo,
+  vizinhancaDaCidade,
   vencedorPorPontos,
   type Objetivo,
   type Raca,
@@ -33,11 +35,33 @@ async function sortearPara(tx: Transacao, temporadaId: string, jogadorId: string
      where r.temporada_id = ${temporadaId}
      group by r.id order by r.indice`;
   if (regioes.length === 0) return null;
-  // "Velha rixa": raças dos outros jogadores diferentes da do jogador.
-  const racas = await tx<{ jogador_id: string; raca: Raca | null }[]>`
-    select jogador_id, raca from cidades where temporada_id = ${temporadaId}`;
-  const minhaRaca = racas.find((r) => r.jogador_id === jogadorId)?.raca ?? null;
-  const racasRivais = racas.flatMap((r) => (r.jogador_id !== jogadorId && r.raca && r.raca !== minhaRaca ? [r.raca] : []));
+  // Onde fica a cidade: "duas regiões" sai perto dela e "velha rixa" só mira raças de vizinhos próximos.
+  const territorios = await tx<{ id: string; regiao_id: string }[]>`
+    select id, regiao_id from territorios where temporada_id = ${temporadaId}`;
+  const fronteiras = (
+    await tx<{ territorio_a: string; territorio_b: string }[]>`
+      select territorio_a, territorio_b from fronteiras where temporada_id = ${temporadaId}`
+  ).map((f) => [f.territorio_a, f.territorio_b] as const);
+  const cidades = await tx<{ jogador_id: string; raca: Raca | null; territorio_id: string | null }[]>`
+    select jogador_id, raca, territorio_id from cidades where temporada_id = ${temporadaId}`;
+  const minha = cidades.find((c) => c.jogador_id === jogadorId);
+  const cidade = minha?.territorio_id
+    ? vizinhancaDaCidade({
+        territorios: territorios.map((t) => ({ id: t.id, regiaoId: t.regiao_id })),
+        fronteiras,
+        cidadeTerritorioId: minha.territorio_id,
+      })
+    : null;
+  const racasRivais = minha?.territorio_id
+    ? racasVizinhas({
+        fronteiras,
+        cidadeTerritorioId: minha.territorio_id,
+        minhaRaca: minha.raca,
+        outros: cidades.flatMap((c) =>
+          c.jogador_id !== jogadorId && c.territorio_id ? [{ territorioId: c.territorio_id, raca: c.raca }] : [],
+        ),
+      })
+    : [];
   const jaSorteados = await tx<{ objetivo: Objetivo }[]>`
     select objetivo from objetivos where temporada_id = ${temporadaId} and jogador_id <> ${jogadorId}`;
   const [vilas] = await tx<{ total: number }[]>`
@@ -50,6 +74,7 @@ async function sortearPara(tx: Transacao, temporadaId: string, jogadorId: string
     racasRivais,
     jaSorteados: jaSorteados.map((o) => o.objetivo),
     vilasNoMapa: vilas?.total ?? 0,
+    ...(cidade ? { cidade } : {}),
   });
 }
 
