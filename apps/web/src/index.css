@@ -21,6 +21,37 @@ body,
   min-height: 100%;
 }
 
+/*
+ * Alvos de toque (WCAG 2.5.8 e 2.5.5): todo controle tem pelo menos 24 px e, no toque, 44 px. Fica na camada
+ * base (com :where, sem peso) para as classes do Tailwind de cada componente ainda valerem por cima.
+ */
+@layer base {
+  :root {
+    --tamanho-alvo: 24px;
+  }
+  @media (pointer: coarse) {
+    :root {
+      --tamanho-alvo: 44px;
+    }
+  }
+  :where(
+      button,
+      select,
+      textarea,
+      input:not([type='checkbox'], [type='radio'], [type='range'], [type='color'], [type='hidden']),
+      [role='button'],
+      nav a,
+      label:has(> input[type='checkbox'], > input[type='radio'])
+    ) {
+    min-block-size: var(--tamanho-alvo);
+    min-inline-size: var(--tamanho-alvo);
+  }
+  /* Títulos curtos sem uma palavra sozinha na última linha. */
+  :where(h1, h2, h3) {
+    text-wrap: balance;
+  }
+}
+
 body {
   @apply bg-noite font-sans text-pergaminho antialiased;
   background-image: radial-gradient(ellipse at top, #3b2c22 0%, #1c1410 60%);

@@ -1,5 +1,6 @@
 import type { Session } from '@supabase/supabase-js';
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
+import AvisoInstalar from '../componentes/AvisoInstalar';
 import IndicadorEscudo from '../componentes/IndicadorEscudo';
 import NavegacaoInferior, { ABAS, type Aba } from '../componentes/NavegacaoInferior';
 import { supabase } from '../lib/supabase';
@@ -220,6 +221,7 @@ export default function Jogo({ sessao }: { sessao: Session }) {
           </div>
         </div>
       </header>
+      <AvisoInstalar />
 
       {/* Só o mapa tem rolagem própria. Com a aba Mapa no endereço, a fundação e o fim de temporada aparecem no lugar
           dele e precisam rolar. */}

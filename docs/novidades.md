@@ -33,6 +33,13 @@ Lista das mudanças para mandar aos jogadores. Cada temporada nova ganha uma se�
 - **Editor de emblema:** até 20 camadas, 12 brasões prontos, formas heráldicas, largura e altura para esticar.
 - **O mapa mostra a bandeira inteira** de cada jogador, com o emblema.
 
+### Site
+
+- **Instale o jogo como app:** no celular ou no computador, o jogo pode ir para a tela inicial com o ícone do escudo e abrir em tela cheia, sem a barra do navegador. Continua sendo o mesmo site: quem não quiser instalar joga pelo navegador como antes. No Android e no computador aparece o botão **Instalar** no alto do jogo; no iPhone, toque em **Compartilhar** e depois em **Adicionar à Tela de Início**.
+- **Versão nova sem perder nada:** quando sair uma atualização, aparece o aviso "Há uma versão nova do jogo" com o botão **Atualizar**, em vez de recarregar no meio do que você estiver fazendo.
+- **Botões mais fáceis de tocar no celular:** todos têm pelo menos o tamanho de um dedo (o × que fecha o painel, "Mandar todas", "Responder" e outros pequenos).
+- O jogo abre mais rápido nas próximas vezes, porque o código fica guardado no aparelho.
+
 ### Temporada
 
 - **Temporada cheia:** quem chega sem vaga inicial livre espera a próxima temporada, quando o mapa é refeito.

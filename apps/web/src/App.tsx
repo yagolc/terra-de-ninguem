@@ -1,3 +1,4 @@
+import AvisoAtualizacao from './componentes/AvisoAtualizacao';
 import { useSessao } from './lib/useSessao';
 import Jogo from './telas/Jogo';
 import Entrada from './telas/Entrada';
@@ -9,5 +10,10 @@ export default function App() {
     return <div className="grid min-h-dvh place-items-center text-pergaminho-escuro">Carregando…</div>;
   }
 
-  return sessao ? <Jogo sessao={sessao} /> : <Entrada />;
+  return (
+    <>
+      {sessao ? <Jogo sessao={sessao} /> : <Entrada />}
+      <AvisoAtualizacao />
+    </>
+  );
 }
