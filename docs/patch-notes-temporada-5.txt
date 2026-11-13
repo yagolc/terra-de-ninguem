@@ -1,0 +1,102 @@
+📜 *TERRA DE NINGUÉM — NOTAS DA ATUALIZAÇÃO*
+⚔️ *Temporada 5: "Asas e Estandartes"*
+
+Senhores e senhoras da Terra de Ninguém, o mapa vai ser refeito e muita coisa mudou desde a última guerra. Os pombos agora cortam o céu levando acordos (e traições), os exércitos ganham acampamentos na linha de frente e ninguém mais vence no susto. Leiam com atenção antes de fundar sua cidade.
+
+━━━━━━━━━━━━━━━━━━
+🌟 *DESTAQUES*
+━━━━━━━━━━━━━━━━━━
+🕊️ Pombal, cartas, pactos e acesso militar
+⛺ Acampamento militar: recrute na frente de batalha
+🏆 Vencer agora exige segurar o objetivo por 4 h
+📲 O jogo vira app e te avisa no celular
+
+━━━━━━━━━━━━━━━━━━
+🕊️ *DIPLOMACIA*
+━━━━━━━━━━━━━━━━━━
+*NOVO — Pombal* (prédio, até o nível 5)
+• Mande cartas para qualquer jogador. O pombo voa da sua cidade até a dele: quanto mais longe, mais demora.
+• Cada nível dá mais pombos (cartas voando ao mesmo tempo) e voo mais rápido.
+• Nova aba *Cartas* na barra, com aviso de não lidas. No perfil de cada jogador tem o botão "Enviar carta".
+
+*NOVO — Pacto de não agressão* (1 a 12 h)
+• Vai junto da carta. Quem recebe tem 6 h para aceitar.
+• Aceito: nenhum dos dois consegue atacar o outro, e marchas que chegarem durante o pacto voltam sem lutar.
+• É secreto e não pode ser rompido. Acaba sozinho.
+
+*NOVO — Acesso militar* (1 a 12 h)
+• Também vai numa carta. Aceito, as tropas de cada um atravessam as terras do outro.
+• Dá para mover tropas por ali e atacar (ou mandar batedor) quem faz fronteira com as terras do aliado, mesmo longe de você.
+• As tropas não param no corredor, e ele nunca serve para atacar o próprio dono das terras.
+• Não impede que vocês se ataquem: para isso existe o pacto. Confie com cuidado. 😏
+
+━━━━━━━━━━━━━━━━━━
+🏆 *VITÓRIA E OBJETIVOS*
+━━━━━━━━━━━━━━━━━━
+*MUDANÇA — Segure o objetivo por 4 horas*
+• Cumprir o objetivo secreto não encerra mais a temporada na hora: é preciso mantê-lo cumprido por *4 h seguidas*.
+• Todos veem no mapa *quem* cumpriu e quanto falta (o objetivo continua secreto).
+• Nesse tempo, quem cumpriu fica *sem escudo e sem pactos de não agressão*. Perder uma defesa não dá escudo novo.
+• Se deixar de cumprir, o relógio zera.
+
+🛠️ _Nota dos desenvolvedores: as temporadas 2, 3 e 4 acabaram em 6, 4 e 2,5 dias, sempre no minuto em que alguém cumpriu, sem chance de reação. Agora todo mundo tem 4 horas para se unir contra o líder._
+
+*MUDANÇA — Objetivos perto de você*
+• *Duas regiões:* uma é sempre a região da sua cidade, e a outra é uma vizinha que começa a pelo menos 2 fronteiras de você e tem a cidade de outro jogador. Nada de objetivo do outro lado do mapa, nem de dupla fácil demais.
+• *Velha rixa:* só mira a raça de um vizinho (cidade a até 4 fronteiras). Sem vizinho de outra raça, esse objetivo não sai.
+• *Fronteiras de ferro:* além dos territórios guarnecidos, agora pede a *Muralha nível 10*.
+
+━━━━━━━━━━━━━━━━━━
+⚔️ *EXÉRCITO E ESTRUTURAS*
+━━━━━━━━━━━━━━━━━━
+*NOVO — ⛺ Acampamento militar*
+• Estrutura nova, só em território conquistado e *uma por jogador*.
+• Custa 300 🌾 · 400 🪵 · 200 🪙, com 2 h de obra.
+• Pronto, o Quartel escolhe onde cada lote fica pronto: na cidade ou *direto no acampamento*, já na frente de batalha.
+• Os soldados continuam saindo da população da cidade. Se o acampamento cair, os lotes dele ficam prontos na cidade.
+
+*NOVO — Destruir estrutura*
+• No painel de um território seu, dá para destruir a estrutura e construir outra no lugar. Nada do que ela custou volta.
+
+*MUDANÇA — Reforço que chega tarde luta*
+• Se você manda tropas para um território seu e ele cai antes de elas chegarem, elas atacam para retomá-lo, sem quebrar o seu escudo.
+
+*MUDANÇA — Herói*
+• O herói agora treina em qualquer território seu onde estiver parado, não só na cidade.
+
+━━━━━━━━━━━━━━━━━━
+⚖️ *BALANCEAMENTO*
+━━━━━━━━━━━━━━━━━━
+🧝 *Elfos:* +20% de madeira (era +10%).
+
+━━━━━━━━━━━━━━━━━━
+📲 *SITE E CELULAR*
+━━━━━━━━━━━━━━━━━━
+*NOVO — Instale o jogo como app*
+• Ícone do escudo na tela inicial e o jogo abre em tela cheia, sem a barra do navegador. Continua sendo o mesmo site.
+• Android e computador: botão *📲 Instalar* no alto do jogo (de preferência pelo Chrome).
+• iPhone: no Safari, *Compartilhar → Adicionar à Tela de Início*.
+
+*NOVO — 🔔 Avisos no celular*
+• No seu *Perfil*, ative e escolha quando o jogo te chama, mesmo fechado:
+  🗼 uma torre sua vê tropas ou batedor vindo
+  ⚔️ uma batalha sua termina
+  🕊️ chega uma carta (ou a resposta a uma proposta)
+  ☠️ uma horda bárbara vem ou ataca
+  🏆 alguém cumpre o objetivo (hora de reagir!)
+• Ative em cada aparelho que usar. Tem botão para mandar um teste. No iPhone, só com o jogo instalado.
+
+*MELHORIAS*
+• Quando sair uma atualização, aparece "Há uma versão nova do jogo" com o botão *Atualizar*, em vez de recarregar no meio do que você está fazendo.
+• Botões maiores no celular, todos do tamanho de um dedo.
+• O jogo abre mais rápido da segunda vez em diante.
+• *Perfil do jogador:* bandeira com cores, padrão e emblema (editor com até 20 camadas e 12 brasões prontos), descrição e estatísticas das temporadas passadas. O mapa mostra a bandeira inteira de cada um.
+
+━━━━━━━━━━━━━━━━━━
+🐞 *CORREÇÕES*
+━━━━━━━━━━━━━━━━━━
+• A análise do batedor em Relatórios agora conta a muralha da cidade livre e o bônus de raça do dono, igual ao painel do mapa.
+• A temporada tem vaga para 8 jogadores: quem chega sem vaga inicial livre entra na próxima, quando o mapa é refeito.
+
+━━━━━━━━━━━━━━━━━━
+Boa sorte, e que os pombos voem a seu favor. 🕊️⚔️
