@@ -12,7 +12,7 @@ type Props = { jogadorId: string; ouro: number };
  */
 export default function PainelPet({ jogadorId, ouro }: Props) {
   const { gemas } = useGemas();
-  const { pets, nomeDe, escolher, pedirResgate, libertar, pagarResgate } = usePets();
+  const { pets, nomeDe, escolher, pedirResgate, libertar, pagarResgate, recarregar } = usePets();
   const [ocupado, setOcupado] = useState(false);
   const [mensagem, setMensagem] = useState<{ texto: string; erro: boolean } | null>(null);
   const [pagando, setPagando] = useState(false);
@@ -156,7 +156,18 @@ export default function PainelPet({ jogadorId, ouro }: Props) {
           titulo="Pagar o resgate?"
           confirmar={ouro >= meu.resgateOuro ? `Pagar ${meu.resgateOuro} de ouro` : 'Entendi'}
           onConfirmar={() => {
-            if (ouro >= meu.resgateOuro!) void fazer(pagarResgate, `${info(meu.tipo)} voltou para casa!`);
+            if (ouro >= meu.resgateOuro!) {
+              const preco = meu.resgateOuro!;
+              // Se o preço mudou no meio do caminho, o servidor recusa: relê para mostrar o valor novo.
+              void fazer(
+                () =>
+                  pagarResgate(preco).catch(async (e: unknown) => {
+                    await recarregar();
+                    throw e;
+                  }),
+                `${info(meu.tipo)} voltou para casa!`,
+              );
+            }
           }}
           onFechar={() => setPagando(false)}
         >

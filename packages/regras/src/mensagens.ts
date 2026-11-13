@@ -199,6 +199,7 @@ export const MENSAGENS_PET: Record<MotivoRecusaPet, string> = {
   pet_nao_e_refem: 'Esse pet não está refém.',
   preco_invalido: `Peça de 1 a ${BALANCEAMENTO.pets.resgateMaximo} de ouro.`,
   sem_preco: 'Quem sequestrou ainda não pediu um resgate.',
+  preco_mudou: 'Quem sequestrou mudou o preço do resgate. Confira o valor novo antes de pagar.',
   ouro_insuficiente: 'Você não tem o ouro do resgate.',
 };
 

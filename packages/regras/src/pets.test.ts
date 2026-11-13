@@ -74,10 +74,13 @@ describe('escolha e resgate', () => {
   });
 
   it('o dono paga o preço pedido se tiver o ouro', () => {
-    expect(verificarPagamentoResgate({ pet: refem, donoId: D, preco: 300, ouro: 300 })).toEqual({ ok: true, ouro: 300 });
-    expect(verificarPagamentoResgate({ pet: refem, donoId: D, preco: null, ouro: 999 })).toEqual({ ok: false, motivo: 'sem_preco' });
-    expect(verificarPagamentoResgate({ pet: refem, donoId: D, preco: 300, ouro: 299 })).toEqual({ ok: false, motivo: 'ouro_insuficiente' });
-    expect(verificarPagamentoResgate({ pet: { ...refem, mantidoPor: D }, donoId: D, preco: 1, ouro: 9 })).toEqual({
+    expect(verificarPagamentoResgate({ pet: refem, donoId: D, preco: 300, ouro: 300, precoVisto: 300 })).toEqual({ ok: true, ouro: 300 });
+    expect(verificarPagamentoResgate({ pet: refem, donoId: D, preco: null, ouro: 999, precoVisto: 300 })).toEqual({ ok: false, motivo: 'sem_preco' });
+    expect(verificarPagamentoResgate({ pet: refem, donoId: D, preco: 300, ouro: 299, precoVisto: 300 })).toEqual({ ok: false, motivo: 'ouro_insuficiente' });
+    // O sequestrador subiu o preço depois que o dono viu: não paga sem confirmar o valor novo.
+    expect(verificarPagamentoResgate({ pet: refem, donoId: D, preco: 900, ouro: 5000, precoVisto: 300 })).toEqual({ ok: false, motivo: 'preco_mudou' });
+    expect(verificarPagamentoResgate({ pet: refem, donoId: D, preco: 300, ouro: 5000 })).toEqual({ ok: false, motivo: 'preco_mudou' });
+    expect(verificarPagamentoResgate({ pet: { ...refem, mantidoPor: D }, donoId: D, preco: 1, ouro: 9, precoVisto: 1 })).toEqual({
       ok: false,
       motivo: 'pet_nao_e_refem',
     });

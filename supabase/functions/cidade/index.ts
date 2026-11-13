@@ -21,7 +21,7 @@
 //      | { acao: 'comprar_item', item, variante?, pedido? } | { acao: 'usar_titulo', titulo } (loja; sem temporada, menos itens de temporada)
 //      | { acao: 'enviar_reporte', tipo, area, titulo, descricao?, gravidade?, passos?, esperado?, aconteceu?, contexto }
 //      | { acao: 'votar_reporte', reporte_id } | { acao: 'atualizar_reporte', reporte_id, status, resposta } (só organizador)
-//      | { acao: 'escolher_pet', tipo } | { acao: 'pedir_resgate', dono_id, ouro } | { acao: 'libertar_pet', dono_id } | { acao: 'pagar_resgate' }
+//      | { acao: 'escolher_pet', tipo } | { acao: 'pedir_resgate', dono_id, ouro } | { acao: 'libertar_pet', dono_id } | { acao: 'pagar_resgate', ouro } (ouro: o preço que o dono viu)
 //      | { acao: 'publicar_arauto', texto } | { acao: 'presentear_gemas', destinatario_id, gemas }
 //      | { acao: 'terminar_obra', pronto_em } (gasta gemas para terminar na hora a obra que está sendo feita)
 // Publicar com: npx supabase functions deploy cidade --no-verify-jwt (o token é validado no código).
@@ -624,7 +624,7 @@ async function executar(jogadorId: string, corpo: Record<string, unknown>): Prom
     return { ok: true, ...(await sql.begin((tx) => libertarPet(tx, jogadorId, corpo.dono_id))) };
   }
   if (corpo.acao === 'pagar_resgate') {
-    return { ok: true, ...(await sql.begin((tx) => pagarResgate(tx, jogadorId))) };
+    return { ok: true, ...(await sql.begin((tx) => pagarResgate(tx, jogadorId, corpo.ouro))) };
   }
   if (corpo.acao === 'publicar_arauto') {
     return { ok: true, ...(await sql.begin((tx) => publicarArauto(tx, jogadorId, corpo.texto))) };

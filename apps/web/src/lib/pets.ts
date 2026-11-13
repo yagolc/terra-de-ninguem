@@ -76,7 +76,8 @@ export function usePets() {
     escolher: (tipo: TipoPet | null) => comando({ acao: 'escolher_pet', tipo }),
     pedirResgate: (donoId: string, ouro: number) => comando({ acao: 'pedir_resgate', dono_id: donoId, ouro }),
     libertar: (donoId: string) => comando({ acao: 'libertar_pet', dono_id: donoId }),
-    pagarResgate: () => comando({ acao: 'pagar_resgate' }),
+    // Manda o preço que o jogador viu: se o sequestrador mudou, o servidor recusa e a tela relê o valor novo.
+    pagarResgate: (ouro: number) => comando({ acao: 'pagar_resgate', ouro }),
     recarregar,
   };
 }

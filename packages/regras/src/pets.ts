@@ -34,6 +34,7 @@ export type MotivoRecusaPet =
   | 'pet_nao_e_refem'
   | 'preco_invalido'
   | 'sem_preco'
+  | 'preco_mudou'
   | 'ouro_insuficiente';
 
 /** Escolher o pet que mora na cidade (ou nenhum): só um comprado, e não dá para trocar enquanto o atual é refém. */
@@ -59,16 +60,21 @@ export function verificarPrecoResgate(entrada: { ouro: unknown; pet: PetNaTempor
   return { ok: true, ouro };
 }
 
-/** Dono paga o resgate pedido: o pet tem de ser refém, com preço, e o dono precisa ter o ouro. */
+/**
+ * Dono paga o resgate pedido: o pet tem de ser refém, com preço, e o dono precisa ter o ouro. `precoVisto` é o preço
+ * que o dono confirmou na tela: se o sequestrador mudou o preço depois, recusa (para ele não pagar sem ver).
+ */
 export function verificarPagamentoResgate(entrada: {
   pet: PetNaTemporada | null;
   donoId: string;
   preco: number | null;
   ouro: number;
+  precoVisto?: unknown;
 }): Verificacao<{ ouro: number }, MotivoRecusaPet> {
   const { pet, donoId, preco, ouro } = entrada;
   if (!pet || pet.donoId !== donoId || pet.mantidoPor === donoId) return { ok: false, motivo: 'pet_nao_e_refem' };
   if (preco === null) return { ok: false, motivo: 'sem_preco' };
+  if (entrada.precoVisto !== preco) return { ok: false, motivo: 'preco_mudou' };
   if (ouro < preco) return { ok: false, motivo: 'ouro_insuficiente' };
   return { ok: true, ouro: preco };
 }
