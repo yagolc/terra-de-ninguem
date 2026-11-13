@@ -11,7 +11,8 @@ import {
   protecaoArmazem,
   quantasCidadesLivres,
 } from '@terra/regras';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
+import Cronica from '../componentes/Cronica';
 import { CRONICAS } from '../lib/cronicas';
 import { ESPECIALIDADES_INFO, ESTRUTURAS_INFO, PREDIOS, RACAS_INFO, RECURSOS_INFO, TERRENOS_INFO, TITULO_HERDEIRO, UNIDADES_INFO } from '../lib/textos';
 
@@ -356,8 +357,23 @@ function Cronicas() {
   const temporadas = Object.keys(CRONICAS)
     .map(Number)
     .sort((a, b) => a - b);
+  const [lendo, setLendo] = useState(false);
+  const ultima = temporadas.at(-1);
   return (
     <Secao icone="📜" titulo="Crônicas do Reino">
+      {ultima !== undefined && (
+        <button
+          onClick={() => setLendo(true)}
+          className="rounded-lg border border-ouro/60 px-3 py-1.5 text-sm font-semibold text-ouro hover:bg-ouro/10"
+        >
+          📖 Ler como livro, do começo ao fim
+        </button>
+      )}
+      {lendo && ultima !== undefined && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-noite/95">
+          <Cronica temporada={ultima} inicio={temporadas[0]} concluir="Fechar" onConcluir={() => setLendo(false)} />
+        </div>
+      )}
       {temporadas.map((n) => (
         <div key={n} className="space-y-2">
           <h3 className="font-titulo text-ouro">

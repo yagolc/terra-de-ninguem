@@ -44,6 +44,7 @@ Lista das mudanças para mandar aos jogadores. Cada temporada nova ganha uma se�
 - **Versão nova sem perder nada:** quando sair uma atualização, aparece o aviso "Há uma versão nova do jogo" com o botão **Atualizar**, em vez de recarregar no meio do que você estiver fazendo.
 - **Botões mais fáceis de tocar no celular:** todos têm pelo menos o tamanho de um dedo (o × que fecha o painel, "Mandar todas", "Responder" e outros pequenos).
 - O jogo abre mais rápido nas próximas vezes, porque o código fica guardado no aparelho.
+- **Crônicas do Reino:** a crônica da temporada ganhou o botão **Voltar** e os capítulos das temporadas anteriores, para ler a história toda. Em Regras → Crônicas do Reino, o botão **Ler como livro** abre do começo.
 - **Avisos no celular:** no seu perfil, em **🔔 Avisos no celular**, ative e escolha quando o jogo te chama, mesmo fechado: uma torre sua vê tropas ou batedor vindo, uma batalha sua termina, chega uma carta (ou a resposta a uma proposta), uma horda bárbara vem ou ataca, ou alguém cumpre o objetivo secreto. Vale por aparelho, com botão para mandar um teste. No iPhone, só com o jogo instalado na tela inicial.
 
 ### Temporada

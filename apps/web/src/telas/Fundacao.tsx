@@ -56,7 +56,7 @@ export default function Fundacao({ temporada, nomeAtual, herdeiro, onFundada }: 
     }
   }
 
-  if (lendo && capitulo) return <Cronica capitulo={capitulo} onConcluir={concluirCronica} />;
+  if (lendo && capitulo) return <Cronica temporada={temporada} onConcluir={concluirCronica} />;
 
   const nomeValido = nome.trim().length >= 1 && nome.trim().length <= 24;
   return (
