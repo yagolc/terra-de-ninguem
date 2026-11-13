@@ -1,6 +1,7 @@
 import {
   CORES_JOGADORES,
   exercito,
+  relogioDoObjetivo,
   somarExercitos,
   type Especialidade,
   type Exercito,
@@ -150,6 +151,8 @@ export type DadosMapa = {
   racas: Map<string, Raca>;
   /** Vencedor da temporada anterior: o herdeiro do trono caído (coroa no mapa, cabeça a prêmio). */
   herdeiroId: string | null;
+  /** Quem cumpriu o objetivo secreto e quando vence se mantiver. */
+  objetivosCumpridos: { jogadorId: string; venceEm: number }[];
 };
 
 export const COR_NEUTRA = '#6b5a48';
@@ -275,6 +278,7 @@ async function buscarMapa(): Promise<DadosMapa | null> {
     estradas,
     hordas,
     barreiras,
+    relogios,
   ] = await Promise.all([
     supabase.from('regioes').select('id, indice, nome, terreno').eq('temporada_id', temporada.id).returns<RegiaoMapa[]>(),
     supabase
@@ -356,6 +360,13 @@ async function buscarMapa(): Promise<DadosMapa | null> {
       .select('territorio_a, territorio_b, tipo')
       .eq('temporada_id', temporada.id)
       .returns<{ territorio_a: string; territorio_b: string; tipo: 'rio' | 'montanha' }[]>(),
+    // Quem cumpriu o objetivo secreto e está segurando (público; o tipo do objetivo continua secreto).
+    supabase
+      .from('placar')
+      .select('jogador_id, objetivo_desde')
+      .eq('temporada_id', temporada.id)
+      .not('objetivo_desde', 'is', null)
+      .returns<{ jogador_id: string; objetivo_desde: string }[]>(),
   ]);
   if (
     !regioes.data ||
@@ -451,6 +462,12 @@ async function buscarMapa(): Promise<DadosMapa | null> {
       ),
     ),
     herdeiroId: anterior.data?.[0]?.vencedor_id ?? null,
+    objetivosCumpridos: (relogios.data ?? []).map((r) => ({
+      jogadorId: r.jogador_id,
+      venceEm:
+        relogioDoObjetivo({ cumprido: true, segurandoDesde: Date.parse(r.objetivo_desde), agora: Date.now(), inicioTemporada: Date.parse(temporada.inicio) })
+          .venceEm ?? 0,
+    })),
     heroi: heroi.data && {
       nome: heroi.data.nome,
       especialidade: heroi.data.especialidade,

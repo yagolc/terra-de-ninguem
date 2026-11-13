@@ -78,6 +78,17 @@ export default function Mapa({ sessao }: { sessao: Session }) {
             <span className="tabular-nums">{monopolio.venceEm > agora ? formatarDuracao(monopolio.venceEm - agora) : 'instantes'}</span>
           </p>
         )}
+        {dados.objetivosCumpridos.map((c) => (
+          <p
+            key={c.jogadorId}
+            role="status"
+            className={`rounded-lg border px-3 py-1.5 text-xs font-semibold backdrop-blur ${c.jogadorId === meuId ? 'border-ouro bg-noite/90 text-ouro' : 'border-sangue bg-sangue/85 text-pergaminho'}`}
+          >
+            🏆 {c.jogadorId === meuId ? 'Você cumpriu' : `${dados.jogadores.get(c.jogadorId)?.nome ?? 'Alguém'} cumpriu`} o objetivo secreto: vence
+            em <span className="tabular-nums">{c.venceEm > agora ? formatarDuracao(c.venceEm - agora) : 'instantes'}</span> se mantiver
+            {c.jogadorId === meuId ? ' (você está sem escudo)' : ' (está sem escudo)'}
+          </p>
+        ))}
         {recente && (
           <p
             role="status"

@@ -1,6 +1,7 @@
 // Objetivos secretos e pontuação (GDD: "Temporadas e condições de vitória").
 import { geradorComSemente } from './aleatorio.ts';
 import { BALANCEAMENTO } from './balanceamento.ts';
+import { fimProtecaoIniciante } from './ataques.ts';
 import type { Raca } from './tipos.ts';
 import { HORA_MS } from './util.ts';
 
@@ -8,7 +9,8 @@ export type Objetivo =
   | { tipo: 'duas_regioes'; regioes: [string, string] }
   /** A meta é calculada na hora, sobre os territórios conquistáveis (ver `metaMetadeDoMapa`). */
   | { tipo: 'metade_do_mapa' }
-  | { tipo: 'territorios_defendidos'; territorios: number; guarnicaoMinima: number }
+  /** `muralha`: nível da Muralha da cidade exigido junto (desde a temporada 5; as cartas antigas não têm). */
+  | { tipo: 'territorios_defendidos'; territorios: number; guarnicaoMinima: number; muralha?: number }
   /** Não é mais sorteado (virou "velha rixa"); fica para as cartas das temporadas antigas. */
   | { tipo: 'derrubar_rival'; rivalId: string }
   /** Conquistar `territorios` diferentes de jogadores da `raca` (ou deixar todos eles só com a cidade). */
@@ -106,6 +108,7 @@ export function sortearObjetivo(entrada: {
         tipo: 'territorios_defendidos',
         territorios: Math.min(config.territoriosDefendidos, totalTerritorios),
         guarnicaoMinima: config.guarnicaoMinima,
+        muralha: BALANCEAMENTO.predios.muralha.nivelMaximo,
       };
     case 'senhor_das_vilas':
       return { tipo: 'senhor_das_vilas', vilas: vilasAlvo, nivel: BALANCEAMENTO.povoados.vila.nivelMaximo };
@@ -135,6 +138,8 @@ export type SituacaoJogador = {
   vitoriasContraJogadores: number;
   /** Nível de cada prédio da cidade. */
   niveisPredios: readonly number[];
+  /** Nível da Muralha da cidade ("fronteiras de ferro"). */
+  nivelMuralha: number;
   /** Nível de cada vila do jogador (as dos territórios dele). */
   niveisVilas: readonly number[];
   ouro: number;
@@ -194,7 +199,13 @@ export function avaliarObjetivo(objetivo: Objetivo, s: SituacaoJogador): Avaliac
     }
     case 'territorios_defendidos': {
       const atual = s.meusTerritorios.filter((t) => t.minhasTropas >= objetivo.guarnicaoMinima).length;
-      return { cumprido: atual >= objetivo.territorios, atual, alvo: objetivo.territorios };
+      const muralha = objetivo.muralha ?? 0;
+      return {
+        cumprido: atual >= objetivo.territorios && s.nivelMuralha >= muralha,
+        atual,
+        alvo: objetivo.territorios,
+        ...(muralha > 0 ? { partes: [{ atual: Math.min(s.nivelMuralha, muralha), alvo: muralha }] } : {}),
+      };
     }
     case 'populacao': {
       const atual = Math.floor(s.populacao);
@@ -313,4 +324,21 @@ export function vencedorPorPontos<T extends { jogadorId: string; pontos: number;
       (a, b) => b.pontos - a.pontos || b.territorios - a.territorios || a.jogadorId.localeCompare(b.jogadorId),
     )[0] ?? null
   );
+}
+
+/**
+ * Relógio do objetivo secreto: cumprido, o jogador precisa mantê-lo por `objetivos.segurarHoras` seguidas para
+ * vencer; se deixar de cumprir, o relógio zera. Não corre durante a proteção de iniciante (ninguém poderia
+ * reagir). `segurandoDesde` é o valor guardado do minuto anterior (null se não estava cumprido).
+ */
+export function relogioDoObjetivo(entrada: {
+  cumprido: boolean;
+  segurandoDesde: number | null;
+  agora: number;
+  inicioTemporada: number;
+}): { segurandoDesde: number | null; venceEm: number | null; venceu: boolean } {
+  if (!entrada.cumprido) return { segurandoDesde: null, venceEm: null, venceu: false };
+  const desde = entrada.segurandoDesde ?? entrada.agora;
+  const venceEm = Math.max(desde, fimProtecaoIniciante(entrada.inicioTemporada)) + BALANCEAMENTO.objetivos.segurarHoras * HORA_MS;
+  return { segurandoDesde: desde, venceEm, venceu: entrada.agora >= venceEm };
 }

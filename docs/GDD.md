@@ -174,13 +174,15 @@ As relações são formais no sistema, mas trair continua sendo possível, e iss
 
 Cada temporada dura de 2 a 4 semanas. No início, cada jogador sorteia um objetivo secreto, como no War, e vence quem cumprir o seu primeiro, revelando a carta para todos. Depois, o mapa e as cidades resetam.
 
+**Segurar o objetivo (desde a temporada 5):** cumprir não encerra mais a temporada na hora. O jogador precisa manter o objetivo cumprido por 4 h seguidas; se deixar de cumprir, o relógio zera. O relógio é público (mapa e tela Objetivo mostram quem cumpriu e quanto falta, sem revelar o tipo) e, enquanto ele corre, o jogador fica sem escudo (o que tinha some e perder uma defesa não dá outro). O relógio não corre durante a proteção de iniciante. Motivo: as temporadas 2, 3 e 4 acabaram em 6, 4 e 2,5 dias, sempre no minuto em que alguém cumpriu, sem chance de reação.
+
 O gerador de mapa divide os territórios em 5 ou 6 regiões, o equivalente aos continentes do War. Os objetivos possíveis:
 
 | Objetivo secreto | Origem | Exemplo |
 | --- | --- | --- |
 | Dominar duas regiões específicas | War (continentes) | Conquiste a Floresta do Norte e as Montanhas de Ferro |
 | Dominar mais da metade do mapa | War (24 territórios) | Cerca de 55% dos territórios |
-| Dominar territórios bem defendidos | War (18 territórios com 2 exércitos) | 10 territórios com 7 soldados em cada (até a temporada 3: 8 com 6) |
+| Dominar territórios bem defendidos ("Fronteiras de ferro") | War (18 territórios com 2 exércitos) | 10 territórios com 7 soldados em cada e, desde a temporada 5, a Muralha da cidade no nível 10 (até a temporada 3: 8 com 6, sem Muralha). Decidiu as temporadas 3 e 4, em 4 e 2,5 dias |
 | Velha rixa (substitui "derrubar um rival" desde a temporada 3) | War (destruir um exército) | Conquiste 10 territórios diferentes de jogadores de uma raça, ou deixe todos eles só com a cidade principal |
 | Senhor das vilas (substitui "alcançar população X" desde a temporada 4) | Próprio do jogo | Tenha metade das vilas do mapa (4 de 8 com 8 jogadores, 3 de 6 com 6) no nível 3 ao mesmo tempo. A população era fácil demais e se resolvia junto com o mestre construtor, sem sair de casa |
 | Senhor da guerra | Próprio do jogo | Vença 50 batalhas contra outros jogadores, atacando ou defendendo (até a temporada 3: 30) |

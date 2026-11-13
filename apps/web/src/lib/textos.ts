@@ -161,7 +161,9 @@ export function descreverObjetivo(
       return {
         icone: '🛡️',
         titulo: 'Fronteiras de ferro',
-        texto: `Tenha ${objetivo.territorios} territórios com pelo menos ${objetivo.guarnicaoMinima} soldados seus em cada um.`,
+        texto:
+          `Tenha ${objetivo.territorios} territórios com pelo menos ${objetivo.guarnicaoMinima} soldados seus em cada um` +
+          (objetivo.muralha ? ` e a Muralha da cidade no nível ${objetivo.muralha}.` : '.'),
       };
     case 'derrubar_rival':
       return {

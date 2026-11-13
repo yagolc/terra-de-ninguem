@@ -5,6 +5,7 @@ import {
   monopolioComercial,
   objetivoMetadeDoMapa,
   pontuar,
+  relogioDoObjetivo,
   sementeDeTexto,
   sortearObjetivo,
   vencedorPorPontos,
@@ -57,8 +58,8 @@ async function sortearPara(tx: Transacao, temporadaId: string, jogadorId: string
  * se alguém fez o monopólio comercial (aberto a todos) ou se o prazo acabou (aí vence quem tem mais pontos). Chamado a cada minuto pelo resolver-marchas.
  */
 export async function atualizarPlacar(tx: Transacao): Promise<{ encerrada: boolean }> {
-  const [temporada] = await tx<{ id: string; fim_previsto: Date | null }[]>`
-    select id, fim_previsto from temporadas where status = 'ativa' for update`;
+  const [temporada] = await tx<{ id: string; inicio: Date; fim_previsto: Date | null }[]>`
+    select id, inicio, fim_previsto from temporadas where status = 'ativa' for update`;
   if (!temporada) return { encerrada: false };
   const temporadaId = temporada.id;
   const agora = Date.now();
@@ -118,7 +119,18 @@ export async function atualizarPlacar(tx: Transacao): Promise<{ encerrada: boole
     select distinct atacante_id, defensor_id, territorio_id from relatorios
      where temporada_id = ${temporadaId} and conquistou and defensor_id is not null`;
 
-  const placar: { jogadorId: string; territorios: number; populacao: number; vitorias: number; pontos: number }[] = [];
+  // Relógio de quem já estava cumprindo o objetivo no minuto anterior (público, no placar).
+  const relogios = await tx<{ jogador_id: string; objetivo_desde: Date | null }[]>`
+    select jogador_id, objetivo_desde from placar where temporada_id = ${temporadaId}`;
+
+  const placar: {
+    jogadorId: string;
+    territorios: number;
+    populacao: number;
+    vitorias: number;
+    pontos: number;
+    objetivoDesde: number | null;
+  }[] = [];
   const cumpriram: string[] = [];
 
   for (const { jogador_id: jogadorId } of jogadores) {
@@ -134,6 +146,7 @@ export async function atualizarPlacar(tx: Transacao): Promise<{ encerrada: boole
       vitorias: vitorias.find((v) => v.jogador_id === jogadorId)?.vitorias ?? 0,
       vitoriasContraHerdeiro: contraHerdeiro.find((v) => v.jogador_id === jogadorId)?.vitorias ?? 0,
       pontos: 0,
+      objetivoDesde: null as number | null,
     };
     linha.pontos = pontuar(linha);
     placar.push(linha);
@@ -173,6 +186,7 @@ export async function atualizarPlacar(tx: Transacao): Promise<{ encerrada: boole
       populacao: cidade.estado.populacao,
       vitoriasContraJogadores: vitoriasContraJogadores.find((v) => v.jogador_id === jogadorId)?.vitorias ?? 0,
       niveisPredios: Object.values(cidade.estado.predios),
+      nivelMuralha: cidade.estado.predios.muralha,
       niveisVilas: vilas.filter((v) => v.dono_id === jogadorId).map((v) => v.nivel),
       cidadesLivres: cidadesLivres.map((c) => ({ minha: c.dono_id === jogadorId, posseDesde: c.posse_desde?.getTime() ?? null })),
       agora,
@@ -199,16 +213,28 @@ export async function atualizarPlacar(tx: Transacao): Promise<{ encerrada: boole
     if (avaliacao.viraObjetivo) {
       await tx`update objetivos set objetivo = ${tx.json(avaliacao.viraObjetivo)} where id = ${registro.id}`;
     }
-    if (avaliacao.cumprido) cumpriram.push(jogadorId);
+    // Cumprido, precisa segurar por algumas horas (relógio público) e fica sem escudo enquanto isso.
+    const relogio = relogioDoObjetivo({
+      cumprido: avaliacao.cumprido,
+      segurandoDesde: relogios.find((r) => r.jogador_id === jogadorId)?.objetivo_desde?.getTime() ?? null,
+      agora,
+      inicioTemporada: temporada.inicio.getTime(),
+    });
+    linha.objetivoDesde = relogio.segurandoDesde;
+    if (relogio.segurandoDesde !== null) {
+      await tx`delete from protecoes where temporada_id = ${temporadaId} and jogador_id = ${jogadorId} and tipo = 'escudo'`;
+    }
+    if (relogio.venceu) cumpriram.push(jogadorId);
   }
 
   for (const p of placar) {
     await tx`
-      insert into placar (temporada_id, jogador_id, territorios, populacao, vitorias, pontos, atualizado_em)
-      values (${temporadaId}, ${p.jogadorId}, ${p.territorios}, ${p.populacao}, ${p.vitorias}, ${p.pontos}, now())
+      insert into placar (temporada_id, jogador_id, territorios, populacao, vitorias, pontos, objetivo_desde, atualizado_em)
+      values (${temporadaId}, ${p.jogadorId}, ${p.territorios}, ${p.populacao}, ${p.vitorias}, ${p.pontos},
+              ${p.objetivoDesde === null ? null : new Date(p.objetivoDesde)}, now())
       on conflict (temporada_id, jogador_id) do update
         set territorios = excluded.territorios, populacao = excluded.populacao, vitorias = excluded.vitorias,
-            pontos = excluded.pontos, atualizado_em = now()`;
+            pontos = excluded.pontos, objetivo_desde = excluded.objetivo_desde, atualizado_em = now()`;
   }
 
   const monopolio = monopolioComercial(

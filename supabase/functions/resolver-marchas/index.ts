@@ -335,11 +335,14 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number, retomada 
     });
   }
 
-  // Quem perde uma defesa ganha escudo.
+  // Quem perde uma defesa ganha escudo, menos quem está segurando o objetivo cumprido (relógio no placar).
   if (defensor && atacanteVenceu) {
     await tx`
       insert into protecoes (temporada_id, jogador_id, tipo, ate)
-      values (${m.temporada_id}, ${destino.dono_id}, 'escudo', ${new Date(escudoAte(agora))})
+      select ${m.temporada_id}, ${destino.dono_id}, 'escudo', ${new Date(escudoAte(agora))}
+       where not exists (
+         select 1 from placar
+          where temporada_id = ${m.temporada_id} and jogador_id = ${destino.dono_id} and objetivo_desde is not null)
       on conflict (temporada_id, jogador_id, tipo) do update set ate = greatest(protecoes.ate, excluded.ate)`;
   }
 

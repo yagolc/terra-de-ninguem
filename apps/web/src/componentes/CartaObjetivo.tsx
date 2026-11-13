@@ -1,4 +1,4 @@
-import type { AvaliacaoObjetivo, Objetivo } from '@terra/regras';
+import { BALANCEAMENTO, type AvaliacaoObjetivo, type Objetivo } from '@terra/regras';
 import { descreverObjetivo, formatarNumero } from '../lib/textos';
 
 type Props = {
@@ -19,6 +19,9 @@ function textoProgresso(objetivo: Objetivo, progresso: AvaliacaoObjetivo): strin
   }
   if (objetivo.tipo === 'senhor_das_vilas' && prontos) {
     return `${prontos.atual} de ${prontos.alvo} vilas no nível ${objetivo.nivel} · ${progresso.atual} de ${progresso.alvo} níveis`;
+  }
+  if (objetivo.tipo === 'territorios_defendidos' && prontos) {
+    return `${progresso.atual} de ${progresso.alvo} territórios guarnecidos · Muralha ${prontos.atual} de ${prontos.alvo}`;
   }
   if (objetivo.tipo === 'monopolio_comercial' && prontos) {
     return prontos.atual < prontos.alvo
@@ -56,7 +59,7 @@ export default function CartaObjetivo({ objetivo, progresso, nomeRegiao, nomeJog
           </div>
           <p className="mt-1.5 text-xs text-pergaminho-escuro tabular-nums">
             {progresso.cumprido
-              ? 'Objetivo cumprido! A vitória é anunciada em até um minuto.'
+              ? `Objetivo cumprido! Mantenha por ${BALANCEAMENTO.objetivos.segurarHoras} h seguidas para vencer. Todos veem o relógio, e você fica sem escudo até lá.`
               : derrubar
                 ? progresso.atual === 0
                   ? 'O rival só tem a cidade principal, mas você precisa ter conquistado um território dele.'

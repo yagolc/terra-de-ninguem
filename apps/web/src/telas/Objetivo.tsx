@@ -51,6 +51,26 @@ export default function Objetivo({ sessao }: { sessao: Session }) {
         )}
       </section>
 
+      {dados.placar.some((p) => p.objetivoVenceEm !== null) && (
+        <section className="rounded-xl border border-sangue/60 bg-sangue/15 p-4 text-sm">
+          <h2 className="font-titulo text-lg text-ouro">🏆 Objetivo cumprido</h2>
+          <p className="mt-1 text-xs text-pergaminho-escuro">
+            Quem cumpre o objetivo secreto vence se mantiver por {BALANCEAMENTO.objetivos.segurarHoras} h seguidas, sem escudo enquanto isso.
+            O objetivo continua secreto, mas todos veem o relógio. Se ele deixar de cumprir, o relógio zera.
+          </p>
+          <ul className="mt-2 space-y-1">
+            {dados.placar
+              .filter((p) => p.objetivoVenceEm !== null)
+              .map((p) => (
+                <li key={p.jogadorId} className="font-semibold text-ouro-claro">
+                  {p.jogadorId === meuId ? 'Você vence' : `${p.nome} vence`} em{' '}
+                  <span className="tabular-nums">{formatarDuracao(Math.max(0, (p.objetivoVenceEm ?? 0) - Date.now()))}</span> se mantiver.
+                </li>
+              ))}
+          </ul>
+        </section>
+      )}
+
       {dados.monopolio.donos.length > 0 && (
         <section className="rounded-xl border border-ouro/50 bg-carvao/90 p-4 text-sm">
           <h2 className="font-titulo text-lg text-ouro">⚖️ Monopólio comercial</h2>

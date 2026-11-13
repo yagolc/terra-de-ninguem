@@ -2,6 +2,7 @@ import {
   avaliarObjetivo,
   cidadesAlheiasPorRegiao,
   monopolioComercial,
+  relogioDoObjetivo,
   type AvaliacaoObjetivo,
   type Bandeira,
   type Monopolio,
@@ -25,6 +26,8 @@ export type LinhaPlacar = {
   raca: Raca | null;
   /** Herdeiro do trono caído (vencedor da temporada anterior): cabeça a prêmio. */
   herdeiro: boolean;
+  /** Cumpriu o objetivo secreto e vence nesta hora se mantiver (relógio público), ou null. */
+  objetivoVenceEm: number | null;
 };
 
 export type TemporadaInfo = {
@@ -95,10 +98,10 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
     supabase.from('regioes').select('id, nome').eq('temporada_id', temporada.id).returns<{ id: string; nome: string }[]>(),
     supabase
       .from('placar')
-      .select('jogador_id, territorios, populacao, vitorias, pontos')
+      .select('jogador_id, territorios, populacao, vitorias, pontos, objetivo_desde')
       .eq('temporada_id', temporada.id)
       .order('pontos', { ascending: false })
-      .returns<{ jogador_id: string; territorios: number; populacao: number; vitorias: number; pontos: number }[]>(),
+      .returns<{ jogador_id: string; territorios: number; populacao: number; vitorias: number; pontos: number; objetivo_desde: string | null }[]>(),
     // O RLS devolve só o meu objetivo, ou todos depois que a temporada acaba.
     supabase
       .from('objetivos')
@@ -127,10 +130,10 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
       >(),
     supabase
       .from('cidades')
-      .select('ouro, predios(nivel)')
+      .select('ouro, predios(tipo, nivel)')
       .eq('temporada_id', temporada.id)
       .eq('jogador_id', jogadorId)
-      .maybeSingle<{ ouro: number; predios: { nivel: number }[] }>(),
+      .maybeSingle<{ ouro: number; predios: { tipo: string; nivel: number }[] }>(),
     supabase
       .from('povoados')
       .select('territorio_id, tipo, nivel, posse_desde')
@@ -175,6 +178,7 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
         b.vencedor === 'atacante' ? b.atacante_id === jogadorId && b.defensor_id !== null : b.defensor_id === jogadorId,
       ).length,
       niveisPredios: cidade.data?.predios.map((p) => p.nivel) ?? [],
+      nivelMuralha: cidade.data?.predios.find((p) => p.tipo === 'muralha')?.nivel ?? 0,
       niveisVilas: povoados.data
         .filter((p) => p.tipo === 'vila' && donoDe(p.territorio_id) === jogadorId)
         .map((p) => p.nivel),
@@ -234,6 +238,10 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
       pontos: p.pontos,
       raca: racaDe.get(p.jogador_id) ?? null,
       herdeiro: p.jogador_id === herdeiroId,
+      objetivoVenceEm: p.objetivo_desde
+        ? relogioDoObjetivo({ cumprido: true, segurandoDesde: Date.parse(p.objetivo_desde), agora: Date.now(), inicioTemporada: temporada.inicio })
+            .venceEm
+        : null,
     })),
     nomeRegiao: (id) => nomesRegioes.get(id) ?? 'uma região',
     nomeJogador,

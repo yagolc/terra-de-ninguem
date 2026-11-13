@@ -160,6 +160,11 @@ export const BALANCEAMENTO = {
     ouroGuardado: 7500,
     /** "Monopólio comercial": horas seguidas com todas as cidades livres. */
     monopolioHoras: 12,
+    /**
+     * Quem cumpre o objetivo secreto vence se o mantiver cumprido por estas horas seguidas (desde a temporada 5). O
+     * relógio é público (o tipo do objetivo continua secreto) e, enquanto ele corre, o jogador fica sem escudo.
+     */
+    segurarHoras: 4,
     /** "Velha rixa": territórios diferentes conquistados de jogadores da raça rival. */
     rixaTerritorios: 10,
   },

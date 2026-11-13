@@ -1,3 +1,4 @@
+import { fimProtecaoIniciante } from './ataques.ts';
 import { describe, expect, it } from 'vitest';
 import { BALANCEAMENTO } from './balanceamento.ts';
 import {
@@ -13,6 +14,7 @@ import {
   vencedorPorPontos,
   type Objetivo,
   type SituacaoJogador,
+  relogioDoObjetivo,
 } from './objetivos.ts';
 import { limitePopulacao, nivelArmazemNecessario } from './predios.ts';
 import { TIPOS_PREDIO } from './tipos.ts';
@@ -37,6 +39,7 @@ function situacao(mudancas: Partial<SituacaoJogador> = {}): SituacaoJogador {
     populacao: 10,
     vitoriasContraJogadores: 0,
     niveisPredios: [1, 0, 0, 0, 0, 0, 0, 0],
+    nivelMuralha: 0,
     niveisVilas: [],
     ouro: 0,
     cidadesLivres: [],
@@ -180,6 +183,62 @@ describe('avaliarObjetivo', () => {
     expect(avaliarObjetivo(obj, s)).toMatchObject({ cumprido: false, atual: 2, alvo: 3 });
   });
 
+  it('fronteiras de ferro: o sorteio pede a Muralha no nível máximo, e sem ela não cumpre', () => {
+    const maxima = BALANCEAMENTO.predios.muralha.nivelMaximo;
+    let sorteado: Objetivo | null = null;
+    for (let semente = 1; semente < 500 && !sorteado; semente++) {
+      const o = sortearObjetivo({ semente, regioes: REGIOES, totalTerritorios: TOTAL, racasRivais: [], jaSorteados: [] });
+      if (o.tipo === 'territorios_defendidos') sorteado = o;
+    }
+    expect(sorteado).toMatchObject({ tipo: 'territorios_defendidos', muralha: maxima });
+
+    const obj: Objetivo = { tipo: 'territorios_defendidos', territorios: 2, guarnicaoMinima: 5, muralha: maxima };
+    const meusTerritorios = [
+      { id: 'a', regiaoId: 'r1', minhasTropas: 5 },
+      { id: 'b', regiaoId: 'r1', minhasTropas: 8 },
+    ];
+    expect(avaliarObjetivo(obj, situacao({ meusTerritorios, nivelMuralha: maxima - 1 }))).toMatchObject({
+      cumprido: false,
+      atual: 2,
+      partes: [{ atual: maxima - 1, alvo: maxima }],
+    });
+    expect(avaliarObjetivo(obj, situacao({ meusTerritorios, nivelMuralha: maxima })).cumprido).toBe(true);
+    // Carta antiga (sem muralha): só os territórios contam.
+    expect(avaliarObjetivo({ ...obj, muralha: undefined }, situacao({ meusTerritorios })).cumprido).toBe(true);
+  });
+});
+
+describe('segurar o objetivo', () => {
+  const H = 3_600_000;
+  const SEGURAR = BALANCEAMENTO.objetivos.segurarHoras * H;
+  const inicio = 0;
+  const depoisDaProtecao = fimProtecaoIniciante(inicio) + 10 * H;
+
+  it('cumprir liga o relógio; vence só depois das horas seguidas', () => {
+    const ligou = relogioDoObjetivo({ cumprido: true, segurandoDesde: null, agora: depoisDaProtecao, inicioTemporada: inicio });
+    expect(ligou).toEqual({ segurandoDesde: depoisDaProtecao, venceEm: depoisDaProtecao + SEGURAR, venceu: false });
+    const quase = relogioDoObjetivo({ cumprido: true, segurandoDesde: depoisDaProtecao, agora: depoisDaProtecao + SEGURAR - 1, inicioTemporada: inicio });
+    expect(quase.venceu).toBe(false);
+    const venceu = relogioDoObjetivo({ cumprido: true, segurandoDesde: depoisDaProtecao, agora: depoisDaProtecao + SEGURAR, inicioTemporada: inicio });
+    expect(venceu.venceu).toBe(true);
+  });
+
+  it('deixar de cumprir zera o relógio', () => {
+    expect(relogioDoObjetivo({ cumprido: false, segurandoDesde: depoisDaProtecao, agora: depoisDaProtecao + SEGURAR, inicioTemporada: inicio })).toEqual({
+      segurandoDesde: null,
+      venceEm: null,
+      venceu: false,
+    });
+  });
+
+  it('não corre durante a proteção de iniciante', () => {
+    const cedo = 1 * H;
+    const r = relogioDoObjetivo({ cumprido: true, segurandoDesde: cedo, agora: cedo + SEGURAR, inicioTemporada: inicio });
+    expect(r).toEqual({ segurandoDesde: cedo, venceEm: fimProtecaoIniciante(inicio) + SEGURAR, venceu: false });
+  });
+});
+
+describe('avaliarObjetivo (outros tipos)', () => {
   it('população: conta habitantes inteiros', () => {
     const obj: Objetivo = { tipo: 'populacao', populacao: 100 };
     expect(avaliarObjetivo(obj, situacao({ populacao: 99.9 })).cumprido).toBe(false);
