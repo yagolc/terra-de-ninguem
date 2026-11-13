@@ -1,5 +1,5 @@
 // Desenho da bandeira do jogador: textos e formas dos padrões, usados pelo componente `Bandeira` (SVG) e pelo mapa (Phaser).
-import { BANDEIRA_INICIAL, verificarEmblema, type Bandeira, type PadraoBandeira } from '@terra/regras';
+import { BANDEIRA_INICIAL, TITULOS_LOJA, verificarEmblema, type Bandeira, type PadraoBandeira } from '@terra/regras';
 import { corDoJogador } from './useMapa';
 
 export const PADROES_INFO: Record<PadraoBandeira, string> = {
@@ -10,6 +10,12 @@ export const PADROES_INFO: Record<PadraoBandeira, string> = {
   diagonal: 'Diagonal',
   xadrez: 'Xadrez',
   borda: 'Borda',
+  // Exclusivos da loja.
+  divisa: 'Divisa',
+  pala: 'Pala',
+  aspa: 'Aspa',
+  ponta: 'Ponta',
+  listrada: 'Listrada',
 };
 
 /** Nome de cada cor (paleta e segundas cores), para leitores de tela e dicas. */
@@ -31,6 +37,9 @@ export const NOMES_CORES: Record<string, string> = {
   '#7a2e1f': 'Sangue',
   '#4f6b3a': 'Musgo',
   '#8a8a8a': 'Cinza',
+  // Cores da loja.
+  '#c9a227': 'Ouro real',
+  '#a8b2bd': 'Prata',
 };
 
 /** Polígonos da segunda cor, em coordenadas de 0 a 1 (x, y, x, y, …) sobre o retângulo da bandeira. */
@@ -61,7 +70,29 @@ export function formasDoPadrao(padrao: PadraoBandeira): number[][] {
         [0, 0, 0.12, 0, 0.12, 1, 0, 1],
         [0.88, 0, 1, 0, 1, 1, 0.88, 1],
       ];
+    // Exclusivos da loja.
+    case 'divisa':
+      return [[0, 0.72, 0.5, 0.26, 1, 0.72, 1, 1, 0.5, 0.54, 0, 1]];
+    case 'pala':
+      return [[0.36, 0, 0.64, 0, 0.64, 1, 0.36, 1]];
+    case 'aspa':
+      return [
+        [0, 0, 0.14, 0, 1, 0.86, 1, 1, 0.86, 1, 0, 0.14],
+        [1, 0, 1, 0.14, 0.14, 1, 0, 1, 0, 0.86, 0.86, 0],
+      ];
+    case 'ponta':
+      return [[0, 0, 0.55, 0.5, 0, 1]];
+    case 'listrada':
+      return [
+        [0, 0.2, 1, 0.2, 1, 0.4, 0, 0.4],
+        [0, 0.6, 1, 0.6, 1, 0.8, 0, 0.8],
+      ];
   }
+}
+
+/** Nome do título da loja guardado em `jogadores.titulo` (null se não houver ou se for desconhecido). */
+export function nomeDoTitulo(titulo: string | null | undefined): string | null {
+  return titulo && titulo in TITULOS_LOJA ? TITULOS_LOJA[titulo as keyof typeof TITULOS_LOJA] : null;
 }
 
 /** Colunas de `jogadores` que formam a bandeira (liste-as no `select`). */

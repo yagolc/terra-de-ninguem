@@ -2,6 +2,7 @@ import { BALANCEAMENTO, gastoTerminarObra, precoPacoteReais, precoTerminarObra }
 import { useState } from 'react';
 import { formatarReais, pixConfigurado } from '../lib/pix';
 import { useGemas } from '../lib/useGemas';
+import ItensLoja from './ItensLoja';
 import PixDoPedido from './PixDoPedido';
 
 const STATUS: Record<string, string> = { pendente: '⏳ esperando o Pix ser conferido', pago: '✅ creditado' };
@@ -11,17 +12,18 @@ const STATUS: Record<string, string> = { pendente: '⏳ esperando o Pix ser conf
  * na hora a obra que está sendo feita (até o nível 7, nunca a Muralha), com o preço dobrando a cada uso na temporada.
  */
 export default function PainelLoja() {
-  const { gemas, pedir, cancelarPedido } = useGemas();
+  const { gemas, pedir, cancelarPedido, comprar, usarTitulo } = useGemas();
   const [aberto, setAberto] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [mensagem, setMensagem] = useState<{ texto: string; erro: boolean } | null>(null);
   const { precoBase, nivelMaximo } = BALANCEAMENTO.loja.terminarObra;
 
-  async function fazer(acao: () => Promise<void>) {
+  async function fazer(acao: () => Promise<void>, sucesso?: string) {
     setOcupado(true);
     setMensagem(null);
     try {
       await acao();
+      if (sucesso) setMensagem({ texto: sucesso, erro: false });
     } catch (e) {
       setMensagem({ texto: e instanceof Error ? e.message : 'Não deu certo. Tente de novo.', erro: true });
     } finally {
@@ -56,6 +58,16 @@ export default function PainelLoja() {
         </div>
       </div>
 
+      {mensagem && <p role="status" className={`text-sm ${mensagem.erro ? 'text-red-300' : 'text-musgo'}`}>{mensagem.texto}</p>}
+
+      <ItensLoja
+        gemas={gemas}
+        ocupado={ocupado}
+        onComprar={(item, variante) => void fazer(() => comprar(item, variante), '💎 Comprado!')}
+        onUsarTitulo={(titulo) => void fazer(() => usarTitulo(titulo), titulo ? 'Título em uso.' : 'Título tirado.')}
+      />
+
+      <h4 className="font-titulo text-ouro">Gemas</h4>
       {!pixConfigurado ? (
         <p className="text-sm text-pergaminho-escuro">A loja ainda não está aberta: falta configurar o Pix.</p>
       ) : (
@@ -86,7 +98,6 @@ export default function PainelLoja() {
         </div>
       )}
 
-      {mensagem && <p className={`text-sm ${mensagem.erro ? 'text-red-300' : 'text-musgo'}`}>{mensagem.texto}</p>}
 
       {gemas.pedidos.length > 0 && (
         <ul className="space-y-2">

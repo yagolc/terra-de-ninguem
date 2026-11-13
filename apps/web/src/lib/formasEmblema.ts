@@ -8,6 +8,25 @@ import type { CamadaEmblema, FormaEmblema } from '@terra/regras';
 type Forma = { nome: string; d: string | readonly string[]; furos?: boolean };
 
 export const FORMAS: Record<FormaEmblema, Forma> = {
+  // Exclusivas do pacote de bandeiras da loja.
+  estrela8: {
+    nome: 'Estrela de 8',
+    d: 'M0-50L8-19.4L35.4-35.4L19.4-8L50 0L19.4 8L35.4 35.4L8 19.4L0 50L-8 19.4L-35.4 35.4L-19.4 8L-50 0L-19.4-8L-35.4-35.4L-8-19.4Z',
+  },
+  cruz_malta: {
+    nome: 'Cruz de Malta',
+    d: ['M0-8L-22-50L0-38L22-50Z', 'M8 0L50-22L38 0L50 22Z', 'M0 8L22 50L0 38L-22 50Z', 'M-8 0L-50 22L-38 0L-50-22Z'],
+  },
+  trevo: {
+    nome: 'Trevo',
+    d: [
+      'M0-46A20 20 0 1 1 0-6A20 20 0 1 1 0-46Z',
+      'M-22-14A20 20 0 1 1-22 26A20 20 0 1 1-22-14Z',
+      'M22-14A20 20 0 1 1 22 26A20 20 0 1 1 22-14Z',
+      'M-4 10H4V50H-4Z',
+    ],
+  },
+  diamante: { nome: 'Diamante', d: 'M-28-34H28L50-10L0 50L-50-10Z' },
   circulo: { nome: 'Círculo', d: 'M0-50A50 50 0 1 1 0 50A50 50 0 1 1 0-50Z' },
   anel: { nome: 'Anel', d: 'M0-50A50 50 0 1 1 0 50A50 50 0 1 1 0-50ZM0-37A37 37 0 1 0 0 37A37 37 0 1 0 0-37Z', furos: true },
   semicirculo: { nome: 'Meio círculo', d: 'M-50 25A50 50 0 0 1 50 25Z' },

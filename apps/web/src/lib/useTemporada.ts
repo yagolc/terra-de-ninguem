@@ -10,7 +10,7 @@ import {
   type Raca,
 } from '@terra/regras';
 import { useCallback, useEffect, useState } from 'react';
-import { bandeiraDoJogador, COLUNAS_BANDEIRA, type LinhaBandeira } from './bandeira';
+import { bandeiraDoJogador, COLUNAS_BANDEIRA, nomeDoTitulo, type LinhaBandeira } from './bandeira';
 import { chamarFuncao } from './funcoes';
 import { supabase } from './supabase';
 
@@ -30,6 +30,8 @@ export type LinhaPlacar = {
   objetivoVenceEm: number | null;
   /** Vezes que usou gemas na temporada (público; não diz em quê). */
   usosGemas: number;
+  /** Título comprado na loja (nome pronto), ou null. */
+  titulo: string | null;
 };
 
 export type TemporadaInfo = {
@@ -96,7 +98,7 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
   const temporada = converterTemporada(linha);
 
   const [jogadores, regioes, placar, objetivos, territorios, tropas, batalhas, cidade, povoados, racas, usosGemas] = await Promise.all([
-    supabase.from('jogadores').select(`id, nome, ${COLUNAS_BANDEIRA}`).returns<(LinhaBandeira & { nome: string })[]>(),
+    supabase.from('jogadores').select(`id, nome, titulo, ${COLUNAS_BANDEIRA}`).returns<(LinhaBandeira & { nome: string; titulo: string | null })[]>(),
     supabase.from('regioes').select('id, nome').eq('temporada_id', temporada.id).returns<{ id: string; nome: string }[]>(),
     supabase
       .from('placar')
@@ -248,6 +250,7 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
             .venceEm
         : null,
       usosGemas: usosDe.get(p.jogador_id) ?? 0,
+      titulo: nomeDoTitulo(nomesJogadores.get(p.jogador_id)?.titulo),
     })),
     nomeRegiao: (id) => nomesRegioes.get(id) ?? 'uma região',
     nomeJogador,

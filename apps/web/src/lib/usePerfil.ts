@@ -1,6 +1,6 @@
 import type { Bandeira, Raca } from '@terra/regras';
 import { useCallback, useEffect, useState } from 'react';
-import { bandeiraDoJogador, COLUNAS_BANDEIRA, type LinhaBandeira } from './bandeira';
+import { bandeiraDoJogador, COLUNAS_BANDEIRA, nomeDoTitulo, type LinhaBandeira } from './bandeira';
 import { supabase } from './supabase';
 
 export type TemporadaDoPerfil = {
@@ -24,6 +24,8 @@ export type DadosPerfil = {
   jogadorId: string;
   nome: string;
   descricao: string;
+  /** Título comprado na loja que o jogador mostra (nome pronto), ou null. */
+  titulo: string | null;
   bandeira: Bandeira;
   temporadas: TemporadaDoPerfil[];
   rivalidades: Rival[];
@@ -31,7 +33,7 @@ export type DadosPerfil = {
   coresEmUso: string[];
 };
 
-type LinhaJogador = LinhaBandeira & { nome: string; descricao: string | null };
+type LinhaJogador = LinhaBandeira & { nome: string; descricao: string | null; titulo: string | null };
 
 type Resposta = {
   temporadas: {
@@ -53,7 +55,7 @@ type Resposta = {
 async function buscarPerfil(jogadorId: string): Promise<DadosPerfil | null> {
   if (!supabase) return null;
   const [jogadores, estatisticas, ativa] = await Promise.all([
-    supabase.from('jogadores').select(`id, nome, descricao, ${COLUNAS_BANDEIRA}`).returns<LinhaJogador[]>(),
+    supabase.from('jogadores').select(`id, nome, descricao, titulo, ${COLUNAS_BANDEIRA}`).returns<LinhaJogador[]>(),
     supabase.rpc('perfil_jogador', { p_jogador: jogadorId }),
     supabase.from('temporadas').select('id').eq('status', 'ativa').maybeSingle<{ id: string }>(),
   ]);
@@ -76,6 +78,7 @@ async function buscarPerfil(jogadorId: string): Promise<DadosPerfil | null> {
     jogadorId,
     nome: jogador.nome,
     descricao: jogador.descricao ?? '',
+    titulo: nomeDoTitulo(jogador.titulo),
     bandeira: bandeiraDoJogador(jogador),
     temporadas: dados.temporadas.map((t) => ({
       numero: t.numero,

@@ -37,6 +37,7 @@ export default function TabelaPlacar({ placar, meuId, vencedorId }: { placar: Li
                     ⚡{linha.usosGemas}
                   </span>
                 )}
+                {linha.titulo && <span className="block text-[11px] italic text-ouro-claro">{linha.titulo}</span>}
                 {linha.herdeiro && (
                   <span className="block text-[11px] text-ouro-claro" title="Cada batalha vencida contra ele vale pontos a mais">
                     {TITULO_HERDEIRO} · 🎯 cabeça a prêmio

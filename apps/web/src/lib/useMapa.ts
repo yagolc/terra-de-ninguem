@@ -152,6 +152,8 @@ export type DadosMapa = {
   racas: Map<string, Raca>;
   /** Vencedor da temporada anterior: o herdeiro do trono caído (coroa no mapa, cabeça a prêmio). */
   herdeiroId: string | null;
+  /** Jogadores com o destaque da cidade comprado na loja nesta temporada. */
+  destaques: Set<string>;
   /** Quem cumpriu o objetivo secreto e quando vence se mantiver. */
   objetivosCumpridos: { jogadorId: string; venceEm: number }[];
   /** Acessos militares aceitos e ainda em vigor do próprio jogador (o RLS só mostra as cartas dele). */
@@ -283,6 +285,7 @@ async function buscarMapa(): Promise<DadosMapa | null> {
     barreiras,
     relogios,
     acessos,
+    destaques,
   ] = await Promise.all([
     supabase.from('regioes').select('id, indice, nome, terreno').eq('temporada_id', temporada.id).returns<RegiaoMapa[]>(),
     supabase
@@ -378,6 +381,8 @@ async function buscarMapa(): Promise<DadosMapa | null> {
       .eq('proposta', 'acesso_militar')
       .gt('pacto_ate', new Date().toISOString())
       .returns<{ remetente_id: string; destinatario_id: string; pacto_ate: string }[]>(),
+    // Quem comprou o destaque da cidade na loja (cidade maior e com brilho no mapa).
+    supabase.rpc('destaques_na_temporada', { p_temporada: temporada.id }),
   ]);
   if (
     !regioes.data ||
@@ -471,6 +476,7 @@ async function buscarMapa(): Promise<DadosMapa | null> {
       ),
     ),
     herdeiroId: anterior.data?.[0]?.vencedor_id ?? null,
+    destaques: new Set(((destaques.data ?? []) as { jogador_id: string }[]).map((d) => d.jogador_id)),
     acessosMilitares: (acessos.data ?? []).map((a) => ({
       jogadores: [a.remetente_id, a.destinatario_id] as const,
       ate: Date.parse(a.pacto_ate),

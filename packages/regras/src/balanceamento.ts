@@ -350,6 +350,17 @@ export const BALANCEAMENTO = {
     },
     /** Pedidos de gemas esperando o Pix ser conferido, por jogador. */
     pedidosPendentesMaximo: 3,
+    /**
+     * Itens da loja. `permanente`: comprado uma vez, vale em todas as temporadas (o `titulo` é um por título).
+     * `temporada`: vale até a temporada acabar e pode ser comprado de novo na próxima.
+     */
+    itens: {
+      bandeiras_exclusivas: { preco: 10, escopo: 'permanente' },
+      titulo: { preco: 5, escopo: 'permanente' },
+      cor_ouro: { preco: 8, escopo: 'permanente' },
+      cor_prata: { preco: 8, escopo: 'permanente' },
+      destaque_cidade: { preco: 5, escopo: 'temporada' },
+    },
   },
 
   reconhecimento: {

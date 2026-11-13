@@ -79,6 +79,7 @@ export default function Perfil({ jogadorId, meuId, onNomeMudou }: Props) {
         <Bandeira bandeira={dados.bandeira} largura={120} className="shrink-0 drop-shadow-lg" titulo={`Bandeira de ${dados.nome}`} />
         <div className="min-w-0 flex-1 space-y-1.5">
           <h2 className="break-words font-titulo text-2xl text-ouro">{dados.nome}</h2>
+          {dados.titulo && <p className="font-titulo text-sm italic text-ouro-claro">{dados.titulo}</p>}
           <p className="text-sm text-pergaminho-escuro">
             {atual?.raca && `${RACAS_INFO[atual.raca].icone} ${RACAS_INFO[atual.raca].nome} · `}
             {titulos > 0 ? `👑 ${titulos} ${titulos === 1 ? 'título' : 'títulos'}` : `${dados.temporadas.length} ${dados.temporadas.length === 1 ? 'temporada' : 'temporadas'}`}

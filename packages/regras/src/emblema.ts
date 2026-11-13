@@ -47,7 +47,15 @@ export const FORMAS_EMBLEMA = [
   'chave',
   'ancora',
   'fita',
+  // Exclusivas do pacote de bandeiras da loja (FORMAS_EXCLUSIVAS).
+  'estrela8',
+  'cruz_malta',
+  'trevo',
+  'diamante',
 ] as const;
+
+/** Formas que só quem comprou o pacote de bandeiras exclusivas da loja usa. */
+export const FORMAS_EXCLUSIVAS = ['estrela8', 'cruz_malta', 'trevo', 'diamante'] as const;
 export type FormaEmblema = (typeof FORMAS_EMBLEMA)[number];
 
 /** Cores das camadas: a paleta dos jogadores, mais preto, pergaminho, ouro, sangue, musgo e cinza. */

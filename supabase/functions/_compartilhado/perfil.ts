@@ -2,6 +2,7 @@
 import { MENSAGENS_PERFIL, verificarPerfil } from '../../../packages/regras/src/index.ts';
 import type { Transacao } from './db.ts';
 import { ErroDoJogo } from './http.ts';
+import { desbloqueiosDoJogador } from './loja.ts';
 import { gravarNomeJogador } from './nome.ts';
 
 /**
@@ -23,6 +24,8 @@ export async function salvarPerfil(tx: Transacao, jogadorId: string, corpo: Reco
   const v = verificarPerfil(
     { cor: corpo.cor, corSecundaria: corpo.cor_secundaria, padrao: corpo.padrao, emblema: corpo.emblema, descricao: corpo.descricao },
     outras.map((o) => o.cor),
+    // Cores, padrões e formas da loja só para quem comprou.
+    await desbloqueiosDoJogador(tx, jogadorId),
   );
   if (!v.ok) throw new ErroDoJogo(MENSAGENS_PERFIL[v.motivo]);
 

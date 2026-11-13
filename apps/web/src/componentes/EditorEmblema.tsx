@@ -1,4 +1,4 @@
-import { CORES_EMBLEMA, FORMAS_EMBLEMA, LIMITES_EMBLEMA, type CamadaEmblema, type FormaEmblema } from '@terra/regras';
+import { CORES_EMBLEMA, FORMAS_EMBLEMA, FORMAS_EXCLUSIVAS, LIMITES_EMBLEMA, type CamadaEmblema, type FormaEmblema } from '@terra/regras';
 import { useRef, useState, type PointerEvent as EventoPonteiro } from 'react';
 import { NOMES_CORES } from '../lib/bandeira';
 import { EMBLEMAS_PRONTOS, FORMAS, partesDaForma, transformacaoDaCamada } from '../lib/formasEmblema';
@@ -9,6 +9,8 @@ type Props = {
   onMudar: (camadas: CamadaEmblema[]) => void;
   /** Cor de fundo do quadro (a da bandeira), para ver o emblema como vai ficar. */
   fundo: string;
+  /** Pacote de bandeiras exclusivas da loja comprado: libera as formas exclusivas. */
+  exclusivas: boolean;
 };
 
 type Painel = 'camadas' | 'formas' | 'prontos';
@@ -41,7 +43,7 @@ function Controle({ rotulo, valor, min, max, passo = 1, sufixo, onMudar }: {
  * Editor do emblema por camadas: até 20 formas empilhadas, cada uma com posição (arrastando no quadro ou pelos
  * controles), tamanho, rotação, cor e espelho. A camada de baixo da lista fica na frente.
  */
-export default function EditorEmblema({ camadas, onMudar, fundo }: Props) {
+export default function EditorEmblema({ camadas, onMudar, fundo, exclusivas }: Props) {
   const [selecionada, setSelecionada] = useState<number | null>(camadas.length > 0 ? camadas.length - 1 : null);
   const [painel, setPainel] = useState<Painel>(camadas.length === 0 ? 'prontos' : 'camadas');
   const quadro = useRef<SVGSVGElement>(null);
@@ -181,18 +183,22 @@ export default function EditorEmblema({ camadas, onMudar, fundo }: Props) {
 
       {painel === 'formas' && (
         <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-9">
-          {FORMAS_EMBLEMA.map((forma) => (
+          {FORMAS_EMBLEMA.map((forma) => {
+            const trancada = !exclusivas && (FORMAS_EXCLUSIVAS as readonly string[]).includes(forma);
+            return (
             <button
               key={forma}
               type="button"
-              onClick={() => adicionar(forma)}
-              title={FORMAS[forma].nome}
-              aria-label={`Adicionar ${FORMAS[forma].nome}`}
-              className="grid aspect-square place-items-center rounded-lg border-2 border-couro bg-noite/60 p-1 hover:border-ouro/60"
+              onClick={() => (trancada ? (location.hash = 'loja') : adicionar(forma))}
+              title={trancada ? `${FORMAS[forma].nome}: exclusiva da loja (💎)` : FORMAS[forma].nome}
+              aria-label={trancada ? `${FORMAS[forma].nome}, exclusiva da loja` : `Adicionar ${FORMAS[forma].nome}`}
+              className={`relative grid aspect-square place-items-center rounded-lg border-2 border-couro bg-noite/60 p-1 hover:border-ouro/60 ${trancada ? 'opacity-50' : ''}`}
             >
+              {trancada && <span className="absolute right-0 top-0 text-[10px]" aria-hidden>🔒</span>}
               <Emblema camadas={[{ forma, x: 50, y: 50, escala: 0.8, largura: 1, altura: 1, rotacao: 0, cor: '#f1e6cf', espelhar: false }]} tamanho={30} />
             </button>
-          ))}
+            );
+          })}
         </div>
       )}
 

@@ -265,12 +265,22 @@ export class CenaMapa extends Phaser.Scene {
     const y = t.y * ESCALA;
     const dono = t.dono_id ? this.opcoes.dados.jogadores.get(t.dono_id) : null;
     if (t.cidade_principal) {
-      // Cidade: castelo com a bandeira do dono ao lado.
-      this.rotulos.push(this.add.text(x + 9, y - 16, '🏰', { ...estilo, fontSize: '20px' }).setOrigin(0.5));
-      if (dono) this.desenharBandeira(x - 28, y - 14, dono);
+      // Cidade: castelo com a bandeira do dono ao lado. Com o destaque da loja: brilho dourado, castelo e bandeira maiores.
+      const destaque = !!dono && this.opcoes.dados.destaques.has(dono.id);
+      if (destaque) {
+        const g = this.camadaBandeiras!;
+        g.fillStyle(0xffd54a, 0.18);
+        g.fillCircle(x - 4, y - 18, 40);
+        g.lineStyle(2, 0xffd54a, 0.85);
+        g.strokeCircle(x - 4, y - 18, 40);
+      }
+      this.rotulos.push(this.add.text(x + 9, y - 16, '🏰', { ...estilo, fontSize: destaque ? '28px' : '20px' }).setOrigin(0.5));
+      if (dono) this.desenharBandeira(destaque ? x - 40 : x - 28, y - 14, dono, destaque ? 1.5 : 1);
       // Coroa sobre a bandeira do herdeiro do trono caído (vencedor da temporada anterior).
       if (dono && dono.id === this.opcoes.dados.herdeiroId) {
-        this.rotulos.push(this.add.text(x - 15, y - 42, '👑', { ...estilo, fontSize: '16px', strokeThickness: 0 }).setOrigin(0.5));
+        this.rotulos.push(
+          this.add.text(destaque ? x - 20 : x - 15, destaque ? y - 52 : y - 42, '👑', { ...estilo, fontSize: '16px', strokeThickness: 0 }).setOrigin(0.5),
+        );
       }
     } else if (dono) {
       // Território conquistado: a bandeira do dono no lugar do ícone de terreno.
@@ -327,11 +337,11 @@ export class CenaMapa extends Phaser.Scene {
    * do SVG da bandeira. Enquanto a imagem carrega (só na primeira vez de cada bandeira), vai o pano só com cor e
    * padrão. (x, y) = base do mastro.
    */
-  private desenharBandeira(x: number, y: number, dono: JogadorMapa) {
+  private desenharBandeira(x: number, y: number, dono: JogadorMapa, escala = 1) {
     const g = this.camadaBandeiras!;
     const bandeira = bandeiraDoJogador(dono);
-    const { largura, altura } = BANDEIRA;
-    const [esq, topo] = [x, y - 20];
+    const [largura, altura] = [BANDEIRA.largura * escala, BANDEIRA.altura * escala];
+    const [esq, topo] = [x, y - 20 * escala];
     // Mastro escuro com borda clara, para destacar sobre a própria cor do território.
     g.lineStyle(5, 0xf1e6cf, 1);
     g.lineBetween(x, y + 12, x, topo);

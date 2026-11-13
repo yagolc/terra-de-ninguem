@@ -30,6 +30,86 @@ export function obraAceleravel(tipo: TipoPredio, nivelAlvo: number): boolean {
   return nivelAlvo <= nivelMaximo && !prediosProibidos.includes(tipo);
 }
 
+// ---------------------------------------------------------------------------------------------------------------
+// Itens da loja: visuais (bandeiras exclusivas, títulos, cores) e o destaque da cidade no mapa.
+
+export type ItemLoja = keyof typeof BALANCEAMENTO.loja.itens;
+export const ITENS_LOJA = Object.keys(BALANCEAMENTO.loja.itens) as ItemLoja[];
+
+/** Títulos à venda (um item `titulo` por título): aparecem no placar e no perfil. */
+export const TITULOS_LOJA = {
+  mecenas: 'Mecenas da Coroa',
+  senhor_do_ouro: 'Senhor do Ouro',
+  lobo_da_fronteira: 'Lobo da Fronteira',
+  arquiteto: 'Arquiteto do Reino',
+  voz_dos_pombos: 'Voz dos Pombos',
+  carrasco: 'Carrasco dos Bárbaros',
+  conquistador: 'Conquistador',
+  tirano: 'Tirano Benevolente',
+} as const;
+export type TituloLoja = keyof typeof TITULOS_LOJA;
+export const TIPOS_TITULO = Object.keys(TITULOS_LOJA) as TituloLoja[];
+
+/** Cores exclusivas: viram cor principal ou segunda cor de quem comprou (a principal continua sem repetir). */
+export const CORES_LOJA = { cor_ouro: '#c9a227', cor_prata: '#a8b2bd' } as const;
+
+/** Uma compra já feita: o item, a variante (o título) e a temporada (itens de temporada). */
+export type ItemComprado = { item: string; variante: string | null; temporadaId: string | null };
+
+/** O que as compras permanentes liberam no perfil. */
+export type Desbloqueios = { bandeirasExclusivas: boolean; cores: string[]; titulos: TituloLoja[] };
+export const SEM_DESBLOQUEIOS: Desbloqueios = { bandeirasExclusivas: false, cores: [], titulos: [] };
+
+export function desbloqueiosDe(comprados: readonly ItemComprado[]): Desbloqueios {
+  const tem = (item: ItemLoja) => comprados.some((c) => c.item === item);
+  return {
+    bandeirasExclusivas: tem('bandeiras_exclusivas'),
+    cores: (Object.keys(CORES_LOJA) as (keyof typeof CORES_LOJA)[]).filter(tem).map((item) => CORES_LOJA[item]),
+    titulos: TIPOS_TITULO.filter((t) => comprados.some((c) => c.item === 'titulo' && c.variante === t)),
+  };
+}
+
+/** O item já foi comprado (permanente: em qualquer temporada; de temporada: nesta). */
+export function itemComprado(comprados: readonly ItemComprado[], item: ItemLoja, variante: string | null, temporadaId: string | null): boolean {
+  const permanente = BALANCEAMENTO.loja.itens[item].escopo === 'permanente';
+  return comprados.some(
+    (c) => c.item === item && (c.variante ?? null) === variante && (permanente || (temporadaId !== null && c.temporadaId === temporadaId)),
+  );
+}
+
+export type MotivoRecusaCompra = 'item_invalido' | 'ja_comprado' | 'sem_temporada' | 'gemas_insuficientes';
+
+/** Confere a compra de um item: item e variante válidos, ainda não comprado, temporada ativa (se for de temporada) e saldo. */
+export function verificarCompraItem(entrada: {
+  item: unknown;
+  variante?: unknown;
+  saldo: number;
+  comprados: readonly ItemComprado[];
+  /** Temporada ativa (null fora de temporada). */
+  temporadaId: string | null;
+}): Verificacao<{ item: ItemLoja; variante: string | null; preco: number; temporadaId: string | null }, MotivoRecusaCompra> {
+  const item = ITENS_LOJA.find((i) => i === entrada.item);
+  if (!item) return { ok: false, motivo: 'item_invalido' };
+  let variante: string | null = null;
+  if (item === 'titulo') {
+    const titulo = TIPOS_TITULO.find((t) => t === entrada.variante);
+    if (!titulo) return { ok: false, motivo: 'item_invalido' };
+    variante = titulo;
+  }
+  const { preco, escopo } = BALANCEAMENTO.loja.itens[item];
+  if (escopo === 'temporada' && entrada.temporadaId === null) return { ok: false, motivo: 'sem_temporada' };
+  if (itemComprado(entrada.comprados, item, variante, entrada.temporadaId)) return { ok: false, motivo: 'ja_comprado' };
+  if (entrada.saldo < preco) return { ok: false, motivo: 'gemas_insuficientes' };
+  return { ok: true, item, variante, preco, temporadaId: escopo === 'temporada' ? entrada.temporadaId : null };
+}
+
+/** Título que o jogador quer mostrar: nenhum (null) ou um que ele comprou. */
+export function verificarTitulo(titulo: unknown, desbloqueios: Desbloqueios): Verificacao<{ titulo: TituloLoja | null }, 'titulo_nao_comprado'> {
+  if (titulo === null || titulo === undefined || titulo === '') return { ok: true, titulo: null };
+  const t = desbloqueios.titulos.find((d) => d === titulo);
+  return t ? { ok: true, titulo: t } : { ok: false, motivo: 'titulo_nao_comprado' };
+}
+
 export type MotivoRecusaTerminarObra = 'sem_obra' | 'item_invalido' | 'predio_proibido' | 'nivel_alto' | 'gemas_insuficientes';
 
 /**

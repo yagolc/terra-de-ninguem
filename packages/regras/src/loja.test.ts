@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCEAMENTO } from './balanceamento.ts';
-import { gastoTerminarObra, obraAceleravel, pacoteValido, precoTerminarObra, terminarObraAgora } from './loja.ts';
+import {
+  CORES_LOJA,
+  TITULOS_LOJA,
+  desbloqueiosDe,
+  gastoTerminarObra,
+  obraAceleravel,
+  pacoteValido,
+  precoTerminarObra,
+  terminarObraAgora,
+  verificarCompraItem,
+  verificarTitulo,
+  type ItemComprado,
+} from './loja.ts';
 import { prediosIniciais } from './predios.ts';
 import type { Obra } from './tipos.ts';
 
@@ -82,5 +94,60 @@ describe('terminarObraAgora', () => {
     expect(terminarObraAgora({ ...base, predios: alta, obras: obraAlta, prontoEm: AGORA + MIN })).toEqual({ ok: false, motivo: 'nivel_alto' });
     const noLimite = { ...alta, casa: max - 1 };
     expect(terminarObraAgora({ ...base, predios: noLimite, obras: obraAlta, prontoEm: AGORA + MIN }).ok).toBe(true);
+  });
+});
+
+describe('verificarCompraItem', () => {
+  const T = 'temporada-1';
+  const base = { saldo: 100, comprados: [] as ItemComprado[], temporadaId: T };
+
+  it('compra item permanente pelo preço do balanceamento, sem temporada', () => {
+    const r = verificarCompraItem({ ...base, item: 'bandeiras_exclusivas', temporadaId: null });
+    expect(r).toEqual({ ok: true, item: 'bandeiras_exclusivas', variante: null, preco: BALANCEAMENTO.loja.itens.bandeiras_exclusivas.preco, temporadaId: null });
+  });
+
+  it('título precisa de variante válida e cada título é um item', () => {
+    expect(verificarCompraItem({ ...base, item: 'titulo' })).toEqual({ ok: false, motivo: 'item_invalido' });
+    expect(verificarCompraItem({ ...base, item: 'titulo', variante: 'rei_do_mundo' })).toEqual({ ok: false, motivo: 'item_invalido' });
+    const comprados: ItemComprado[] = [{ item: 'titulo', variante: 'mecenas', temporadaId: null }];
+    expect(verificarCompraItem({ ...base, comprados, item: 'titulo', variante: 'mecenas' })).toEqual({ ok: false, motivo: 'ja_comprado' });
+    expect(verificarCompraItem({ ...base, comprados, item: 'titulo', variante: 'tirano' }).ok).toBe(true);
+  });
+
+  it('permanente não se compra duas vezes, nem em outra temporada', () => {
+    const comprados: ItemComprado[] = [{ item: 'cor_ouro', variante: null, temporadaId: null }];
+    expect(verificarCompraItem({ ...base, comprados, item: 'cor_ouro', temporadaId: 'outra' })).toEqual({ ok: false, motivo: 'ja_comprado' });
+  });
+
+  it('item de temporada precisa de temporada ativa e volta a valer na próxima', () => {
+    expect(verificarCompraItem({ ...base, item: 'destaque_cidade', temporadaId: null })).toEqual({ ok: false, motivo: 'sem_temporada' });
+    const comprados: ItemComprado[] = [{ item: 'destaque_cidade', variante: null, temporadaId: T }];
+    expect(verificarCompraItem({ ...base, comprados, item: 'destaque_cidade' })).toEqual({ ok: false, motivo: 'ja_comprado' });
+    const r = verificarCompraItem({ ...base, comprados, item: 'destaque_cidade', temporadaId: 'temporada-2' });
+    expect(r.ok && r.temporadaId).toBe('temporada-2');
+  });
+
+  it('recusa item desconhecido e saldo curto', () => {
+    expect(verificarCompraItem({ ...base, item: 'dragao' })).toEqual({ ok: false, motivo: 'item_invalido' });
+    expect(verificarCompraItem({ ...base, saldo: 1, item: 'cor_prata' })).toEqual({ ok: false, motivo: 'gemas_insuficientes' });
+  });
+});
+
+describe('desbloqueiosDe e verificarTitulo', () => {
+  it('junta pacote, cores e títulos comprados', () => {
+    const d = desbloqueiosDe([
+      { item: 'bandeiras_exclusivas', variante: null, temporadaId: null },
+      { item: 'cor_prata', variante: null, temporadaId: null },
+      { item: 'titulo', variante: 'lobo_da_fronteira', temporadaId: null },
+      { item: 'destaque_cidade', variante: null, temporadaId: 't' },
+    ]);
+    expect(d).toEqual({ bandeirasExclusivas: true, cores: [CORES_LOJA.cor_prata], titulos: ['lobo_da_fronteira'] });
+    expect(verificarTitulo('lobo_da_fronteira', d)).toEqual({ ok: true, titulo: 'lobo_da_fronteira' });
+    expect(verificarTitulo(null, d)).toEqual({ ok: true, titulo: null });
+    expect(verificarTitulo('mecenas', d)).toEqual({ ok: false, motivo: 'titulo_nao_comprado' });
+  });
+
+  it('os nomes dos títulos cabem no placar', () => {
+    for (const nome of Object.values(TITULOS_LOJA)) expect(nome.length).toBeLessThanOrEqual(24);
   });
 });

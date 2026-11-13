@@ -2,6 +2,7 @@ import {
   CORES_JOGADORES,
   CORES_SECUNDARIAS,
   PADROES_BANDEIRA,
+  PADROES_EXCLUSIVOS,
   TAMANHO_DESCRICAO,
   TAMANHO_NOME,
   limparNome,
@@ -10,6 +11,7 @@ import {
 import { useState } from 'react';
 import { NOMES_CORES, PADROES_INFO } from '../lib/bandeira';
 import { chamarFuncao } from '../lib/funcoes';
+import { useGemas } from '../lib/useGemas';
 import type { DadosPerfil } from '../lib/usePerfil';
 import Bandeira from './Bandeira';
 import EditorEmblema from './EditorEmblema';
@@ -44,6 +46,10 @@ export default function EditorPerfil({ perfil, onSalvo, onCancelar }: Props) {
   const [bandeira, setBandeira] = useState<DadosBandeira>(perfil.bandeira);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  // Cores, padrões e formas da loja: só aparecem liberados para quem comprou.
+  const { gemas } = useGemas();
+  const coresLoja = gemas?.desbloqueios.cores ?? [];
+  const exclusivas = gemas?.desbloqueios.bandeirasExclusivas ?? false;
 
   const mudar = (parte: Partial<DadosBandeira>) => setBandeira((b) => ({ ...b, ...parte }));
   const nomeLimpo = limparNome(nome);
@@ -97,7 +103,7 @@ export default function EditorPerfil({ perfil, onSalvo, onCancelar }: Props) {
       <fieldset className="space-y-2">
         <legend className={ROTULO}>Cor (pinta seus territórios no mapa)</legend>
         <div className="flex flex-wrap gap-2">
-          {CORES_JOGADORES.map((cor) => (
+          {[...CORES_JOGADORES, ...coresLoja].map((cor) => (
             <BolinhaCor
               key={cor}
               cor={cor}
@@ -112,7 +118,7 @@ export default function EditorPerfil({ perfil, onSalvo, onCancelar }: Props) {
       <fieldset className="space-y-2">
         <legend className={ROTULO}>Segunda cor</legend>
         <div className="flex flex-wrap gap-2">
-          {CORES_SECUNDARIAS.map((cor) => (
+          {[...CORES_SECUNDARIAS, ...coresLoja].map((cor) => (
             <BolinhaCor key={cor} cor={cor} escolhida={bandeira.corSecundaria === cor} onEscolher={() => mudar({ corSecundaria: cor })} />
           ))}
         </div>
@@ -121,24 +127,30 @@ export default function EditorPerfil({ perfil, onSalvo, onCancelar }: Props) {
       <fieldset className="space-y-2">
         <legend className={ROTULO}>Padrão</legend>
         <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
-          {PADROES_BANDEIRA.map((padrao) => (
-            <button
-              key={padrao}
-              type="button"
-              onClick={() => mudar({ padrao })}
-              aria-pressed={bandeira.padrao === padrao}
-              className={`flex flex-col items-center gap-1 rounded-lg border-2 p-1.5 text-[11px] ${bandeira.padrao === padrao ? 'border-ouro bg-ouro/10 text-ouro' : 'border-couro text-pergaminho-escuro hover:border-ouro/50'}`}
-            >
-              <Bandeira bandeira={{ ...bandeira, padrao }} largura={42} semEmblema />
-              {PADROES_INFO[padrao]}
-            </button>
-          ))}
+          {PADROES_BANDEIRA.map((padrao) => {
+            // Exclusivo da loja ainda não comprado: aparece trancado, com o caminho para a loja.
+            const trancado = !exclusivas && (PADROES_EXCLUSIVOS as readonly string[]).includes(padrao);
+            return (
+              <button
+                key={padrao}
+                type="button"
+                onClick={() => (trancado ? (location.hash = 'loja') : mudar({ padrao }))}
+                aria-pressed={bandeira.padrao === padrao}
+                title={trancado ? 'Exclusivo da loja (💎): toque para ver' : PADROES_INFO[padrao]}
+                className={`flex flex-col items-center gap-1 rounded-lg border-2 p-1.5 text-[11px] ${bandeira.padrao === padrao ? 'border-ouro bg-ouro/10 text-ouro' : 'border-couro text-pergaminho-escuro hover:border-ouro/50'} ${trancado ? 'opacity-50' : ''}`}
+              >
+                <Bandeira bandeira={{ ...bandeira, padrao }} largura={42} semEmblema />
+                {trancado ? '🔒 ' : ''}
+                {PADROES_INFO[padrao]}
+              </button>
+            );
+          })}
         </div>
       </fieldset>
 
       <fieldset className="space-y-2">
         <legend className={ROTULO}>Emblema (no centro da bandeira)</legend>
-        <EditorEmblema camadas={bandeira.emblema} onMudar={(emblema) => mudar({ emblema })} fundo={bandeira.cor} />
+        <EditorEmblema camadas={bandeira.emblema} onMudar={(emblema) => mudar({ emblema })} fundo={bandeira.cor} exclusivas={exclusivas} />
       </fieldset>
 
       <label className="block space-y-1">

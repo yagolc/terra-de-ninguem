@@ -1,3 +1,4 @@
+import { desbloqueiosDe, type Desbloqueios, type ItemComprado, type TituloLoja } from '@terra/regras';
 import { useCallback, useEffect, useState } from 'react';
 import { chamarFuncao } from './funcoes';
 import { supabase } from './supabase';
@@ -16,6 +17,13 @@ export type Gemas = {
   /** Vezes que o jogador usou gemas na temporada ativa (o preço dobra a cada uso). */
   usos: number;
   pedidos: PedidoGemas[];
+  /** Itens da loja já comprados e o que eles liberam no perfil. */
+  itens: ItemComprado[];
+  desbloqueios: Desbloqueios;
+  /** Temporada ativa (itens de temporada valem só nela), ou null. */
+  temporadaId: string | null;
+  /** Título que o jogador mostra no placar e no perfil. */
+  titulo: TituloLoja | null;
 };
 
 type LinhaPedido = {
@@ -30,7 +38,9 @@ type LinhaPedido = {
 async function buscarGemas(): Promise<Gemas> {
   if (!supabase) throw new Error('O Supabase não está configurado.');
   // O RLS devolve só o saldo, os pedidos e os usos do próprio jogador.
-  const [saldo, usos, pedidos] = await Promise.all([
+  const { data: sessao } = await supabase.auth.getSession();
+  const meuId = sessao.session?.user.id ?? '';
+  const [saldo, usos, pedidos, itens, ativa, eu] = await Promise.all([
     supabase.from('gemas').select('saldo').maybeSingle<{ saldo: number }>(),
     supabase
       .from('usos_gemas')
@@ -43,8 +53,12 @@ async function buscarGemas(): Promise<Gemas> {
       .order('criado_em', { ascending: false })
       .limit(10)
       .returns<LinhaPedido[]>(),
+    supabase.from('itens_comprados').select('item, variante, temporada_id').returns<{ item: string; variante: string | null; temporada_id: string | null }[]>(),
+    supabase.from('temporadas').select('id').eq('status', 'ativa').maybeSingle<{ id: string }>(),
+    supabase.from('jogadores').select('titulo').eq('id', meuId).maybeSingle<{ titulo: TituloLoja | null }>(),
   ]);
-  if (saldo.error || usos.error || pedidos.error) throw new Error('Não foi possível carregar suas gemas.');
+  if (saldo.error || usos.error || pedidos.error || itens.error) throw new Error('Não foi possível carregar suas gemas.');
+  const comprados = (itens.data ?? []).map((i) => ({ item: i.item, variante: i.variante, temporadaId: i.temporada_id }));
   return {
     saldo: saldo.data?.saldo ?? 0,
     usos: usos.count ?? 0,
@@ -56,6 +70,10 @@ async function buscarGemas(): Promise<Gemas> {
       criadoEm: Date.parse(p.criado_em),
       pagoEm: p.pago_em ? Date.parse(p.pago_em) : null,
     })),
+    itens: comprados,
+    desbloqueios: desbloqueiosDe(comprados),
+    temporadaId: ativa.data?.id ?? null,
+    titulo: eu.data?.titulo ?? null,
   };
 }
 
@@ -92,5 +110,21 @@ export function useGemas() {
     [recarregar],
   );
 
-  return { gemas, recarregar, pedir, cancelarPedido };
+  const comprar = useCallback(
+    async (item: string, variante?: string) => {
+      await chamarFuncao('cidade', { acao: 'comprar_item', item, ...(variante ? { variante } : {}) });
+      await recarregar();
+    },
+    [recarregar],
+  );
+
+  const usarTitulo = useCallback(
+    async (titulo: TituloLoja | null) => {
+      await chamarFuncao('cidade', { acao: 'usar_titulo', titulo });
+      await recarregar();
+    },
+    [recarregar],
+  );
+
+  return { gemas, recarregar, pedir, cancelarPedido, comprar, usarTitulo };
 }

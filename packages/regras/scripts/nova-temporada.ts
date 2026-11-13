@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { BALANCEAMENTO } from '../src/balanceamento.ts';
 import { escolherMelhorMapa, type MapaGerado, type Ponto2 } from '../src/mapa/gerador.ts';
+import { CORES_LOJA } from '../src/loja.ts';
 import { CORES_JOGADORES, escolherCor, grafoDeFronteiras } from '../src/territorios.ts';
 import { TIPOS_UNIDADE } from '../src/tipos.ts';
 import { totalUnidades } from '../src/util.ts';
@@ -57,7 +58,9 @@ const participantes = jogadores.slice(0, quantos);
 const coresDosParticipantes: string[] = [];
 for (const j of participantes) {
   const propria = j.cor?.toLowerCase();
-  const livre = propria && (CORES_JOGADORES as readonly string[]).includes(propria) && !coresDosParticipantes.includes(propria);
+  // Cores da loja (ouro, prata) só aparecem em quem comprou: o servidor confere ao salvar o perfil.
+  const valida = ([...CORES_JOGADORES, ...Object.values(CORES_LOJA)] as string[]).includes(propria ?? '');
+  const livre = propria && valida && !coresDosParticipantes.includes(propria);
   coresDosParticipantes.push(livre ? propria : escolherCor(coresDosParticipantes));
 }
 

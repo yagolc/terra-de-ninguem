@@ -3,7 +3,7 @@ import type { MotivoRecusaAtaque, MotivoRecusaMovimento } from './ataques.ts';
 import type { MotivoRecusaInscricao } from './avisos.ts';
 import { BALANCEAMENTO } from './balanceamento.ts';
 import type { MotivoRecusaCancelamento } from './cancelamento.ts';
-import type { MotivoRecusaTerminarObra } from './loja.ts';
+import type { MotivoRecusaCompra, MotivoRecusaTerminarObra } from './loja.ts';
 import type { MotivoRecusaDestruicao, MotivoRecusaEstrada, MotivoRecusaEstrutura } from './estruturas.ts';
 import type { MotivoRecusaMissao } from './missoes.ts';
 import type { MotivoRecusaNome } from './nome.ts';
@@ -167,4 +167,16 @@ export const MENSAGENS_PERFIL: Record<MotivoRecusaPerfil, string> = {
   emblema_invalido: 'O emblema tem uma camada inválida.',
   camadas_demais: 'O emblema pode ter no máximo 20 camadas.',
   descricao_longa: 'A descrição pode ter no máximo 280 caracteres.',
+  item_nao_comprado: 'Esse padrão ou forma é do pacote de bandeiras exclusivas da loja (💎).',
+};
+
+export const MENSAGENS_COMPRA: Record<MotivoRecusaCompra, string> = {
+  item_invalido: 'Item desconhecido na loja.',
+  ja_comprado: 'Você já tem esse item.',
+  sem_temporada: 'Esse item vale para a temporada, e nenhuma está em andamento.',
+  gemas_insuficientes: 'Gemas insuficientes. Compre mais na loja.',
+};
+
+export const MENSAGENS_TITULO: Record<'titulo_nao_comprado', string> = {
+  titulo_nao_comprado: 'Esse título ainda não é seu: compre na loja (💎).',
 };

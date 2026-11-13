@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { CORES_SECUNDARIAS, PADROES_BANDEIRA, TAMANHO_DESCRICAO, verificarPerfil } from './perfil.ts';
-import { LIMITES_EMBLEMA } from './emblema.ts';
+import { CORES_SECUNDARIAS, PADROES_BANDEIRA, PADROES_EXCLUSIVOS, TAMANHO_DESCRICAO, verificarPerfil } from './perfil.ts';
+import { FORMAS_EXCLUSIVAS, LIMITES_EMBLEMA } from './emblema.ts';
+import { CORES_LOJA } from './loja.ts';
 import { CORES_JOGADORES } from './territorios.ts';
 
 const ESTRELA = { forma: 'estrela', x: 50, y: 50, escala: 0.6, largura: 1, altura: 1, rotacao: 0, cor: '#d4a64a', espelhar: false } as const;
@@ -35,7 +36,8 @@ describe('perfil do jogador', () => {
   });
 
   it('padrão tem de ser conhecido e o emblema, válido', () => {
-    for (const padrao of PADROES_BANDEIRA) expect(verificarPerfil({ ...VALIDO, padrao }, []).ok).toBe(true);
+    const pacote = { bandeirasExclusivas: true, cores: [], titulos: [] };
+    for (const padrao of PADROES_BANDEIRA) expect(verificarPerfil({ ...VALIDO, padrao }, [], pacote).ok).toBe(true);
     expect(verificarPerfil({ ...VALIDO, padrao: 'listras' }, [])).toEqual({ ok: false, motivo: 'padrao_invalido' });
     expect(verificarPerfil({ ...VALIDO, emblema: [{ ...ESTRELA, forma: 'unicornio' }] }, [])).toEqual({ ok: false, motivo: 'emblema_invalido' });
     expect(verificarPerfil({ ...VALIDO, emblema: Array(LIMITES_EMBLEMA.camadas + 1).fill(ESTRELA) }, [])).toEqual({ ok: false, motivo: 'camadas_demais' });
@@ -53,5 +55,36 @@ describe('perfil do jogador', () => {
   it('descrição vazia vale', () => {
     const v = verificarPerfil({ ...VALIDO, descricao: undefined }, []);
     expect(v.ok && v.descricao).toBe('');
+  });
+});
+
+describe('itens da loja no perfil', () => {
+  const comPacote = { bandeirasExclusivas: true, cores: [CORES_LOJA.cor_ouro], titulos: [] };
+
+  it('padrão e forma exclusivos só com o pacote de bandeiras', () => {
+    for (const padrao of PADROES_EXCLUSIVOS) {
+      expect(verificarPerfil({ ...VALIDO, padrao }, [])).toEqual({ ok: false, motivo: 'item_nao_comprado' });
+      expect(verificarPerfil({ ...VALIDO, padrao }, [], comPacote).ok).toBe(true);
+    }
+    for (const forma of FORMAS_EXCLUSIVAS) {
+      const emblema = [{ ...ESTRELA, forma }];
+      expect(verificarPerfil({ ...VALIDO, emblema }, [])).toEqual({ ok: false, motivo: 'item_nao_comprado' });
+      expect(verificarPerfil({ ...VALIDO, emblema }, [], comPacote).ok).toBe(true);
+    }
+  });
+
+  it('cor da loja só para quem comprou, como principal ou segunda cor, e sem repetir a de outro', () => {
+    expect(verificarPerfil({ ...VALIDO, cor: CORES_LOJA.cor_ouro }, [])).toEqual({ ok: false, motivo: 'cor_invalida' });
+    expect(verificarPerfil({ ...VALIDO, corSecundaria: CORES_LOJA.cor_ouro }, [])).toEqual({ ok: false, motivo: 'cor_secundaria_invalida' });
+    expect(verificarPerfil({ ...VALIDO, cor: CORES_LOJA.cor_ouro, corSecundaria: CORES_LOJA.cor_ouro }, [], comPacote).ok).toBe(true);
+    expect(verificarPerfil({ ...VALIDO, cor: CORES_LOJA.cor_prata }, [], comPacote)).toEqual({ ok: false, motivo: 'cor_invalida' });
+    expect(verificarPerfil({ ...VALIDO, cor: CORES_LOJA.cor_ouro }, [CORES_LOJA.cor_ouro], comPacote)).toEqual({ ok: false, motivo: 'cor_em_uso' });
+  });
+
+  it('as cores da loja não repetem a paleta nem as segundas cores', () => {
+    for (const cor of Object.values(CORES_LOJA)) {
+      expect(CORES_JOGADORES as readonly string[]).not.toContain(cor);
+      expect(CORES_SECUNDARIAS).not.toContain(cor);
+    }
   });
 });
