@@ -14,11 +14,14 @@
 //      | { acao: 'enviar_carta', destinatario_id, texto, proposta?: 'nao_agressao' | 'acesso_militar', horas_pacto? } (precisa de Pombal)
 //      | { acao: 'responder_pacto', carta_id, aceitar }
 //      | { acao: 'marcar_relatorios_lidos' } | { acao: 'marcar_cartas_lidas' }
+//      | { acao: 'inscrever_avisos', inscricao, tipos } | { acao: 'cancelar_avisos', endpoint } | { acao: 'testar_avisos', endpoint }
+//        (avisos no celular deste aparelho; não precisam de temporada ativa)
 // Publicar com: npx supabase functions deploy cidade --no-verify-jwt (o token é validado no código).
 import {
   MENSAGENS_ALOCACAO,
   MENSAGENS_ATAQUE,
   MENSAGENS_CARTA,
+  MENSAGENS_INSCRICAO_AVISOS,
   MENSAGENS_CANCELAMENTO,
   MENSAGENS_ESTRADA,
   MENSAGENS_ESTRUTURA,
@@ -55,6 +58,7 @@ import {
   verificarAlocacao,
   verificarAtaque,
   verificarCarta,
+  verificarInscricaoAvisos,
   verificarEstrada,
   verificarEstrutura,
   verificarEvolucao,
@@ -89,6 +93,7 @@ import {
 import { sql, type Transacao } from '../_compartilhado/db.ts';
 import { salvarPerfil } from '../_compartilhado/perfil.ts';
 import { fimDoPacto, terrasParaMarchar } from '../_compartilhado/pombos.ts';
+import { testarAviso } from '../_compartilhado/avisos.ts';
 import { garantirObjetivo } from '../_compartilhado/objetivos.ts';
 import { CORS, ErroDoJogo, resposta } from '../_compartilhado/http.ts';
 
@@ -494,6 +499,39 @@ async function executar(jogadorId: string, corpo: Record<string, unknown>): Prom
     await sql`update relatorios set lido_atacante = true where atacante_id = ${jogadorId} and not lido_atacante`;
     await sql`update relatorios set lido_defensor = true where defensor_id = ${jogadorId} and not lido_defensor`;
     await sql`update reconhecimentos set lido = true where jogador_id = ${jogadorId} and not lido and disponivel_em <= now()`;
+    return { ok: true };
+  }
+  if (corpo.acao === 'inscrever_avisos') {
+    // Aparelho que ativa (ou muda os tipos de) avisos no celular. O mesmo aparelho passa a ser de quem entrou nele.
+    const v = verificarInscricaoAvisos({ inscricao: corpo.inscricao, tipos: corpo.tipos });
+    if (!v.ok) throw new ErroDoJogo(MENSAGENS_INSCRICAO_AVISOS[v.motivo]);
+    await sql.begin(async (tx) => {
+      await tx`
+        insert into inscricoes_avisos (jogador_id, endpoint, p256dh, auth, tipos)
+        values (${jogadorId}, ${v.endpoint}, ${v.p256dh}, ${v.auth}, ${v.tipos}::text[])
+        on conflict (endpoint) do update
+          set jogador_id = excluded.jogador_id, p256dh = excluded.p256dh, auth = excluded.auth, tipos = excluded.tipos,
+              atualizado_em = now()`;
+      // No máximo 10 aparelhos por jogador: os mais antigos saem.
+      await tx`
+        delete from inscricoes_avisos where jogador_id = ${jogadorId} and id not in (
+          select id from inscricoes_avisos where jogador_id = ${jogadorId} order by atualizado_em desc limit 10)`;
+    });
+    return { ok: true, tipos: v.tipos };
+  }
+  if (corpo.acao === 'cancelar_avisos') {
+    await sql`delete from inscricoes_avisos where jogador_id = ${jogadorId} and endpoint = ${String(corpo.endpoint ?? '')}`;
+    return { ok: true };
+  }
+  if (corpo.acao === 'testar_avisos') {
+    const r = await testarAviso(jogadorId, String(corpo.endpoint ?? ''));
+    if (!r.ok) {
+      throw new ErroDoJogo(
+        r.codigo === 404
+          ? 'Este aparelho não está inscrito. Ative os avisos de novo.'
+          : `O serviço de avisos do navegador recusou o envio${r.codigo ? ` (código ${r.codigo})` : ''}. Tente desativar e ativar de novo.`,
+      );
+    }
     return { ok: true };
   }
   if (corpo.acao === 'marcar_cartas_lidas') {

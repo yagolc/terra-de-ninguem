@@ -1,6 +1,7 @@
 // Regras puras do jogo: recebem números, devolvem números. Nada de banco, rede, relógio ou Math.random.
 export * from './aleatorio.ts';
 export * from './ataques.ts';
+export * from './avisos.ts';
 export * from './balanceamento.ts';
 export * from './batalha.ts';
 export * from './cancelamento.ts';

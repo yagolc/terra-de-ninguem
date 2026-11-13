@@ -11,7 +11,7 @@ Tudo em TypeScript, num único repositório. As regras do jogo (fórmulas de pro
 | Interface | React + Vite + TypeScript | Telas, menus e fluxo do jogo |
 | Mapa | Phaser 3 | Desenho e interação com o mapa de territórios |
 | Estilo | Tailwind CSS | Layout responsivo para celular e desktop |
-| PWA | vite-plugin-pwa | Instalação na tela inicial (pronta desde a temporada 5) e notificações (depois) |
+| PWA | vite-plugin-pwa | Instalação na tela inicial e notificações (avisos no celular), prontas desde a temporada 5 |
 | Lógica do servidor | Supabase Edge Functions | Comandos do jogador: construir, treinar, atacar |
 | Banco | Postgres (Supabase) com Row Level Security | Estado do jogo; cada jogador só lê o que pode ver |
 | Login | Supabase Auth com link mágico por e-mail | Entrada só por convite |

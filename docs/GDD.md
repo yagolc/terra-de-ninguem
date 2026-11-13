@@ -147,6 +147,7 @@ Ataques podem chegar sem aviso a qualquer hora. Três proteções evitam que alg
 - Sem torre de vigia, o defensor só descobre o ataque no relatório.
 - Com torre de vigia, ele vê exércitos chegando e pode reforçar a defesa ou pedir ajuda a um aliado. Níveis mais altos revelam o tamanho e a composição do exército.
 - Notificações no celular avisam do ataque, se o jogador tiver torre.
+- **Avisos no celular (desde a temporada 5):** cada jogador ativa no perfil, por aparelho, e escolhe os tipos: torre vê tropas ou batedor vindo, batalha terminou (atacante e defensor), carta ou resposta a proposta chegou, horda bárbara vem ou atacou, e alguém cumpriu o objetivo (para todos: é a hora de reagir). Saem no minuto seguinte ao acontecimento. No iPhone, só com o jogo instalado na tela inicial.
 - **Estrada (desde a temporada 4):** feita num território próprio, à parte da estrutura (madeira e ouro, 30 min). Tropas movidas entre dois territórios próprios com estrada pronta andam 2× mais rápido, para reforçar antes do ataque chegar; ataques não usam estrada. É pública (todos a veem no mapa) e destruída na conquista.
 
 ## Hordas bárbaras (desde a temporada 4)

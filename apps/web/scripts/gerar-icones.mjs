@@ -36,6 +36,17 @@ const fontes = {
 };
 fs.writeFileSync(path.join(destino, 'icone-app.svg'), fontes['icone-app.svg']);
 
+// Ícone pequeno da barra de notificações do Android: só a silhueta branca do escudo (o sistema pinta por cima).
+// A cruz é recortada (transparente), porque só o contorno opaco aparece.
+const silhueta = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <mask id="cruz"><rect width="64" height="64" fill="#fff"/><path d="M32 16v32M20 28h24" stroke="#000" stroke-width="5" stroke-linecap="round"/></mask>
+  <path d="M32 4 8 12v18c0 15 10 25 24 30 14-5 24-15 24-30V12L32 4Z" fill="#fff" mask="url(#cruz)"/>
+</svg>`;
+await sharp(Buffer.from(silhueta))
+  .resize(96, 96)
+  .png({ compressionLevel: 9 })
+  .toFile(path.join(destino, 'icone-aviso-96.png'));
+
 const saidas = [
   ['icone-192.png', fontes['icone-app.svg'], 192],
   ['icone-512.png', fontes['icone-app.svg'], 512],

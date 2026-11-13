@@ -1,5 +1,6 @@
 // Textos para o jogador de cada motivo de recusa. Servidor e interface usam os mesmos.
 import type { MotivoRecusaAtaque, MotivoRecusaMovimento } from './ataques.ts';
+import type { MotivoRecusaInscricao } from './avisos.ts';
 import type { MotivoRecusaCancelamento } from './cancelamento.ts';
 import type { MotivoRecusaEstrada, MotivoRecusaEstrutura } from './estruturas.ts';
 import type { MotivoRecusaMissao } from './missoes.ts';
@@ -118,6 +119,11 @@ export const MENSAGENS_CARTA: Record<MotivoRecusaCarta, string> = {
   texto_longo: 'A carta pode ter no máximo 500 letras.',
   proposta_invalida: 'Proposta desconhecida.',
   horas_invalidas: 'O pacto dura de 1 a 12 horas.',
+};
+
+export const MENSAGENS_INSCRICAO_AVISOS: Record<MotivoRecusaInscricao, string> = {
+  inscricao_invalida: 'O navegador não mandou uma inscrição de avisos válida. Recarregue o jogo e tente de novo.',
+  sem_tipos: 'Escolha pelo menos um tipo de aviso.',
 };
 
 export const MENSAGENS_RESPOSTA_PACTO: Record<MotivoRecusaRespostaPacto, string> = {

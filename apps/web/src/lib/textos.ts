@@ -6,6 +6,7 @@ import {
   type Recurso,
   type Recursos,
   type Terreno,
+  type TipoAviso,
   type TipoEstrutura,
   type TipoMissao,
   type TipoPredio,
@@ -17,6 +18,15 @@ export const TERRENOS_INFO: Record<Terreno, { nome: string; icone: string; efeit
   planicie: { nome: 'Planície', icone: '🌾', efeito: 'sem bônus de defesa' },
   floresta: { nome: 'Floresta', icone: '🌲', efeito: 'arqueiros defendem melhor' },
   montanha: { nome: 'Montanha', icone: '⛰️', efeito: 'bônus de defesa geral' },
+};
+
+/** Tipos de aviso no celular, como aparecem na escolha do perfil. */
+export const AVISOS_INFO: Record<TipoAviso, { icone: string; nome: string; descricao: string }> = {
+  ataque: { icone: '🗼', nome: 'Uma torre vê tropas vindo', descricao: 'Ataque ou batedor a caminho de um território seu com torre.' },
+  batalha: { icone: '⚔️', nome: 'Uma batalha termina', descricao: 'Você foi atacado, ou um ataque seu chegou ao destino.' },
+  carta: { icone: '🕊️', nome: 'Chega uma carta', descricao: 'Também quando respondem a uma proposta sua.' },
+  horda: { icone: '☠️', nome: 'Uma horda bárbara vem ou ataca', descricao: 'Quando ela sai na sua direção e quando luta.' },
+  objetivo: { icone: '🏆', nome: 'Alguém cumpre o objetivo', descricao: 'Começa o relógio de quem cumpriu: a hora de reagir.' },
 };
 
 /** Propostas que uma carta pode levar: ícone, nome e o que valem enquanto durarem. */

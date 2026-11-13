@@ -37,6 +37,8 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png}'],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         navigateFallback: '/index.html',
+        // Avisos no celular: o tratamento do push e do toque na notificação fica em public/sw-avisos.js.
+        importScripts: ['/sw-avisos.js'],
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
