@@ -54,7 +54,7 @@ npm run typecheck    # tsc em todos os pacotes
 npm run build        # build de produção
 npm run temporada:nova -- --semente 1234 --jogadores 6
                      # gera mapa + prévia em supabase/.temp/previa-temporada.svg; com --aplicar encerra a
-                     # temporada ativa e grava a nova (uma transação). Vagas iniciais sem dono ficam para quem chegar depois; sem vaga livre, a temporada está cheia e o `entrar` recusa.
+                     # temporada ativa e grava a nova (uma transação). Nenhuma vaga inicial é reservada (desde 13/11/2026): quem fundar primeiro pega uma livre; sem vaga livre, a temporada está cheia e o `entrar` recusa.
 npm run simular -- --atacante 50l,20a,10c --defensor 40l,30a --terreno floresta --muralha 3
                      # simula 1000 batalhas (l/a/c = lanceiro/arqueiro/cavalaria; --cidade, --estoque, --armazem)
 npm run arte         # converte docs/arte/originais em WebP para o site (precisa do ffmpeg)

@@ -175,7 +175,9 @@ const valoresRegioes = mapa.regioes
 const valoresTerritorios = mapa.territorios
   .map((t) => {
     const jogador = mapa.iniciais.indexOf(t.indice);
-    const reservado = jogador >= 0 && participantes[jogador] ? texto(participantes[jogador].id) : 'null';
+    // Nenhuma vaga é reservada: quem fundar a cidade primeiro fica com uma vaga livre (a lista de jogadores só
+    // serve para a prévia e as cores). Reservar deixava a temporada "cheia" para quem não estava na lista.
+    const reservado = 'null';
     const guarnicao = Object.fromEntries(TIPOS_UNIDADE.map((tipo) => [tipo, t.guarnicao[tipo]]));
     return (
       `(${texto(idsTerritorios[t.indice]!)}, t, ${texto(idsRegioes[t.regiao]!)}, ${t.indice}, ${texto(t.nome)}, ` +
