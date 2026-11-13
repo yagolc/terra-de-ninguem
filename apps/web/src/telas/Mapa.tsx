@@ -192,6 +192,25 @@ export default function Mapa({ sessao }: { sessao: Session }) {
               <span className="size-2.5 rounded-full" style={{ background: COR_NEUTRA }} />
               Neutro
             </li>
+            {dados.barreiras.length > 0 && (
+              <>
+                <li className="flex items-center gap-1.5 text-pergaminho-escuro">
+                  <svg viewBox="0 0 24 10" className="h-2.5 w-6" aria-hidden>
+                    <path d="M1 5 Q4 1 7 5 T13 5 T19 5 T23 5" fill="none" stroke="#10243d" strokeWidth="4" strokeLinecap="round" />
+                    <path d="M1 5 Q4 1 7 5 T13 5 T19 5 T23 5" fill="none" stroke="#3a7bd5" strokeWidth="2.2" strokeLinecap="round" />
+                  </svg>
+                  Rio
+                </li>
+                <li className="flex items-center gap-1.5 text-pergaminho-escuro">
+                  <svg viewBox="0 0 24 12" className="h-3 w-6" aria-hidden>
+                    <path d="M1 11 L6 2 L11 11 Z M10 11 L15 4 L20 11 Z" fill="#8a7866" stroke="#1c1410" strokeWidth="1" />
+                    <path d="M4.6 4.5 L6 2 L7.4 4.5 Z M13.9 5.6 L15 4 L16.1 5.6 Z" fill="#f1e6cf" />
+                  </svg>
+                  Cordilheira
+                </li>
+                <li className="text-pergaminho-escuro/80">não dá para passar</li>
+              </>
+            )}
           </ul>
           <p className="mt-1 text-pergaminho-escuro/80">Arraste para mover · role ou pince para zoom</p>
         </div>

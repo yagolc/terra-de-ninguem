@@ -4,6 +4,10 @@ Lista das mudanças para mandar aos jogadores. Cada temporada nova ganha uma se�
 
 ## Temporada 6
 
+### Mapa
+
+- **Rios e cordilheiras mais claros:** o rio virou uma faixa de água ondulada e a cordilheira, uma fileira de montanhas com neve. Os dois estão na legenda do mapa, e o painel de um território diz com quem ele não tem passagem ("🌊 rio com…", "⛰️ cordilheira com…").
+
 ### Feedback
 
 - **Aba Feedback** (💬 no alto da tela): relate bugs e sugira ideias. Cada relato ganha um número e um status (novo, em análise, planejado, em andamento, resolvido…), e você recebe um aviso quando ele muda. Vote 👍 nos dos outros ("também aconteceu comigo" / "também quero"): os mais votados vêm primeiro.

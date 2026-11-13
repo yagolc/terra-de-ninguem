@@ -218,6 +218,23 @@ export default function PainelTerritorio({
 
       <PainelEstrada territorioId={t.id} estrada={dados.estradas.get(t.id)} meu={meu} meuId={meuId} agora={agora} onConstruido={onConstruido} />
 
+      {(() => {
+        // Vizinhos do outro lado de um rio ou cordilheira: encostam no mapa, mas não fazem fronteira.
+        const bloqueados = dados.barreiras.flatMap((b) => {
+          const outro = b.a === t.id ? b.b : b.b === t.id ? b.a : null;
+          const nome = outro ? dados.territorios.find((x) => x.id === outro)?.nome : undefined;
+          return nome ? [{ nome, tipo: b.tipo }] : [];
+        });
+        if (bloqueados.length === 0) return null;
+        return (
+          <p className="rounded-lg bg-noite/60 px-3 py-2 text-xs text-pergaminho-escuro">
+            <b className="text-pergaminho">Sem passagem:</b>{' '}
+            {bloqueados.map((x) => `${x.tipo === 'rio' ? '🌊 rio' : '⛰️ cordilheira'} com ${x.nome}`).join(' · ')}. Tropas e batedores não
+            atravessam por ali: precisam dar a volta.
+          </p>
+        );
+      })()}
+
       <div>
         <h3 className="mb-1.5 text-sm text-pergaminho-escuro">Vizinhos ({vizinhos.length})</h3>
         <ul className="flex flex-wrap gap-1.5">

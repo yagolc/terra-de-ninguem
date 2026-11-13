@@ -190,14 +190,16 @@ export class CenaMapa extends Phaser.Scene {
   }
 
   /**
-   * Rios (azul) e cordilheiras (escuras): a aresta que os dois vizinhos dividem, por cima da borda das regiões.
-   * Não são fronteira: ninguém ataca nem move por ali.
+   * Rios e cordilheiras na aresta que os dois vizinhos dividem, por cima da borda das regiões. Não são fronteira:
+   * ninguém ataca nem move por ali. O rio é uma faixa de água ondulada com margem escura e brilho; a cordilheira, uma
+   * fileira de picos com neve no topo, para não se confundir com a borda comum.
    */
   private desenharBarreiras(g: Phaser.GameObjects.Graphics) {
     const { dados } = this.opcoes;
     if (dados.barreiras.length === 0) return;
     const porId = new Map(dados.territorios.map((t) => [t.id, t]));
     const chave = (p: [number, number]) => p.join(',');
+    const picos: [number, number, number, number][] = [];
     for (const { a, b, tipo } of dados.barreiras) {
       const ta = porId.get(a);
       const tb = porId.get(b);
@@ -207,19 +209,68 @@ export class CenaMapa extends Phaser.Scene {
         const q = ta.poligono[(i + 1) % ta.poligono.length]!;
         if (!deB.has(chave(p)) || !deB.has(chave(q))) return;
         const [x1, y1, x2, y2] = [p[0] * ESCALA, p[1] * ESCALA, q[0] * ESCALA, q[1] * ESCALA];
-        if (tipo === 'rio') {
-          g.lineStyle(9, 0x1c3a5e, 0.9);
-          g.lineBetween(x1, y1, x2, y2);
-          g.lineStyle(6, 0x3a7bd5, 1);
-          g.lineBetween(x1, y1, x2, y2);
-        } else {
-          g.lineStyle(11, 0x1c1410, 0.95);
-          g.lineBetween(x1, y1, x2, y2);
-          g.lineStyle(5, 0x6b5d50, 1);
-          g.lineBetween(x1, y1, x2, y2);
-        }
+        if (tipo === 'rio') this.desenharRio(g, x1, y1, x2, y2);
+        else picos.push([x1, y1, x2, y2]);
       });
     }
+    // Picos por último, por cima dos rios e das bordas: os de baixo na tela por cima dos de cima, como num desenho.
+    const todos = picos.flatMap(([x1, y1, x2, y2]) => this.picosDaCordilheira(g, x1, y1, x2, y2));
+    todos.sort((a, b) => a.y - b.y);
+    for (const pico of todos) this.desenharPico(g, pico.x, pico.y, pico.alto);
+  }
+
+  /** Trecho de rio: a água ondula entre as duas pontas (que ficam fixas, para os trechos se emendarem). */
+  private desenharRio(g: Phaser.GameObjects.Graphics, x1: number, y1: number, x2: number, y2: number) {
+    const comprimento = Math.hypot(x2 - x1, y2 - y1);
+    if (comprimento === 0) return;
+    const [nx, ny] = [-(y2 - y1) / comprimento, (x2 - x1) / comprimento];
+    const passos = Math.max(4, Math.round(comprimento / 4));
+    const onda = Math.max(1, Math.round(comprimento / 18));
+    const pontos = Array.from({ length: passos + 1 }, (_, i) => {
+      const t = i / passos;
+      const desvio = 3.5 * Math.sin(t * onda * Math.PI * 2) * Math.sin(t * Math.PI);
+      return new Phaser.Math.Vector2(x1 + (x2 - x1) * t + nx * desvio, y1 + (y2 - y1) * t + ny * desvio);
+    });
+    g.lineStyle(13, 0x10243d, 0.9);
+    g.strokePoints(pontos, false);
+    g.lineStyle(8, 0x3a7bd5, 1);
+    g.strokePoints(pontos, false);
+    g.lineStyle(2, 0xa9d1ff, 0.85);
+    g.strokePoints(pontos, false);
+  }
+
+  /**
+   * Base escura da cordilheira na aresta e onde vão os picos: um a cada `espaco` px ao longo dela, alternando alto e
+   * baixo e um pouco para os lados, para parecer uma serra e não uma linha de dentes.
+   */
+  private picosDaCordilheira(g: Phaser.GameObjects.Graphics, x1: number, y1: number, x2: number, y2: number) {
+    const comprimento = Math.hypot(x2 - x1, y2 - y1);
+    g.lineStyle(7, 0x1c1410, 0.95);
+    g.lineBetween(x1, y1, x2, y2);
+    g.lineStyle(3, 0x5e5043, 1);
+    g.lineBetween(x1, y1, x2, y2);
+    const espaco = 15;
+    const quantos = Math.max(1, Math.round(comprimento / espaco));
+    return Array.from({ length: quantos }, (_, i) => {
+      const t = (i + 0.5) / quantos;
+      return { x: x1 + (x2 - x1) * t + (i % 2 === 0 ? -1.5 : 1.5), y: y1 + (y2 - y1) * t + 4, alto: i % 2 === 0 };
+    });
+  }
+
+  /** Um pico sempre apontando para cima: encosta clara, encosta na sombra, neve no topo e contorno escuro. */
+  private desenharPico(g: Phaser.GameObjects.Graphics, x: number, y: number, alto: boolean) {
+    const altura = alto ? 20 : 15;
+    const meia = alto ? 11 : 9;
+    const [topoX, topoY] = [x, y - altura];
+    g.fillStyle(0x9a8774, 1);
+    g.fillTriangle(x - meia, y, topoX, topoY, x, y);
+    g.fillStyle(0x645545, 1);
+    g.fillTriangle(x, y, topoX, topoY, x + meia, y);
+    const neve = 0.4;
+    g.fillStyle(0xf1e6cf, 1);
+    g.fillTriangle(topoX - meia * neve, topoY + altura * neve, topoX, topoY, topoX + meia * neve, topoY + altura * neve);
+    g.lineStyle(1.5, 0x1c1410, 1);
+    g.strokeTriangle(x - meia, y, topoX, topoY, x + meia, y);
   }
 
   /**
