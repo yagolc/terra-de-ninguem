@@ -42,8 +42,8 @@ export default function Regras() {
         <p>
           Cada temporada dura <b>{B.temporada.duracaoDias} dias</b>. Ao entrar, você recebe um <b>objetivo secreto</b> (aba Objetivo). Quem
           cumprir o seu precisa <b>mantê-lo por {B.objetivos.segurarHoras} h seguidas</b> para vencer. Nesse tempo, todos veem no mapa
-          quem cumpriu e quanto falta (o objetivo continua secreto), e ele fica <b>sem escudo</b>: é a chance dos outros de reagir. Se
-          deixar de cumprir, o relógio zera. Quando alguém vence, todas as cartas são reveladas.
+          quem cumpriu e quanto falta (o objetivo continua secreto), e ele fica <b>sem escudo e sem pactos de não agressão</b> (os que
+          tinha acabam, e não dá para fechar outro): é a chance dos outros de reagir. Se deixar de cumprir, o relógio zera. Quando alguém vence, todas as cartas são reveladas.
         </p>
         <p>
           Se o prazo acabar sem ninguém cumprir, vence quem tiver mais pontos: <b>{B.pontos.porTerritorio}</b> por território,{' '}

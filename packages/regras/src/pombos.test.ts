@@ -103,6 +103,15 @@ describe('resposta ao pacto', () => {
     expect(responder({}, validadeDaProposta(chegaEm))).toMatchObject({ ok: true });
     expect(responder({}, validadeDaProposta(chegaEm) + 1)).toEqual({ ok: false, motivo: 'proposta_expirada' });
   });
+
+  it('com o objetivo em jogo, não aceita não agressão, mas recusa e aceita acesso militar', () => {
+    const agora = chegaEm + MINUTO_MS;
+    const comObjetivo = (mudar: Partial<typeof carta>, aceitar: boolean) =>
+      verificarRespostaPacto({ carta: { ...carta, ...mudar }, jogadorId: 'ele', aceitar, agora, objetivoEmJogo: true });
+    expect(comObjetivo({}, true)).toEqual({ ok: false, motivo: 'objetivo_em_jogo' });
+    expect(comObjetivo({}, false)).toEqual({ ok: true, pactoAte: null });
+    expect(comObjetivo({ proposta: 'acesso_militar' as never }, true)).toMatchObject({ ok: true });
+  });
 });
 
 describe('pacto em vigor', () => {

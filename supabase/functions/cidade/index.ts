@@ -437,12 +437,24 @@ async function responderPacto(tx: Transacao, temporada: Temporada, jogadorId: st
   const cartaId = String(corpo.carta_id ?? '');
   if (!UUID.test(cartaId)) throw new ErroDoJogo(MENSAGENS_RESPOSTA_PACTO.sem_proposta);
   const [carta] = await tx<
-    { destinatario_id: string; proposta: TipoProposta | null; horas_pacto: number | null; chega_em: Date; resposta: string | null }[]
+    {
+      remetente_id: string;
+      destinatario_id: string;
+      proposta: TipoProposta | null;
+      horas_pacto: number | null;
+      chega_em: Date;
+      resposta: string | null;
+    }[]
   >`
-    select destinatario_id, proposta, horas_pacto, chega_em, resposta from cartas
+    select remetente_id, destinatario_id, proposta, horas_pacto, chega_em, resposta from cartas
      where id = ${cartaId} and temporada_id = ${temporada.id} for update`;
   if (!carta) throw new ErroDoJogo(MENSAGENS_RESPOSTA_PACTO.sem_proposta);
   const aceitar = corpo.aceitar === true;
+  // Quem está segurando o objetivo cumprido não fica protegido por pacto de não agressão (nem fecha um novo).
+  const [segurando] = await tx<{ n: number }[]>`
+    select count(*)::int as n from placar
+     where temporada_id = ${temporada.id} and objetivo_desde is not null
+       and jogador_id in (${carta.remetente_id}, ${carta.destinatario_id})`;
   const v = verificarRespostaPacto({
     carta: {
       destinatarioId: carta.destinatario_id,
@@ -454,6 +466,7 @@ async function responderPacto(tx: Transacao, temporada: Temporada, jogadorId: st
     jogadorId,
     aceitar,
     agora,
+    objetivoEmJogo: (segurando?.n ?? 0) > 0,
   });
   if (!v.ok) throw new ErroDoJogo(MENSAGENS_RESPOSTA_PACTO[v.motivo]);
   await tx`

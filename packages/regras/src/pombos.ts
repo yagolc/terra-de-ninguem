@@ -95,17 +95,19 @@ export function validadeDaProposta(chegaEm: number): number {
   return chegaEm + BALANCEAMENTO.pombos.pacto.validadePropostaHoras * HORA_MS;
 }
 
-export type MotivoRecusaRespostaPacto = 'sem_proposta' | 'ainda_voando' | 'ja_respondida' | 'proposta_expirada';
+export type MotivoRecusaRespostaPacto = 'sem_proposta' | 'ainda_voando' | 'ja_respondida' | 'proposta_expirada' | 'objetivo_em_jogo';
 
 /**
  * Confere a resposta a uma proposta de pacto: só quem recebeu responde, uma vez, depois de a carta chegar
  * e antes de a proposta expirar. Aceita, o pacto vale a partir de agora pelas horas propostas.
+ * `objetivoEmJogo`: um dos dois está segurando o objetivo cumprido; aí não dá para aceitar não agressão (recusar dá).
  */
 export function verificarRespostaPacto(entrada: {
   carta: { destinatarioId: string; proposta: TipoProposta | null; horasPacto: number | null; chegaEm: number; respondida: boolean };
   jogadorId: string;
   aceitar: boolean;
   agora: number;
+  objetivoEmJogo?: boolean;
 }): { ok: true; pactoAte: number | null } | { ok: false; motivo: MotivoRecusaRespostaPacto } {
   const { carta, agora } = entrada;
   if (carta.destinatarioId !== entrada.jogadorId || carta.proposta === null || carta.horasPacto === null) {
@@ -114,6 +116,7 @@ export function verificarRespostaPacto(entrada: {
   if (agora < carta.chegaEm) return { ok: false, motivo: 'ainda_voando' };
   if (carta.respondida) return { ok: false, motivo: 'ja_respondida' };
   if (agora > validadeDaProposta(carta.chegaEm)) return { ok: false, motivo: 'proposta_expirada' };
+  if (entrada.aceitar && entrada.objetivoEmJogo && carta.proposta === 'nao_agressao') return { ok: false, motivo: 'objetivo_em_jogo' };
   return { ok: true, pactoAte: entrada.aceitar ? agora + carta.horasPacto * HORA_MS : null };
 }
 

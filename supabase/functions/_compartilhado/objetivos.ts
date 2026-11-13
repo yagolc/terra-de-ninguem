@@ -248,6 +248,11 @@ export async function atualizarPlacar(tx: Transacao): Promise<{ encerrada: boole
     linha.objetivoDesde = relogio.segurandoDesde;
     if (relogio.segurandoDesde !== null) {
       await tx`delete from protecoes where temporada_id = ${temporadaId} and jogador_id = ${jogadorId} and tipo = 'escudo'`;
+      // Os pactos de não agressão dele acabam agora: senão, pactos fechados antes o deixariam intocável no relógio.
+      await tx`
+        update cartas set pacto_ate = ${new Date(agora)}
+         where temporada_id = ${temporadaId} and proposta = 'nao_agressao' and pacto_ate > ${new Date(agora)}
+           and (remetente_id = ${jogadorId} or destinatario_id = ${jogadorId})`;
     }
     if (relogio.venceu) cumpriram.push(jogadorId);
   }

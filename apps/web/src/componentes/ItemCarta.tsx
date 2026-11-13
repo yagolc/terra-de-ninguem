@@ -58,6 +58,12 @@ export default function ItemCarta({ carta, meuId, nomes, agora, ocupado, onRespo
                   {carta.pactoAte > agora
                     ? `Vale até ${quando.format(new Date(carta.pactoAte))} (falta ${formatarDuracao(carta.pactoAte - agora)}).`
                     : `Acabou em ${quando.format(new Date(carta.pactoAte))}.`}
+                  {/* Não agressão que acabou antes do prazo: um dos dois começou a segurar o objetivo cumprido. */}
+                  {carta.proposta === 'nao_agressao' &&
+                    carta.respondidaEm !== null &&
+                    carta.horasPacto !== null &&
+                    carta.pactoAte < carta.respondidaEm + carta.horasPacto * 3600_000 - 60_000 &&
+                    ' Terminou antes do prazo porque um de vocês cumpriu o objetivo secreto.'}
                 </p>
               )}
               {carta.resposta === 'recusada' && <p className="text-red-300">Recusado.</p>}

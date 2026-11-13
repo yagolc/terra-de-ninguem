@@ -125,6 +125,8 @@ export const MENSAGENS_RESPOSTA_PACTO: Record<MotivoRecusaRespostaPacto, string>
   ainda_voando: 'A carta ainda não chegou.',
   ja_respondida: 'Essa proposta já foi respondida.',
   proposta_expirada: 'A proposta expirou. Peça outra a quem mandou.',
+  objetivo_em_jogo:
+    'Um de vocês está segurando o objetivo cumprido: enquanto o relógio corre, não vale pacto de não agressão. Acesso militar continua valendo.',
 };
 
 export const MENSAGENS_NOME: Record<MotivoRecusaNome, string> = {
