@@ -102,7 +102,7 @@ export const MENSAGENS_TERMINAR_OBRA: Record<MotivoRecusaTerminarObra, string> =
   item_invalido: 'Só dá para terminar a obra que está sendo feita agora. Talvez ela já tenha terminado.',
   predio_proibido: 'A Muralha não pode ser terminada com gemas.',
   nivel_alto: `Só obras até o nível ${BALANCEAMENTO.loja.terminarObra.nivelMaximo} podem ser terminadas com gemas.`,
-  gemas_insuficientes: 'Gemas insuficientes. Compre mais na loja (no seu perfil).',
+  gemas_insuficientes: 'Gemas insuficientes. Compre mais na loja (💎 no alto da tela).',
 };
 
 export const MENSAGENS_VILA: Record<MotivoRecusaVila, string> = {

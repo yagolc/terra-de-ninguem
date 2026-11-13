@@ -1,5 +1,5 @@
-/** `regras` e `perfil` não ficam na barra: abrem pelo botão 📖 e pelo nome no cabeçalho. */
-export type Aba = 'cidade' | 'mapa' | 'objetivo' | 'relatorios' | 'cartas' | 'regras' | 'perfil';
+/** `regras`, `loja` e `perfil` não ficam na barra: abrem pelos botões 📖 e 💎 e pelo nome no cabeçalho. */
+export type Aba = 'cidade' | 'mapa' | 'objetivo' | 'relatorios' | 'cartas' | 'regras' | 'loja' | 'perfil';
 
 export const ABAS = [
   { id: 'cidade', rotulo: 'Cidade', icone: '🏰' },

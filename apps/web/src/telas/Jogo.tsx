@@ -13,6 +13,7 @@ import FimDeTemporada from './FimDeTemporada';
 import Fundacao from './Fundacao';
 import Objetivo from './Objetivo';
 import Perfil from './Perfil';
+import Loja from './Loja';
 import Regras from './Regras';
 import Relatorios from './Relatorios';
 
@@ -24,6 +25,7 @@ function abaDoEndereco(): Aba {
   if (location.hash === '#relatorios') return 'relatorios';
   if (location.hash === '#objetivo') return 'objetivo';
   if (location.hash === '#regras') return 'regras';
+  if (location.hash === '#loja') return 'loja';
   if (location.hash.startsWith('#perfil')) return 'perfil';
   if (location.hash.startsWith('#cartas')) return 'cartas';
   return 'cidade';
@@ -206,6 +208,14 @@ export default function Jogo({ sessao }: { sessao: Session }) {
           </nav>
           <div className="flex items-center gap-2">
             <button
+              onClick={() => irPara('loja')}
+              aria-current={aba === 'loja' ? 'page' : undefined}
+              title="Loja de gemas"
+              className={`rounded-lg border px-3 py-1.5 text-sm ${aba === 'loja' ? 'border-ouro text-ouro' : 'border-couro text-pergaminho-escuro hover:text-pergaminho'}`}
+            >
+              💎<span className="hidden sm:inline"> Loja</span>
+            </button>
+            <button
               onClick={() => irPara('regras')}
               aria-current={aba === 'regras' ? 'page' : undefined}
               className={`rounded-lg border px-3 py-1.5 text-sm ${aba === 'regras' ? 'border-ouro text-ouro' : 'border-couro text-pergaminho-escuro hover:text-pergaminho'}`}
@@ -228,6 +238,8 @@ export default function Jogo({ sessao }: { sessao: Session }) {
       <main className={`min-h-0 flex-1 ${aba === 'mapa' && temporada && fundada ? 'overflow-hidden' : 'overflow-y-auto'}`}>
         {aba === 'regras' ? (
           <Regras />
+        ) : aba === 'loja' ? (
+          <Loja />
         ) : aba === 'perfil' ? (
           <Perfil jogadorId={perfilDe ?? sessao.user.id} meuId={sessao.user.id} onNomeMudou={setNome} />
         ) : temporada === undefined ? null : temporada === null ? (

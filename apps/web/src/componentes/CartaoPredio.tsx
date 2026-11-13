@@ -177,7 +177,7 @@ export default function CartaoPredio({ tipo, cidade, bonus, obras, agora, ocupad
             confirmar={temGemas ? `Terminar por ${precoAgora} 💎` : 'Ir para a loja'}
             onConfirmar={() => {
               if (temGemas) onTerminar(obras[0]!.prontoEm);
-              else location.hash = 'perfil';
+              else location.hash = 'loja';
             }}
             onFechar={() => setATerminar(false)}
           >
@@ -189,7 +189,7 @@ export default function CartaoPredio({ tipo, cidade, bonus, obras, agora, ocupad
               Custa <b>{precoAgora} gemas</b> (você tem {gemas.saldo}). O próximo uso nesta temporada vai custar{' '}
               {precoTerminarObra(gemas.usos + 1)}.
             </p>
-            {!temGemas && <p className="text-red-300">Gemas insuficientes. Compre mais na loja, no seu perfil.</p>}
+            {!temGemas && <p className="text-red-300">Gemas insuficientes. Compre mais na loja (💎 no alto da tela).</p>}
             <p className="text-xs text-pergaminho-escuro">Todos veem no placar quantas vezes você usou (⚡).</p>
           </JanelaConfirmacao>
         )}

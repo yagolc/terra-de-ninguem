@@ -2,7 +2,6 @@ import { useEffect, useState, type ReactNode } from 'react';
 import Bandeira from '../componentes/Bandeira';
 import EditorPerfil from '../componentes/EditorPerfil';
 import PainelAvisos from '../componentes/PainelAvisos';
-import PainelLoja from '../componentes/PainelLoja';
 import { RACAS_INFO } from '../lib/textos';
 import { usePerfil, type TemporadaDoPerfil } from '../lib/usePerfil';
 
@@ -179,7 +178,6 @@ export default function Perfil({ jogadorId, meuId, onNomeMudou }: Props) {
           segredo.
         </p>
       </Secao>
-      {meu && <PainelLoja />}
       {meu && <PainelAvisos />}
     </div>
   );

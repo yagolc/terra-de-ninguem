@@ -163,7 +163,7 @@ export default function Cidade({ sessao }: { sessao: Session }) {
               {obras.length > 0 &&
                 ` · ${obras.map((o) => PREDIOS[o.tipo].nome).join(' → ')} · tudo pronto em ${formatarDuracao(obras.at(-1)!.prontoEm - agora)}`}
               {gemas && (
-                <a href="#perfil" title="Suas gemas (loja no perfil)" className="ml-2 text-ouro-claro hover:underline">
+                <a href="#loja" title="Suas gemas (loja)" className="ml-2 text-ouro-claro hover:underline">
                   💎 {gemas.saldo}
                 </a>
               )}

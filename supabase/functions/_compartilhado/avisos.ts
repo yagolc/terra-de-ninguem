@@ -237,7 +237,7 @@ export async function coletarAvisos(tx: Transacao, agora: number): Promise<Aviso
           tipo: 'loja',
           titulo: `💎 ${p.nome} pediu ${p.gemas} gemas`,
           corpo: `${reais} · código ${p.codigo}. Quando o Pix cair, confirme o pedido.`,
-          url: '/#perfil',
+          url: '/#loja',
           tag: `pedido-${p.id}`,
         });
       }
@@ -255,7 +255,7 @@ export async function coletarAvisos(tx: Transacao, agora: number): Promise<Aviso
       tipo: 'loja',
       titulo: `💎 ${p.gemas} gemas creditadas`,
       corpo: 'Seu Pix foi conferido. Na cidade, o ⚡ termina na hora a obra que está sendo feita.',
-      url: '/#perfil',
+      url: '/#loja',
       tag: `credito-${p.id}`,
     });
   }

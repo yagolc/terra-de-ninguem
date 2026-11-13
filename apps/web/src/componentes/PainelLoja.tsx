@@ -7,7 +7,7 @@ import PixDoPedido from './PixDoPedido';
 const STATUS: Record<string, string> = { pendente: '⏳ esperando o Pix ser conferido', pago: '✅ creditado' };
 
 /**
- * Loja de gemas do próprio perfil: saldo, pacotes para comprar por Pix e os pedidos. As gemas servem para terminar
+ * Loja de gemas (aba Loja, botão 💎 do cabeçalho): saldo, pacotes para comprar por Pix e os pedidos. As gemas servem para terminar
  * na hora a obra que está sendo feita (até o nível 7, nunca a Muralha), com o preço dobrando a cada uso na temporada.
  */
 export default function PainelLoja() {
