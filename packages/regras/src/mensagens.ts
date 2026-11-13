@@ -8,6 +8,7 @@ import type { MotivoRecusaDestruicao, MotivoRecusaEstrada, MotivoRecusaEstrutura
 import type { MotivoRecusaMissao } from './missoes.ts';
 import type { MotivoRecusaNome } from './nome.ts';
 import type { MotivoRecusaPerfil } from './perfil.ts';
+import type { MotivoRecusaPet } from './pets.ts';
 import type { MotivoRecusaCarta, MotivoRecusaRespostaPacto } from './pombos.ts';
 import type { MotivoRecusaRecrutamento, MotivoRecusaTreinoHeroi } from './herois.ts';
 import type { MotivoRecusaVila } from './povoados.ts';
@@ -189,6 +190,15 @@ export const MENSAGENS_PRESENTE: Record<MotivoRecusaPresente, string> = {
   quantidade_invalida: `Presenteie de 1 a ${BALANCEAMENTO.loja.presenteMaximo} gemas.`,
   para_si_mesmo: 'Não dá para presentear a si mesmo.',
   gemas_insuficientes: 'Você não tem todas essas gemas.',
+};
+
+export const MENSAGENS_PET: Record<MotivoRecusaPet, string> = {
+  pet_nao_comprado: 'Esse pet ainda não é seu: compre na loja (💎).',
+  pet_refem: 'Seu pet está refém. Resgate ele antes de trocar.',
+  pet_nao_e_refem: 'Esse pet não está refém.',
+  preco_invalido: `Peça de 1 a ${BALANCEAMENTO.pets.resgateMaximo} de ouro.`,
+  sem_preco: 'Quem sequestrou ainda não pediu um resgate.',
+  ouro_insuficiente: 'Você não tem o ouro do resgate.',
 };
 
 export const MENSAGENS_TITULO: Record<'titulo_nao_comprado', string> = {

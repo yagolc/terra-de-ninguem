@@ -16,6 +16,7 @@ import BarraRecursos from '../componentes/BarraRecursos';
 import CartaoPredio from '../componentes/CartaoPredio';
 import PainelHeroi from '../componentes/PainelHeroi';
 import PainelMissoes from '../componentes/PainelMissoes';
+import PainelPet from '../componentes/PainelPet';
 import PainelQuartel from '../componentes/PainelQuartel';
 import PainelTrabalhadores from '../componentes/PainelTrabalhadores';
 import { useCidade } from '../lib/useCidade';
@@ -216,6 +217,7 @@ export default function Cidade({ sessao }: { sessao: Session }) {
             onRecrutar={recrutar}
             onTreinar={treinarHeroi}
           />
+          <PainelPet jogadorId={sessao.user.id} ouro={cidade.recursos.ouro} />
         </aside>
       </div>
     </div>

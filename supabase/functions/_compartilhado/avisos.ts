@@ -22,6 +22,7 @@ const hora = new Intl.DateTimeFormat('pt-BR', { weekday: 'short', hour: '2-digit
 const quando = (d: Date | number) => hora.format(d instanceof Date ? d : new Date(d));
 const resumo = (texto: string, max = 120) => (texto.length > max ? `${texto.slice(0, max - 1)}…` : texto);
 const NOME_PROPOSTA: Record<TipoProposta, string> = { nao_agressao: 'pacto de não agressão', acesso_militar: 'acesso militar' };
+const NOME_PET: Record<string, string> = { lobo: 'lobo 🐺', corvo: 'corvo 🐦‍⬛', gato: 'gato 🐈', urso: 'urso 🐻', falcao: 'falcão 🦅', dragao: 'dragão 🐉' };
 
 let vapidPronto: boolean | null = null;
 function prepararVapid(): boolean {
@@ -50,13 +51,14 @@ export async function coletarAvisos(tx: Transacao, agora: number): Promise<Aviso
       motivo: string | null;
       territorio: string;
       atacante: string;
+      pet: { acao: 'resgatou' | 'sequestrou'; tipo: string } | null;
     }[]
   >`
     update relatorios r set avisado = true
       from territorios t
      where r.id in (select id from relatorios where not avisado order by criado_em limit 200 for update skip locked)
        and t.id = r.territorio_id
-    returning r.id, r.tipo, r.atacante_id, r.defensor_id, r.vencedor, r.conquistou, r.dados->>'motivo' as motivo,
+    returning r.id, r.tipo, r.atacante_id, r.defensor_id, r.vencedor, r.conquistou, r.dados->>'motivo' as motivo, r.dados->'pet' as pet,
               t.nome as territorio, (select nome from jogadores where id = r.atacante_id) as atacante`;
   for (const r of relatorios) {
     const base = { tipo: 'batalha' as const, url: '/#relatorios', tag: `relatorio-${r.id}` };
@@ -70,6 +72,10 @@ export async function coletarAvisos(tx: Transacao, agora: number): Promise<Aviso
       continue;
     }
     const venceu = r.vencedor === 'atacante';
+    // Pet sequestrado ou resgatado no saque (vai junto no aviso dos dois lados).
+    const pet = r.pet ? `${NOME_PET[r.pet.tipo] ?? 'pet'}` : null;
+    const petAtacante = pet ? (r.pet!.acao === 'resgatou' ? ` Você resgatou seu ${pet}!` : ` Seu exército trouxe o ${pet} de lá como refém.`) : '';
+    const petDefensor = pet ? (r.pet!.acao === 'resgatou' ? ` Ele levou de volta o ${pet} que estava com você.` : ` Ele sequestrou seu ${pet}!`) : '';
     avisos.push({
       ...base,
       jogadorId: r.atacante_id,
@@ -82,12 +88,13 @@ export async function coletarAvisos(tx: Transacao, agora: number): Promise<Aviso
             : 'Os defensores caíram, mas faltou folga para conquistar.'
         : 'Suas tropas foram derrotadas.',
     });
+    if (petAtacante) avisos[avisos.length - 1]!.corpo += petAtacante;
     if (r.defensor_id) {
       avisos.push({
         ...base,
         jogadorId: r.defensor_id,
         titulo: `⚔️ ${r.atacante} atacou ${r.territorio}`,
-        corpo: !venceu ? 'Você defendeu.' : r.conquistou ? 'Você perdeu o território.' : 'Seus defensores perderam.',
+        corpo: (!venceu ? 'Você defendeu.' : r.conquistou ? 'Você perdeu o território.' : 'Seus defensores perderam.') + petDefensor,
       });
     }
   }
@@ -241,6 +248,48 @@ export async function coletarAvisos(tx: Transacao, agora: number): Promise<Aviso
           tag: `pedido-${p.id}`,
         });
       }
+    }
+  }
+
+  // Pets: preço do resgate pedido (para o dono), resgate pago (para quem sequestrou), libertado de graça (para o dono).
+  const eventosPet = await tx<
+    { temporada_id: string; dono_id: string; sequestrador_id: string | null; tipo: string; evento: 'preco' | 'pago' | 'libertado' | null; resgate_ouro: number | null; dono: string; sequestrador: string | null }[]
+  >`
+    update pets p set evento_avisado = true
+     where not p.evento_avisado
+    returning p.temporada_id, p.dono_id, p.sequestrador_id, p.tipo, p.evento, p.resgate_ouro,
+              (select nome from jogadores where id = p.dono_id) as dono,
+              (select nome from jogadores where id = p.sequestrador_id) as sequestrador`;
+  for (const e of eventosPet) {
+    const pet = NOME_PET[e.tipo] ?? 'pet';
+    const tag = `pet-${e.temporada_id}-${e.dono_id}`;
+    if (e.evento === 'preco' && e.resgate_ouro) {
+      avisos.push({
+        jogadorId: e.dono_id,
+        tipo: 'batalha',
+        titulo: `💰 Resgate do seu ${pet}`,
+        corpo: `${e.sequestrador ?? 'Quem sequestrou'} pede ${e.resgate_ouro} de ouro para devolver. Pague na tela Cidade ou vá buscar na marra.`,
+        url: '/#cidade',
+        tag,
+      });
+    } else if (e.evento === 'pago' && e.sequestrador_id) {
+      avisos.push({
+        jogadorId: e.sequestrador_id,
+        tipo: 'batalha',
+        titulo: `💰 ${e.dono} pagou o resgate`,
+        corpo: `Você recebeu ${e.resgate_ouro ?? 0} de ouro e o ${pet} voltou para a cidade de ${e.dono}.`,
+        url: '/#cidade',
+        tag,
+      });
+    } else if (e.evento === 'libertado') {
+      avisos.push({
+        jogadorId: e.dono_id,
+        tipo: 'batalha',
+        titulo: `🐾 Seu ${pet} voltou`,
+        corpo: `${e.sequestrador ?? 'Quem sequestrou'} devolveu de graça.`,
+        url: '/#cidade',
+        tag,
+      });
     }
   }
 

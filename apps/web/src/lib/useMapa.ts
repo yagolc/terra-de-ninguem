@@ -17,6 +17,7 @@ import {
 } from '@terra/regras';
 import { useCallback, useEffect, useState } from 'react';
 import { buscarHordas, type Horda } from './hordas';
+import { buscarPets, type PetDaTemporada } from './pets';
 import { supabase } from './supabase';
 
 export type RegiaoMapa = { id: string; indice: number; nome: string; terreno: Terreno };
@@ -154,6 +155,8 @@ export type DadosMapa = {
   herdeiroId: string | null;
   /** Jogadores com o destaque da cidade comprado na loja nesta temporada. */
   destaques: Set<string>;
+  /** Pets da temporada: em que cidade está cada um (`mantidoPor`). */
+  pets: PetDaTemporada[];
   /** Arautos no ar (anúncios públicos da loja), o mais novo primeiro. */
   arautos: { id: string; jogadorId: string; texto: string; ate: number }[];
   /** Quem cumpriu o objetivo secreto e quando vence se mantiver. */
@@ -289,6 +292,7 @@ async function buscarMapa(): Promise<DadosMapa | null> {
     acessos,
     destaques,
     arautos,
+    pets,
   ] = await Promise.all([
     supabase.from('regioes').select('id, indice, nome, terreno').eq('temporada_id', temporada.id).returns<RegiaoMapa[]>(),
     supabase
@@ -394,6 +398,8 @@ async function buscarMapa(): Promise<DadosMapa | null> {
       .gt('ate', new Date().toISOString())
       .order('criado_em', { ascending: false })
       .returns<{ id: string; jogador_id: string; texto: string; ate: string }[]>(),
+    // Pets da cidade (públicos): moram com o dono ou estão reféns na cidade de quem sequestrou.
+    buscarPets(temporada.id),
   ]);
   if (
     !regioes.data ||
@@ -487,6 +493,7 @@ async function buscarMapa(): Promise<DadosMapa | null> {
       ),
     ),
     herdeiroId: anterior.data?.[0]?.vencedor_id ?? null,
+    pets,
     arautos: (arautos.data ?? []).map((a) => ({ id: a.id, jogadorId: a.jogador_id, texto: a.texto, ate: Date.parse(a.ate) })),
     destaques: new Set(((destaques.data ?? []) as { jogador_id: string }[]).map((d) => d.jogador_id)),
     acessosMilitares: (acessos.data ?? []).map((a) => ({

@@ -41,6 +41,7 @@ import { avancarAteAgora, carregarCidade, grupoEm, salvarCidade, type CidadeAvan
 import { sql, type Transacao } from '../_compartilhado/db.ts';
 import { heroiNoRelatorio, heroiNoTerritorio, posicionarHeroi, type HeroiSalvo } from '../_compartilhado/herois.ts';
 import { atualizarPlacar } from '../_compartilhado/objetivos.ts';
+import { moverPetNoSaque } from '../_compartilhado/pets.ts';
 import { fimDoPacto } from '../_compartilhado/pombos.ts';
 import { avisarJogadores } from '../_compartilhado/avisos.ts';
 import { resposta } from '../_compartilhado/http.ts';
@@ -233,6 +234,7 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number, retomada 
   // Saque: a cidade principal (estoque do dono), a vila neutra (estoque dela) ou a vila de um jogador (volta ao nível 0).
   let saque = recursos();
   let vilaZerada = false;
+  let pet: Awaited<ReturnType<typeof moverPetNoSaque>> = null;
   if (tipo === 'saque' && atacanteVenceu && defensor && destino.cidade_principal) {
     saque = calcularSaque({
       estoque: defensor.estado.recursos,
@@ -241,6 +243,8 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number, retomada 
       bonusCarga,
     });
     defensor.estado = { ...defensor.estado, recursos: subtrairRecursos(defensor.estado.recursos, saque) };
+    // Pet: o atacante resgata o dele, se estiver refém ali, ou leva o do defensor (no máximo um por saque).
+    pet = await moverPetNoSaque(tx, m.temporada_id, m.jogador_id, defensor.carregada.jogadorId, agora);
   } else if (tipo === 'saque' && atacanteVenceu && povoado?.tipo === 'vila') {
     if (defensor) {
       saque = saquearVilaDeJogador({ nivel: povoado.nivel, sobreviventes: batalha.sobreviventesAtacante, bonusCarga });
@@ -379,6 +383,7 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number, retomada 
               perdasAtacante: batalha.perdasAtacante,
               perdasDefensor: batalha.perdasDefensor,
               saque,
+              pet,
             })})`;
 }
 

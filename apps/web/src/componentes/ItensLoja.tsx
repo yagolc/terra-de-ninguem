@@ -1,18 +1,30 @@
-import { BALANCEAMENTO, CORES_LOJA, TIPOS_TITULO, TITULOS_LOJA, itemComprado, type ItemLoja, type TituloLoja } from '@terra/regras';
+import {
+  BALANCEAMENTO,
+  CORES_LOJA,
+  TIPOS_PET,
+  TIPOS_TITULO,
+  TITULOS_LOJA,
+  itemComprado,
+  precoDoItem,
+  type ItemLoja,
+  type TipoPet,
+  type TituloLoja,
+} from '@terra/regras';
 import { useState } from 'react';
+import { PETS_INFO } from '../lib/pets';
 import type { Gemas } from '../lib/useGemas';
 import JanelaConfirmacao from './JanelaConfirmacao';
 
 type Props = {
   gemas: Gemas;
   ocupado: boolean;
-  onComprar: (item: ItemLoja, variante?: TituloLoja, pedido?: string) => void;
+  onComprar: (item: ItemLoja, variante?: TituloLoja | TipoPet, pedido?: string) => void;
   onUsarTitulo: (titulo: TituloLoja | null) => void;
 };
 
-type Compra = { item: ItemLoja; variante?: TituloLoja; nome: string; pedido?: string };
+type Compra = { item: ItemLoja; variante?: TituloLoja | TipoPet; nome: string; pedido?: string };
 
-const INFO: Record<Exclude<ItemLoja, 'titulo'>, { nome: string; icone: string; descricao: string }> = {
+const INFO: Record<Exclude<ItemLoja, 'titulo' | 'pet'>, { nome: string; icone: string; descricao: string }> = {
   bandeiras_exclusivas: {
     nome: 'Bandeiras exclusivas',
     icone: '🚩',
@@ -35,8 +47,8 @@ const INFO: Record<Exclude<ItemLoja, 'titulo'>, { nome: string; icone: string; d
 /** Itens da loja: visuais permanentes, destaque da temporada e títulos (comprar e escolher o que aparece). */
 export default function ItensLoja({ gemas, ocupado, onComprar, onUsarTitulo }: Props) {
   const [compra, setCompra] = useState<Compra | null>(null);
-  const preco = (item: ItemLoja) => BALANCEAMENTO.loja.itens[item].preco;
-  const tem = (item: ItemLoja, variante: TituloLoja | null = null) => itemComprado(gemas.itens, item, variante, gemas.temporadaId);
+  const preco = (item: ItemLoja, variante: string | null = null) => precoDoItem(item, variante);
+  const tem = (item: ItemLoja, variante: TituloLoja | TipoPet | null = null) => itemComprado(gemas.itens, item, variante, gemas.temporadaId);
 
   return (
     <div className="space-y-3">
@@ -74,6 +86,38 @@ export default function ItensLoja({ gemas, ocupado, onComprar, onUsarTitulo }: P
           );
         })}
       </ul>
+
+      <div className="space-y-2">
+        <h4 className="font-titulo text-ouro">🐾 Pets</h4>
+        <p className="text-xs text-pergaminho-escuro">
+          Seu para sempre; um mora na sua cidade (tela Cidade) e aparece no mapa. Um saque vencedor contra a sua cidade leva o pet
+          como refém: você resgata pagando o ouro que pedirem, saqueando de volta ou na temporada nova.
+        </p>
+        <ul className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+          {TIPOS_PET.map((tipo) => {
+            const meu = tem('pet', tipo);
+            return (
+              <li key={tipo} className="flex flex-col items-center gap-1 rounded-lg border border-couro bg-noite/50 p-2 text-sm">
+                <span className="text-3xl" aria-hidden>
+                  {PETS_INFO[tipo].icone}
+                </span>
+                {PETS_INFO[tipo].nome}
+                {meu ? (
+                  <span className="text-xs text-musgo">✅ Seu</span>
+                ) : (
+                  <button
+                    disabled={ocupado}
+                    onClick={() => setCompra({ item: 'pet', variante: tipo, nome: `Pet: ${PETS_INFO[tipo].nome}` })}
+                    className="rounded-md border border-ouro/60 px-2 py-0.5 text-xs text-ouro hover:bg-ouro/10 disabled:opacity-40"
+                  >
+                    {preco('pet', tipo)} 💎
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
 
       <div className="space-y-2">
         <h4 className="font-titulo text-ouro">Títulos</h4>
@@ -124,14 +168,14 @@ export default function ItensLoja({ gemas, ocupado, onComprar, onUsarTitulo }: P
       {compra && (
         <JanelaConfirmacao
           titulo="Comprar?"
-          confirmar={gemas.saldo >= preco(compra.item) ? `Comprar por ${preco(compra.item)} 💎` : 'Entendi'}
+          confirmar={gemas.saldo >= preco(compra.item, compra.variante ?? null) ? `Comprar por ${preco(compra.item, compra.variante ?? null)} 💎` : 'Entendi'}
           onConfirmar={() => {
-            if (gemas.saldo >= preco(compra.item)) onComprar(compra.item, compra.variante, compra.pedido);
+            if (gemas.saldo >= preco(compra.item, compra.variante ?? null)) onComprar(compra.item, compra.variante, compra.pedido);
           }}
           onFechar={() => setCompra(null)}
         >
           <p>
-            <b>{compra.nome}</b> por <b>{preco(compra.item)} gemas</b> (você tem {gemas.saldo}).
+            <b>{compra.nome}</b> por <b>{preco(compra.item, compra.variante ?? null)} gemas</b> (você tem {gemas.saldo}).
           </p>
           {compra.item === 'cronica' && (
             <label className="block space-y-1">
@@ -149,7 +193,7 @@ export default function ItensLoja({ gemas, ocupado, onComprar, onUsarTitulo }: P
               </span>
             </label>
           )}
-          {gemas.saldo < preco(compra.item) && <p className="text-red-300">Gemas insuficientes: compre um pacote acima.</p>}
+          {gemas.saldo < preco(compra.item, compra.variante ?? null) && <p className="text-red-300">Gemas insuficientes: compre um pacote acima.</p>}
         </JanelaConfirmacao>
       )}
     </div>

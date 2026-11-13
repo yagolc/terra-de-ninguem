@@ -1,6 +1,7 @@
 // Loja de gemas: terminar na hora a obra que está sendo feita. Gema só se ganha comprando (Pix).
 import { BALANCEAMENTO } from './balanceamento.ts';
 import { reprogramar } from './cancelamento.ts';
+import { TIPOS_PET, tipoPetValido, type TipoPet } from './pets.ts';
 import type { NiveisPredios, Obra, TipoPredio, Verificacao } from './tipos.ts';
 
 /** Preço em gemas do próximo "terminar agora", depois de `usos` na mesma temporada: base, 2×, 4×, 8×… */
@@ -57,8 +58,8 @@ export const CORES_LOJA = { cor_ouro: '#c9a227', cor_prata: '#a8b2bd' } as const
 export type ItemComprado = { item: string; variante: string | null; temporadaId: string | null };
 
 /** O que as compras permanentes liberam no perfil. */
-export type Desbloqueios = { bandeirasExclusivas: boolean; cores: string[]; titulos: TituloLoja[] };
-export const SEM_DESBLOQUEIOS: Desbloqueios = { bandeirasExclusivas: false, cores: [], titulos: [] };
+export type Desbloqueios = { bandeirasExclusivas: boolean; cores: string[]; titulos: TituloLoja[]; pets: TipoPet[] };
+export const SEM_DESBLOQUEIOS: Desbloqueios = { bandeirasExclusivas: false, cores: [], titulos: [], pets: [] };
 
 export function desbloqueiosDe(comprados: readonly ItemComprado[]): Desbloqueios {
   const tem = (item: ItemLoja) => comprados.some((c) => c.item === item);
@@ -66,6 +67,7 @@ export function desbloqueiosDe(comprados: readonly ItemComprado[]): Desbloqueios
     bandeirasExclusivas: tem('bandeiras_exclusivas'),
     cores: (Object.keys(CORES_LOJA) as (keyof typeof CORES_LOJA)[]).filter(tem).map((item) => CORES_LOJA[item]),
     titulos: TIPOS_TITULO.filter((t) => comprados.some((c) => c.item === 'titulo' && c.variante === t)),
+    pets: TIPOS_PET.filter((p) => comprados.some((c) => c.item === 'pet' && c.variante === p)),
   };
 }
 
@@ -103,13 +105,24 @@ export function verificarCompraItem(entrada: {
     if (!titulo) return { ok: false, motivo: 'item_invalido' };
     variante = titulo;
   }
-  const { preco, escopo } = BALANCEAMENTO.loja.itens[item];
+  if (item === 'pet') {
+    if (!tipoPetValido(entrada.variante)) return { ok: false, motivo: 'item_invalido' };
+    variante = entrada.variante;
+  }
+  const { escopo } = BALANCEAMENTO.loja.itens[item];
+  const preco = precoDoItem(item, variante);
   if (escopo === 'temporada' && entrada.temporadaId === null) return { ok: false, motivo: 'sem_temporada' };
   if (itemComprado(entrada.comprados, item, variante, entrada.temporadaId)) return { ok: false, motivo: 'ja_comprado' };
   if (entrada.saldo < preco) return { ok: false, motivo: 'gemas_insuficientes' };
   const pedido = item === 'cronica' ? limparTextoArauto(entrada.pedido) : '';
   if ([...pedido].length > BALANCEAMENTO.loja.pedidoCronicaMaximo) return { ok: false, motivo: 'pedido_longo' };
   return { ok: true, item, variante, preco, temporadaId: escopo === 'temporada' ? entrada.temporadaId : null, pedido: pedido || null };
+}
+
+/** Preço de um item; o pet custa conforme o bicho (`pets.precos`). */
+export function precoDoItem(item: ItemLoja, variante: string | null = null): number {
+  if (item === 'pet' && tipoPetValido(variante)) return BALANCEAMENTO.pets.precos[variante];
+  return BALANCEAMENTO.loja.itens[item].preco;
 }
 
 /** Título que o jogador quer mostrar: nenhum (null) ou um que ele comprou. */

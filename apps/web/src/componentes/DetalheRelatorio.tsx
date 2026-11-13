@@ -1,5 +1,6 @@
 import { BALANCEAMENTO, RECURSOS, TIPOS_UNIDADE, bonusDefesaRaca, totalUnidades, type Exercito } from '@terra/regras';
 import type { HeroiNoRelatorio, Relatorio } from '../lib/useRelatorios';
+import { PETS_INFO } from '../lib/pets';
 import { ESPECIALIDADES_INFO, RACAS_INFO, RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarNumero } from '../lib/textos';
 
 function LinhaExercito({ rotulo, exercito, perdas }: { rotulo: string; exercito: Exercito; perdas: Exercito }) {
@@ -83,6 +84,14 @@ export default function DetalheRelatorio({ relatorio, nomeDefensor }: { relatori
         </p>
       )}
       {d.vilaZerada && saqueTotal === 0 && <p>🏘️ A vila foi saqueada e voltou ao nível 0.</p>}
+      {d.pet && (
+        <p>
+          {PETS_INFO[d.pet.tipo].icone}{' '}
+          {d.pet.acao === 'resgatou'
+            ? `O atacante resgatou o próprio ${PETS_INFO[d.pet.tipo].nome.toLowerCase()}, que estava refém aqui.`
+            : `O ${PETS_INFO[d.pet.tipo].nome.toLowerCase()} do defensor foi levado como refém.`}
+        </p>
+      )}
       {d.milicia && (
         <p>
           ⚖️ A cidade livre jurou lealdade: {BALANCEAMENTO.povoados.cidadeLivre.milicia} lanceiros de milícia passam a defendê-la para o

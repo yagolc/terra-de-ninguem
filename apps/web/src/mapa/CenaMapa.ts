@@ -1,6 +1,7 @@
 import { estoqueVila, totalRecursos } from '@terra/regras';
 import Phaser from 'phaser';
 import { bandeiraDoJogador, formasDoPadrao } from '../lib/bandeira';
+import { PETS_INFO } from '../lib/pets';
 import { chaveDaBandeira, svgDaBandeira } from '../lib/svgBandeira';
 import { COR_NEUTRA, corDoJogador, type DadosMapa, type JogadorMapa, type TerritorioMapa } from '../lib/useMapa';
 
@@ -276,6 +277,16 @@ export class CenaMapa extends Phaser.Scene {
       }
       this.rotulos.push(this.add.text(x + 9, y - 16, '🏰', { ...estilo, fontSize: destaque ? '28px' : '20px' }).setOrigin(0.5));
       if (dono) this.desenharBandeira(destaque ? x - 40 : x - 28, y - 14, dono, destaque ? 1.5 : 1);
+      // Pets na cidade, acima e à direita do castelo (longe do nome e do selo da estrutura): o do dono e, com cadeado, os reféns.
+      if (dono) {
+        const naCidade = this.opcoes.dados.pets.filter((p) => p.mantidoPor === dono.id);
+        const proprio = naCidade.find((p) => p.donoId === dono.id);
+        const refens = naCidade.filter((p) => p.donoId !== dono.id);
+        const textoPets = [proprio ? PETS_INFO[proprio.tipo].icone : '', ...refens.map((p) => `🔒${PETS_INFO[p.tipo].icone}`)].filter(Boolean).join(' ');
+        if (textoPets) {
+          this.rotulos.push(this.add.text(x + 18, y - 38, textoPets, { ...estilo, fontSize: '13px', strokeThickness: 0 }).setOrigin(0, 0.5));
+        }
+      }
       // Coroa sobre a bandeira do herdeiro do trono caído (vencedor da temporada anterior).
       if (dono && dono.id === this.opcoes.dados.herdeiroId) {
         this.rotulos.push(

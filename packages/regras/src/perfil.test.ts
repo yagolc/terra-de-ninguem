@@ -36,7 +36,7 @@ describe('perfil do jogador', () => {
   });
 
   it('padrão tem de ser conhecido e o emblema, válido', () => {
-    const pacote = { bandeirasExclusivas: true, cores: [], titulos: [] };
+    const pacote = { bandeirasExclusivas: true, cores: [], titulos: [], pets: [] };
     for (const padrao of PADROES_BANDEIRA) expect(verificarPerfil({ ...VALIDO, padrao }, [], pacote).ok).toBe(true);
     expect(verificarPerfil({ ...VALIDO, padrao: 'listras' }, [])).toEqual({ ok: false, motivo: 'padrao_invalido' });
     expect(verificarPerfil({ ...VALIDO, emblema: [{ ...ESTRELA, forma: 'unicornio' }] }, [])).toEqual({ ok: false, motivo: 'emblema_invalido' });
@@ -59,7 +59,7 @@ describe('perfil do jogador', () => {
 });
 
 describe('itens da loja no perfil', () => {
-  const comPacote = { bandeirasExclusivas: true, cores: [CORES_LOJA.cor_ouro], titulos: [] };
+  const comPacote = { bandeirasExclusivas: true, cores: [CORES_LOJA.cor_ouro], titulos: [], pets: [] };
 
   it('padrão e forma exclusivos só com o pacote de bandeiras', () => {
     for (const padrao of PADROES_EXCLUSIVOS) {

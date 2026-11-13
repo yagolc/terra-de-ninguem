@@ -362,6 +362,8 @@ export const BALANCEAMENTO = {
       destaque_cidade: { preco: 5, escopo: 'temporada' },
       // Nome na Crônica: o jogador aparece no capítulo desta temporada (escrito à mão pelo organizador).
       cronica: { preco: 10, escopo: 'temporada' },
+      // Pet da cidade: um item por bicho (variante); o preço de cada um está em `pets.precos`.
+      pet: { preco: 8, escopo: 'permanente' },
     },
     /** Tamanho máximo do pedido de quem compra a Crônica (como quer ser lembrado). */
     pedidoCronicaMaximo: 200,
@@ -372,6 +374,16 @@ export const BALANCEAMENTO = {
     arauto: { precoBase: 3, duracaoHoras: 24, tamanhoMaximo: 140 },
     /** Presentear gemas a outro jogador: sem taxa, até este tanto por presente. */
     presenteMaximo: 100,
+  },
+
+  /**
+   * Pets da cidade (comprados na loja, só visuais). Um saque vencedor contra a cidade leva o pet que mora lá; o dono
+   * recupera saqueando a cidade de quem levou, pagando o resgate em ouro que o sequestrador pedir, ou na temporada nova.
+   */
+  pets: {
+    precos: { lobo: 8, corvo: 8, gato: 8, urso: 8, falcao: 8, dragao: 15 },
+    /** Resgate em ouro que o sequestrador pode pedir. */
+    resgateMaximo: 5000,
   },
 
   reconhecimento: {

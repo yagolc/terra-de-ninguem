@@ -19,6 +19,7 @@
 //        (avisos no celular deste aparelho; não precisam de temporada ativa)
 //      | { acao: 'pedir_gemas', gemas } | { acao: 'cancelar_pedido_gemas', codigo } (loja; não precisam de temporada ativa)
 //      | { acao: 'comprar_item', item, variante?, pedido? } | { acao: 'usar_titulo', titulo } (loja; sem temporada, menos itens de temporada)
+//      | { acao: 'escolher_pet', tipo } | { acao: 'pedir_resgate', dono_id, ouro } | { acao: 'libertar_pet', dono_id } | { acao: 'pagar_resgate' }
 //      | { acao: 'publicar_arauto', texto } | { acao: 'presentear_gemas', destinatario_id, gemas }
 //      | { acao: 'terminar_obra', pronto_em } (gasta gemas para terminar na hora a obra que está sendo feita)
 // Publicar com: npx supabase functions deploy cidade --no-verify-jwt (o token é validado no código).
@@ -104,6 +105,7 @@ import {
 } from '../_compartilhado/cidade.ts';
 import { sql, type Transacao } from '../_compartilhado/db.ts';
 import { comprarItem, presentearGemas, publicarArauto, usarTitulo } from '../_compartilhado/loja.ts';
+import { escolherPet, libertarPet, pagarResgate, pedirResgate } from '../_compartilhado/pets.ts';
 import { salvarPerfil } from '../_compartilhado/perfil.ts';
 import { fimDoPacto, terrasParaMarchar } from '../_compartilhado/pombos.ts';
 import { testarAviso } from '../_compartilhado/avisos.ts';
@@ -599,6 +601,18 @@ async function executar(jogadorId: string, corpo: Record<string, unknown>): Prom
   }
   if (corpo.acao === 'comprar_item') {
     return { ok: true, ...(await sql.begin((tx) => comprarItem(tx, jogadorId, corpo))) };
+  }
+  if (corpo.acao === 'escolher_pet') {
+    return { ok: true, ...(await sql.begin((tx) => escolherPet(tx, jogadorId, corpo.tipo))) };
+  }
+  if (corpo.acao === 'pedir_resgate') {
+    return { ok: true, ...(await sql.begin((tx) => pedirResgate(tx, jogadorId, corpo.dono_id, corpo.ouro))) };
+  }
+  if (corpo.acao === 'libertar_pet') {
+    return { ok: true, ...(await sql.begin((tx) => libertarPet(tx, jogadorId, corpo.dono_id))) };
+  }
+  if (corpo.acao === 'pagar_resgate') {
+    return { ok: true, ...(await sql.begin((tx) => pagarResgate(tx, jogadorId))) };
   }
   if (corpo.acao === 'publicar_arauto') {
     return { ok: true, ...(await sql.begin((tx) => publicarArauto(tx, jogadorId, corpo.texto))) };

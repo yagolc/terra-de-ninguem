@@ -162,7 +162,7 @@ describe('desbloqueiosDe e verificarTitulo', () => {
       { item: 'titulo', variante: 'lobo_da_fronteira', temporadaId: null },
       { item: 'destaque_cidade', variante: null, temporadaId: 't' },
     ]);
-    expect(d).toEqual({ bandeirasExclusivas: true, cores: [CORES_LOJA.cor_prata], titulos: ['lobo_da_fronteira'] });
+    expect(d).toEqual({ bandeirasExclusivas: true, cores: [CORES_LOJA.cor_prata], titulos: ['lobo_da_fronteira'], pets: [] });
     expect(verificarTitulo('lobo_da_fronteira', d)).toEqual({ ok: true, titulo: 'lobo_da_fronteira' });
     expect(verificarTitulo(null, d)).toEqual({ ok: true, titulo: null });
     expect(verificarTitulo('mecenas', d)).toEqual({ ok: false, motivo: 'titulo_nao_comprado' });

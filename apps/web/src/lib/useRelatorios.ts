@@ -1,4 +1,4 @@
-import { exercito, type Especialidade, type Exercito, type Raca, type Recursos, type Terreno } from '@terra/regras';
+import { exercito, type Especialidade, type Exercito, type Raca, type Recursos, type Terreno, type TipoPet } from '@terra/regras';
 import { useCallback, useEffect, useState } from 'react';
 import { chamarFuncao } from './funcoes';
 import { buscarHordas, type Horda } from './hordas';
@@ -18,6 +18,8 @@ export type DadosBatalha = {
   povoado?: { tipo: 'vila' | 'cidade_livre'; nivel: number } | null;
   /** A vila de um jogador foi saqueada e voltou ao nível 0. */
   vilaZerada?: boolean;
+  /** Pet levado no saque: o atacante resgatou o dele ou sequestrou o do defensor. */
+  pet?: { acao: 'resgatou' | 'sequestrou'; donoId: string; tipo: TipoPet } | null;
   /** A milícia da cidade livre se juntou ao conquistador. */
   milicia?: boolean;
   /** Era um movimento para um território próprio que caiu no caminho: as tropas lutaram para retomá-lo. */

@@ -15,6 +15,7 @@ export * from './mensagens.ts';
 export * from './missoes.ts';
 export * from './nome.ts';
 export * from './perfil.ts';
+export * from './pets.ts';
 export * from './pix.ts';
 export * from './pombos.ts';
 export * from './objetivos.ts';

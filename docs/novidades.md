@@ -12,6 +12,7 @@ Lista das mudanças para mandar aos jogadores. Cada temporada nova ganha uma se�
 - **Destaque da cidade** (5 💎, vale na temporada): sua cidade aparece maior no mapa, com um brilho dourado.
 - **Arauto** (📯): um anúncio seu no alto do mapa, para todos, por 24 h (e no celular de quem tem avisos de carta ligados). Um por vez; custa 3 gemas e dobra a cada arauto na temporada.
 - **Seu nome na Crônica** (📜, 10 💎 por temporada): você vira personagem do capítulo da temporada na Crônica do reino e pode contar como quer ser lembrado.
+- **Pets da cidade** (🐾): lobo, corvo, gato, urso e falcão (8 💎) e dragãozinho (15 💎), seus para sempre. Um mora na sua cidade e aparece no mapa. Um saque vencedor contra a sua cidade leva o pet como refém: quem sequestrou pode pedir um resgate em ouro, você pode ir buscar na marra saqueando a cidade dele, e na temporada nova ele volta sozinho.
 - **Presentear gemas** (🎁): no perfil de outro jogador, dê gemas do seu saldo, sem taxa. Serve até para pagar acordos.
 
 ## Temporada 5
