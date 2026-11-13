@@ -7,9 +7,12 @@ import {
   gastoTerminarObra,
   obraAceleravel,
   pacoteValido,
+  precoArauto,
   precoTerminarObra,
   terminarObraAgora,
+  verificarArauto,
   verificarCompraItem,
+  verificarPresente,
   verificarTitulo,
   type ItemComprado,
 } from './loja.ts';
@@ -149,5 +152,42 @@ describe('desbloqueiosDe e verificarTitulo', () => {
 
   it('os nomes dos títulos cabem no placar', () => {
     for (const nome of Object.values(TITULOS_LOJA)) expect(nome.length).toBeLessThanOrEqual(24);
+  });
+});
+
+describe('verificarArauto', () => {
+  const base = { texto: 'O Império exige tributo!', saldo: 100, usos: 0, noArAte: null, agora: AGORA };
+  const { precoBase, duracaoHoras, tamanhoMaximo } = BALANCEAMENTO.loja.arauto;
+
+  it('publica por 24 h pelo preço base e o preço dobra com os usos', () => {
+    expect(verificarArauto(base)).toEqual({ ok: true, texto: base.texto, preco: precoBase, ate: AGORA + duracaoHoras * 3600_000 });
+    expect([0, 1, 2, 3].map(precoArauto)).toEqual([precoBase, precoBase * 2, precoBase * 4, precoBase * 8]);
+    const r = verificarArauto({ ...base, usos: 2 });
+    expect(r.ok && r.preco).toBe(precoBase * 4);
+  });
+
+  it('limpa o texto e confere o tamanho', () => {
+    const r = verificarArauto({ ...base, texto: '  Paz\n\n  ou   guerra  ' });
+    expect(r.ok && r.texto).toBe('Paz ou guerra');
+    expect(verificarArauto({ ...base, texto: '   ' })).toEqual({ ok: false, motivo: 'texto_vazio' });
+    expect(verificarArauto({ ...base, texto: 'a'.repeat(tamanhoMaximo) }).ok).toBe(true);
+    expect(verificarArauto({ ...base, texto: 'a'.repeat(tamanhoMaximo + 1) })).toEqual({ ok: false, motivo: 'texto_longo' });
+  });
+
+  it('um por jogador no ar e saldo suficiente', () => {
+    expect(verificarArauto({ ...base, noArAte: AGORA + MIN })).toEqual({ ok: false, motivo: 'arauto_no_ar' });
+    expect(verificarArauto({ ...base, noArAte: AGORA }).ok).toBe(true);
+    expect(verificarArauto({ ...base, saldo: precoBase - 1 })).toEqual({ ok: false, motivo: 'gemas_insuficientes' });
+  });
+});
+
+describe('verificarPresente', () => {
+  it('aceita inteiros de 1 ao máximo, para outro jogador, dentro do saldo', () => {
+    expect(verificarPresente({ gemas: 5, saldo: 5, paraSiMesmo: false })).toEqual({ ok: true, gemas: 5 });
+    for (const gemas of [0, -1, 1.5, '3', BALANCEAMENTO.loja.presenteMaximo + 1]) {
+      expect(verificarPresente({ gemas, saldo: 1000, paraSiMesmo: false })).toEqual({ ok: false, motivo: 'quantidade_invalida' });
+    }
+    expect(verificarPresente({ gemas: 1, saldo: 10, paraSiMesmo: true })).toEqual({ ok: false, motivo: 'para_si_mesmo' });
+    expect(verificarPresente({ gemas: 6, saldo: 5, paraSiMesmo: false })).toEqual({ ok: false, motivo: 'gemas_insuficientes' });
   });
 });

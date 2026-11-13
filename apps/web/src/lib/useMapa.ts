@@ -154,6 +154,8 @@ export type DadosMapa = {
   herdeiroId: string | null;
   /** Jogadores com o destaque da cidade comprado na loja nesta temporada. */
   destaques: Set<string>;
+  /** Arautos no ar (anúncios públicos da loja), o mais novo primeiro. */
+  arautos: { id: string; jogadorId: string; texto: string; ate: number }[];
   /** Quem cumpriu o objetivo secreto e quando vence se mantiver. */
   objetivosCumpridos: { jogadorId: string; venceEm: number }[];
   /** Acessos militares aceitos e ainda em vigor do próprio jogador (o RLS só mostra as cartas dele). */
@@ -286,6 +288,7 @@ async function buscarMapa(): Promise<DadosMapa | null> {
     relogios,
     acessos,
     destaques,
+    arautos,
   ] = await Promise.all([
     supabase.from('regioes').select('id, indice, nome, terreno').eq('temporada_id', temporada.id).returns<RegiaoMapa[]>(),
     supabase
@@ -383,6 +386,14 @@ async function buscarMapa(): Promise<DadosMapa | null> {
       .returns<{ remetente_id: string; destinatario_id: string; pacto_ate: string }[]>(),
     // Quem comprou o destaque da cidade na loja (cidade maior e com brilho no mapa).
     supabase.rpc('destaques_na_temporada', { p_temporada: temporada.id }),
+    // Arautos no ar (anúncios públicos comprados na loja), o mais novo primeiro.
+    supabase
+      .from('arautos')
+      .select('id, jogador_id, texto, ate')
+      .eq('temporada_id', temporada.id)
+      .gt('ate', new Date().toISOString())
+      .order('criado_em', { ascending: false })
+      .returns<{ id: string; jogador_id: string; texto: string; ate: string }[]>(),
   ]);
   if (
     !regioes.data ||
@@ -476,6 +487,7 @@ async function buscarMapa(): Promise<DadosMapa | null> {
       ),
     ),
     herdeiroId: anterior.data?.[0]?.vencedor_id ?? null,
+    arautos: (arautos.data ?? []).map((a) => ({ id: a.id, jogadorId: a.jogador_id, texto: a.texto, ate: Date.parse(a.ate) })),
     destaques: new Set(((destaques.data ?? []) as { jogador_id: string }[]).map((d) => d.jogador_id)),
     acessosMilitares: (acessos.data ?? []).map((a) => ({
       jogadores: [a.remetente_id, a.destinatario_id] as const,

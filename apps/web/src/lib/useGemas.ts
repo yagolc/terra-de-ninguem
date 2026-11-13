@@ -24,6 +24,10 @@ export type Gemas = {
   temporadaId: string | null;
   /** Título que o jogador mostra no placar e no perfil. */
   titulo: TituloLoja | null;
+  /** Arautos do jogador nesta temporada (o preço dobra) e até quando o último fica no ar. */
+  arautos: { usos: number; noArAte: number | null };
+  /** Últimos presentes de gemas, mandados ou recebidos. */
+  presentes: { id: string; enviado: boolean; outroId: string; outroNome: string; gemas: number; criadoEm: number }[];
 };
 
 type LinhaPedido = {
@@ -40,7 +44,7 @@ async function buscarGemas(): Promise<Gemas> {
   // O RLS devolve só o saldo, os pedidos e os usos do próprio jogador.
   const { data: sessao } = await supabase.auth.getSession();
   const meuId = sessao.session?.user.id ?? '';
-  const [saldo, usos, pedidos, itens, ativa, eu] = await Promise.all([
+  const [saldo, usos, pedidos, itens, ativa, eu, arautos, presentes] = await Promise.all([
     supabase.from('gemas').select('saldo').maybeSingle<{ saldo: number }>(),
     supabase
       .from('usos_gemas')
@@ -56,8 +60,26 @@ async function buscarGemas(): Promise<Gemas> {
     supabase.from('itens_comprados').select('item, variante, temporada_id').returns<{ item: string; variante: string | null; temporada_id: string | null }[]>(),
     supabase.from('temporadas').select('id').eq('status', 'ativa').maybeSingle<{ id: string }>(),
     supabase.from('jogadores').select('titulo').eq('id', meuId).maybeSingle<{ titulo: TituloLoja | null }>(),
+    supabase
+      .from('arautos')
+      .select('ate, temporadas!inner(status)')
+      .eq('jogador_id', meuId)
+      .eq('temporadas.status', 'ativa')
+      .returns<{ ate: string }[]>(),
+    // O RLS devolve só os presentes que o jogador mandou ou recebeu.
+    supabase
+      .from('presentes_gemas')
+      .select('id, remetente_id, destinatario_id, gemas, criado_em')
+      .order('criado_em', { ascending: false })
+      .limit(10)
+      .returns<{ id: string; remetente_id: string; destinatario_id: string; gemas: number; criado_em: string }[]>(),
   ]);
   if (saldo.error || usos.error || pedidos.error || itens.error) throw new Error('Não foi possível carregar suas gemas.');
+  // Nomes de quem deu ou recebeu os presentes.
+  const outros = [...new Set((presentes.data ?? []).map((p) => (p.remetente_id === meuId ? p.destinatario_id : p.remetente_id)))];
+  const nomes = outros.length
+    ? new Map(((await supabase.from('jogadores').select('id, nome').in('id', outros)).data ?? []).map((j: { id: string; nome: string }) => [j.id, j.nome]))
+    : new Map<string, string>();
   const comprados = (itens.data ?? []).map((i) => ({ item: i.item, variante: i.variante, temporadaId: i.temporada_id }));
   return {
     saldo: saldo.data?.saldo ?? 0,
@@ -74,6 +96,18 @@ async function buscarGemas(): Promise<Gemas> {
     desbloqueios: desbloqueiosDe(comprados),
     temporadaId: ativa.data?.id ?? null,
     titulo: eu.data?.titulo ?? null,
+    arautos: {
+      usos: arautos.data?.length ?? 0,
+      noArAte: arautos.data && arautos.data.length > 0 ? Math.max(...arautos.data.map((a) => Date.parse(a.ate))) : null,
+    },
+    presentes: (presentes.data ?? []).map((p) => ({
+      id: p.id,
+      enviado: p.remetente_id === meuId,
+      outroId: p.remetente_id === meuId ? p.destinatario_id : p.remetente_id,
+      outroNome: nomes.get(p.remetente_id === meuId ? p.destinatario_id : p.remetente_id) ?? 'alguém',
+      gemas: p.gemas,
+      criadoEm: Date.parse(p.criado_em),
+    })),
   };
 }
 
@@ -126,5 +160,21 @@ export function useGemas() {
     [recarregar],
   );
 
-  return { gemas, recarregar, pedir, cancelarPedido, comprar, usarTitulo };
+  const publicarArauto = useCallback(
+    async (texto: string) => {
+      await chamarFuncao('cidade', { acao: 'publicar_arauto', texto });
+      await recarregar();
+    },
+    [recarregar],
+  );
+
+  const presentear = useCallback(
+    async (destinatarioId: string, quantidade: number) => {
+      await chamarFuncao('cidade', { acao: 'presentear_gemas', destinatario_id: destinatarioId, gemas: quantidade });
+      await recarregar();
+    },
+    [recarregar],
+  );
+
+  return { gemas, recarregar, pedir, cancelarPedido, comprar, usarTitulo, publicarArauto, presentear };
 }

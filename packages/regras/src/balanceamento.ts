@@ -361,6 +361,13 @@ export const BALANCEAMENTO = {
       cor_prata: { preco: 8, escopo: 'permanente' },
       destaque_cidade: { preco: 5, escopo: 'temporada' },
     },
+    /**
+     * Arauto: mensagem pública no alto do mapa por `duracaoHoras`. Um por jogador no ar; o preço dobra a cada
+     * arauto do jogador na temporada (3, 6, 12…).
+     */
+    arauto: { precoBase: 3, duracaoHoras: 24, tamanhoMaximo: 140 },
+    /** Presentear gemas a outro jogador: sem taxa, até este tanto por presente. */
+    presenteMaximo: 100,
   },
 
   reconhecimento: {

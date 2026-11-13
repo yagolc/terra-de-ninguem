@@ -19,6 +19,7 @@
 //        (avisos no celular deste aparelho; não precisam de temporada ativa)
 //      | { acao: 'pedir_gemas', gemas } | { acao: 'cancelar_pedido_gemas', codigo } (loja; não precisam de temporada ativa)
 //      | { acao: 'comprar_item', item, variante? } | { acao: 'usar_titulo', titulo } (loja; sem temporada, menos itens de temporada)
+//      | { acao: 'publicar_arauto', texto } | { acao: 'presentear_gemas', destinatario_id, gemas }
 //      | { acao: 'terminar_obra', pronto_em } (gasta gemas para terminar na hora a obra que está sendo feita)
 // Publicar com: npx supabase functions deploy cidade --no-verify-jwt (o token é validado no código).
 import {
@@ -102,7 +103,7 @@ import {
   type Temporada,
 } from '../_compartilhado/cidade.ts';
 import { sql, type Transacao } from '../_compartilhado/db.ts';
-import { comprarItem, usarTitulo } from '../_compartilhado/loja.ts';
+import { comprarItem, presentearGemas, publicarArauto, usarTitulo } from '../_compartilhado/loja.ts';
 import { salvarPerfil } from '../_compartilhado/perfil.ts';
 import { fimDoPacto, terrasParaMarchar } from '../_compartilhado/pombos.ts';
 import { testarAviso } from '../_compartilhado/avisos.ts';
@@ -598,6 +599,12 @@ async function executar(jogadorId: string, corpo: Record<string, unknown>): Prom
   }
   if (corpo.acao === 'comprar_item') {
     return { ok: true, ...(await sql.begin((tx) => comprarItem(tx, jogadorId, corpo))) };
+  }
+  if (corpo.acao === 'publicar_arauto') {
+    return { ok: true, ...(await sql.begin((tx) => publicarArauto(tx, jogadorId, corpo.texto))) };
+  }
+  if (corpo.acao === 'presentear_gemas') {
+    return { ok: true, ...(await sql.begin((tx) => presentearGemas(tx, jogadorId, corpo.destinatario_id, corpo.gemas))) };
   }
   if (corpo.acao === 'usar_titulo') {
     return { ok: true, ...(await sql.begin((tx) => usarTitulo(tx, jogadorId, corpo.titulo))) };

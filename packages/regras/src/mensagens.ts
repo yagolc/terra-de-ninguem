@@ -3,7 +3,7 @@ import type { MotivoRecusaAtaque, MotivoRecusaMovimento } from './ataques.ts';
 import type { MotivoRecusaInscricao } from './avisos.ts';
 import { BALANCEAMENTO } from './balanceamento.ts';
 import type { MotivoRecusaCancelamento } from './cancelamento.ts';
-import type { MotivoRecusaCompra, MotivoRecusaTerminarObra } from './loja.ts';
+import type { MotivoRecusaArauto, MotivoRecusaCompra, MotivoRecusaPresente, MotivoRecusaTerminarObra } from './loja.ts';
 import type { MotivoRecusaDestruicao, MotivoRecusaEstrada, MotivoRecusaEstrutura } from './estruturas.ts';
 import type { MotivoRecusaMissao } from './missoes.ts';
 import type { MotivoRecusaNome } from './nome.ts';
@@ -175,6 +175,19 @@ export const MENSAGENS_COMPRA: Record<MotivoRecusaCompra, string> = {
   ja_comprado: 'Você já tem esse item.',
   sem_temporada: 'Esse item vale para a temporada, e nenhuma está em andamento.',
   gemas_insuficientes: 'Gemas insuficientes. Compre mais na loja.',
+};
+
+export const MENSAGENS_ARAUTO: Record<MotivoRecusaArauto, string> = {
+  texto_vazio: 'Escreva o que o arauto vai anunciar.',
+  texto_longo: `O arauto anuncia no máximo ${BALANCEAMENTO.loja.arauto.tamanhoMaximo} letras.`,
+  arauto_no_ar: 'Seu arauto ainda está anunciando. Espere ele terminar para mandar outro.',
+  gemas_insuficientes: 'Gemas insuficientes. Compre mais na loja.',
+};
+
+export const MENSAGENS_PRESENTE: Record<MotivoRecusaPresente, string> = {
+  quantidade_invalida: `Presenteie de 1 a ${BALANCEAMENTO.loja.presenteMaximo} gemas.`,
+  para_si_mesmo: 'Não dá para presentear a si mesmo.',
+  gemas_insuficientes: 'Você não tem todas essas gemas.',
 };
 
 export const MENSAGENS_TITULO: Record<'titulo_nao_comprado', string> = {

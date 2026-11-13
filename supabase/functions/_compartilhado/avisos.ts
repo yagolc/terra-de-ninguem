@@ -244,6 +244,42 @@ export async function coletarAvisos(tx: Transacao, agora: number): Promise<Aviso
     }
   }
 
+  // Loja: presente de gemas, para quem recebeu.
+  const presentes = await tx<{ id: string; destinatario_id: string; gemas: number; remetente: string }[]>`
+    update presentes_gemas p set avisado = true
+     where not p.avisado
+    returning p.id, p.destinatario_id, p.gemas, (select nome from jogadores where id = p.remetente_id) as remetente`;
+  for (const p of presentes) {
+    avisos.push({
+      jogadorId: p.destinatario_id,
+      tipo: 'loja',
+      titulo: `🎁 ${p.remetente} te deu ${p.gemas} ${p.gemas === 1 ? 'gema' : 'gemas'}`,
+      corpo: 'Já estão no seu saldo, na loja (💎).',
+      url: '/#loja',
+      tag: `presente-${p.id}`,
+    });
+  }
+
+  // Arauto novo: para os outros jogadores da temporada (tipo carta, que cada um pode desligar).
+  const arautos = await tx<{ id: string; temporada_id: string; jogador_id: string; texto: string; nome: string }[]>`
+    update arautos a set avisado = true
+     where not a.avisado
+    returning a.id, a.temporada_id, a.jogador_id, a.texto, (select nome from jogadores where id = a.jogador_id) as nome`;
+  for (const a of arautos) {
+    const jogadores = await tx<{ jogador_id: string }[]>`select jogador_id from cidades where temporada_id = ${a.temporada_id}`;
+    for (const j of jogadores) {
+      if (j.jogador_id === a.jogador_id) continue;
+      avisos.push({
+        jogadorId: j.jogador_id,
+        tipo: 'carta',
+        titulo: `📯 O arauto de ${a.nome} anuncia`,
+        corpo: resumo(a.texto),
+        url: '/#mapa',
+        tag: `arauto-${a.id}`,
+      });
+    }
+  }
+
   // Loja: gemas creditadas, para quem comprou.
   const creditados = await tx<{ id: string; jogador_id: string; gemas: number }[]>`
     update pedidos_gemas p set credito_avisado = true

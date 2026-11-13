@@ -110,6 +110,57 @@ export function verificarTitulo(titulo: unknown, desbloqueios: Desbloqueios): Ve
   return t ? { ok: true, titulo: t } : { ok: false, motivo: 'titulo_nao_comprado' };
 }
 
+// ---------------------------------------------------------------------------------------------------------------
+// Arauto (mensagem pública no mapa) e presente de gemas.
+
+/** Preço do próximo arauto depois de `usos` na temporada: base, 2×, 4×… */
+export function precoArauto(usos: number): number {
+  return BALANCEAMENTO.loja.arauto.precoBase * 2 ** Math.max(0, Math.floor(usos));
+}
+
+/** Texto do arauto numa linha só, sem espaços repetidos nem nas pontas. */
+export function limparTextoArauto(texto: unknown): string {
+  return String(texto ?? '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export type MotivoRecusaArauto = 'texto_vazio' | 'texto_longo' | 'arauto_no_ar' | 'gemas_insuficientes';
+
+/**
+ * Confere um arauto novo: texto de 1 a `tamanhoMaximo` letras, nenhum arauto do jogador ainda no ar (`noArAte`,
+ * o fim do último) e saldo para o preço (que dobra com os `usos` da temporada). Devolve até quando fica no ar.
+ */
+export function verificarArauto(entrada: {
+  texto: unknown;
+  saldo: number;
+  usos: number;
+  noArAte: number | null;
+  agora: number;
+}): Verificacao<{ texto: string; preco: number; ate: number }, MotivoRecusaArauto> {
+  const texto = limparTextoArauto(entrada.texto);
+  const { tamanhoMaximo, duracaoHoras } = BALANCEAMENTO.loja.arauto;
+  if (texto.length === 0) return { ok: false, motivo: 'texto_vazio' };
+  if ([...texto].length > tamanhoMaximo) return { ok: false, motivo: 'texto_longo' };
+  if (entrada.noArAte !== null && entrada.noArAte > entrada.agora) return { ok: false, motivo: 'arauto_no_ar' };
+  const preco = precoArauto(entrada.usos);
+  if (entrada.saldo < preco) return { ok: false, motivo: 'gemas_insuficientes' };
+  return { ok: true, texto, preco, ate: entrada.agora + duracaoHoras * 3600_000 };
+}
+
+export type MotivoRecusaPresente = 'quantidade_invalida' | 'para_si_mesmo' | 'gemas_insuficientes';
+
+/** Presente de gemas: número inteiro de 1 a `presenteMaximo`, para outro jogador, e dentro do saldo. */
+export function verificarPresente(entrada: { gemas: unknown; saldo: number; paraSiMesmo: boolean }): Verificacao<{ gemas: number }, MotivoRecusaPresente> {
+  const gemas = entrada.gemas;
+  if (typeof gemas !== 'number' || !Number.isInteger(gemas) || gemas < 1 || gemas > BALANCEAMENTO.loja.presenteMaximo) {
+    return { ok: false, motivo: 'quantidade_invalida' };
+  }
+  if (entrada.paraSiMesmo) return { ok: false, motivo: 'para_si_mesmo' };
+  if (entrada.saldo < gemas) return { ok: false, motivo: 'gemas_insuficientes' };
+  return { ok: true, gemas };
+}
+
 export type MotivoRecusaTerminarObra = 'sem_obra' | 'item_invalido' | 'predio_proibido' | 'nivel_alto' | 'gemas_insuficientes';
 
 /**

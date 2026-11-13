@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import Bandeira from '../componentes/Bandeira';
 import EditorPerfil from '../componentes/EditorPerfil';
 import PainelAvisos from '../componentes/PainelAvisos';
+import PresentearGemas from '../componentes/PresentearGemas';
 import { RACAS_INFO } from '../lib/textos';
 import { usePerfil, type TemporadaDoPerfil } from '../lib/usePerfil';
 
@@ -105,6 +106,7 @@ export default function Perfil({ jogadorId, meuId, onNomeMudou }: Props) {
               🕊️ Enviar carta
             </a>
           )}
+          {!meu && <PresentearGemas jogadorId={jogadorId} nome={dados.nome} />}
         </div>
       </section>
 

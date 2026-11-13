@@ -68,6 +68,20 @@ export default function Mapa({ sessao }: { sessao: Session }) {
       <CanvasMapa dados={dados} meuId={meuId} selecionado={selecionado} onSelecionar={selecionar} />
 
       <div className="pointer-events-none absolute left-3 top-3 max-w-[calc(100%-1.5rem)] space-y-2 md:max-w-[60%]">
+        {dados.arautos
+          .filter((a) => a.ate > agora)
+          .map((a) => {
+            const jogador = dados.jogadores.get(a.jogadorId);
+            return (
+              <p
+                key={a.id}
+                className="break-words rounded-lg border-2 bg-noite/90 px-3 py-1.5 text-xs backdrop-blur"
+                style={{ borderColor: jogador ? corDoJogador(jogador) : undefined }}
+              >
+                📯 <b className="text-ouro-claro">{a.jogadorId === meuId ? 'Seu arauto' : `Arauto de ${jogador?.nome ?? 'alguém'}`}:</b> {a.texto}
+              </p>
+            );
+          })}
         {monopolio && (
           <p
             role="status"

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { formatarReais, pixConfigurado } from '../lib/pix';
 import { useGemas } from '../lib/useGemas';
 import ItensLoja from './ItensLoja';
+import PainelArauto from './PainelArauto';
 import PixDoPedido from './PixDoPedido';
 
 const STATUS: Record<string, string> = { pendente: '⏳ esperando o Pix ser conferido', pago: '✅ creditado' };
@@ -12,20 +13,22 @@ const STATUS: Record<string, string> = { pendente: '⏳ esperando o Pix ser conf
  * na hora a obra que está sendo feita (até o nível 7, nunca a Muralha), com o preço dobrando a cada uso na temporada.
  */
 export default function PainelLoja() {
-  const { gemas, pedir, cancelarPedido, comprar, usarTitulo } = useGemas();
+  const { gemas, pedir, cancelarPedido, comprar, usarTitulo, publicarArauto } = useGemas();
   const [aberto, setAberto] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [mensagem, setMensagem] = useState<{ texto: string; erro: boolean } | null>(null);
   const { precoBase, nivelMaximo } = BALANCEAMENTO.loja.terminarObra;
 
-  async function fazer(acao: () => Promise<void>, sucesso?: string) {
+  async function fazer(acao: () => Promise<void>, sucesso?: string): Promise<boolean> {
     setOcupado(true);
     setMensagem(null);
     try {
       await acao();
       if (sucesso) setMensagem({ texto: sucesso, erro: false });
+      return true;
     } catch (e) {
       setMensagem({ texto: e instanceof Error ? e.message : 'Não deu certo. Tente de novo.', erro: true });
+      return false;
     } finally {
       setOcupado(false);
     }
@@ -65,6 +68,13 @@ export default function PainelLoja() {
         ocupado={ocupado}
         onComprar={(item, variante) => void fazer(() => comprar(item, variante), '💎 Comprado!')}
         onUsarTitulo={(titulo) => void fazer(() => usarTitulo(titulo), titulo ? 'Título em uso.' : 'Título tirado.')}
+      />
+
+      <PainelArauto
+        gemas={gemas}
+        agora={Date.now()}
+        ocupado={ocupado}
+        onPublicar={(texto) => fazer(() => publicarArauto(texto), '📯 Arauto anunciando no mapa!')}
       />
 
       <h4 className="font-titulo text-ouro">Gemas</h4>
@@ -132,6 +142,23 @@ export default function PainelLoja() {
             </li>
           ))}
         </ul>
+      )}
+      {gemas.presentes.length > 0 && (
+        <div className="space-y-1 border-t border-couro/60 pt-2">
+          <h4 className="font-titulo text-ouro">🎁 Presentes</h4>
+          <ul className="space-y-0.5 text-sm">
+            {gemas.presentes.map((p) => (
+              <li key={p.id} className="text-pergaminho-escuro">
+                {p.enviado ? `Você deu ${p.gemas} 💎 a ` : `Você ganhou ${p.gemas} 💎 de `}
+                <a href={`#perfil=${p.outroId}`} className="text-pergaminho hover:underline">
+                  {p.outroNome}
+                </a>{' '}
+                · {new Date(p.criadoEm).toLocaleDateString('pt-BR')}
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-pergaminho-escuro">Para dar gemas, abra o perfil do jogador.</p>
+        </div>
       )}
     </section>
   );
