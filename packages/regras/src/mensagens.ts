@@ -2,7 +2,7 @@
 import type { MotivoRecusaAtaque, MotivoRecusaMovimento } from './ataques.ts';
 import type { MotivoRecusaInscricao } from './avisos.ts';
 import type { MotivoRecusaCancelamento } from './cancelamento.ts';
-import type { MotivoRecusaEstrada, MotivoRecusaEstrutura } from './estruturas.ts';
+import type { MotivoRecusaDestruicao, MotivoRecusaEstrada, MotivoRecusaEstrutura } from './estruturas.ts';
 import type { MotivoRecusaMissao } from './missoes.ts';
 import type { MotivoRecusaNome } from './nome.ts';
 import type { MotivoRecusaPerfil } from './perfil.ts';
@@ -28,6 +28,7 @@ export const MENSAGENS_ALOCACAO: Record<MotivoRecusaAlocacao, string> = {
 };
 
 export const MENSAGENS_TREINO: Record<MotivoRecusaTreino, string> = {
+  sem_acampamento: 'Esse território não tem um acampamento militar seu pronto.',
   quantidade_invalida: 'Quantidade de tropas inválida.',
   fila_cheia: 'A fila do quartel está cheia. Espere um lote terminar.',
   sem_quartel: 'Construa um Quartel primeiro.',
@@ -67,8 +68,15 @@ export const MENSAGENS_RECONHECIMENTO: Record<MotivoRecusaReconhecimento, string
 
 export const MENSAGENS_ESTRUTURA: Record<MotivoRecusaEstrutura, string> = {
   territorio_invalido: 'Só dá para construir em territórios seus.',
-  ja_tem_estrutura: 'Esse território já tem uma estrutura. É uma por território.',
+  ja_tem_estrutura: 'Esse território já tem uma estrutura. É uma por território: destrua a atual para construir outra.',
   recursos_insuficientes: 'Recursos insuficientes.',
+  acampamento_na_cidade: 'O acampamento militar vai num território conquistado, não na cidade (ela já tem o Quartel).',
+  limite_acampamentos: 'Você já tem um acampamento militar. Destrua o atual para fazer outro.',
+};
+
+export const MENSAGENS_DESTRUICAO: Record<MotivoRecusaDestruicao, string> = {
+  territorio_invalido: 'Só dá para destruir estruturas nos seus territórios.',
+  sem_estrutura: 'Esse território não tem uma estrutura sua.',
 };
 
 export const MENSAGENS_ESTRADA: Record<MotivoRecusaEstrada, string> = {

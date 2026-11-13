@@ -73,6 +73,12 @@ export const ESTRUTURAS_INFO: Record<TipoEstrutura, { nome: string; icone: strin
     icone: '🪵',
     descricao: `+${Math.round(BALANCEAMENTO.bonusPalicada * 100)}% de defesa neste território (na cidade, soma com a muralha).`,
   },
+  acampamento: {
+    nome: 'Acampamento militar',
+    icone: '⛺',
+    descricao:
+      'O Quartel da cidade pode treinar tropas que ficam prontas aqui, já na frente de batalha. Só em território conquistado, um por jogador.',
+  },
   entreposto: {
     nome: 'Entreposto',
     icone: '🏪',

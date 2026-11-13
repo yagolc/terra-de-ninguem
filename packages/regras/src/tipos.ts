@@ -13,7 +13,7 @@ export type TipoPredio = (typeof TIPOS_PREDIO)[number];
 export type NiveisPredios = Record<TipoPredio, number>;
 
 /** Estruturas que se constroem nos territórios (uma por território). */
-export const TIPOS_ESTRUTURA = ['torre', 'palicada', 'entreposto'] as const;
+export const TIPOS_ESTRUTURA = ['torre', 'palicada', 'entreposto', 'acampamento'] as const;
 export type TipoEstrutura = (typeof TIPOS_ESTRUTURA)[number];
 
 /** Povoados neutros dentro de territórios: vilas (pequenas, várias) e cidades livres (grandes, poucas). */

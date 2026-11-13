@@ -12,7 +12,6 @@ import {
   verificarTreino,
   type EstadoCidade,
   type Exercito,
-  type LoteTreino,
   type TipoUnidade,
 } from '@terra/regras';
 import { useState } from 'react';
@@ -20,16 +19,19 @@ import { imagemDoTreino } from '../lib/arte';
 import Ilustracao from './Ilustracao';
 import { RECURSOS_INFO, UNIDADES_INFO, formatarDuracao, formatarNumero, formatarTaxa, listarRecursos } from '../lib/textos';
 import JanelaConfirmacao from './JanelaConfirmacao';
+import type { Acampamento, LoteNaFila } from '../lib/useCidade';
 
 type Props = {
   cidade: EstadoCidade;
   tropas: Exercito;
   emMarcha: Exercito;
-  fila: LoteTreino[];
+  fila: LoteNaFila[];
+  /** Acampamento militar do jogador: os lotes podem ficar prontos lá em vez de na cidade. */
+  acampamento: Acampamento | null;
   soldados: number;
   agora: number;
   ocupado: boolean;
-  onTreinar: (tipo: TipoUnidade, quantidade: number) => void;
+  onTreinar: (tipo: TipoUnidade, quantidade: number, noAcampamento: boolean) => void;
   /** Cancela o lote que termina em `prontoEm` (depois da confirmação). */
   onCancelar: (prontoEm: number) => void;
 };
@@ -42,8 +44,11 @@ function maximoTreinavel(cidade: EstadoCidade, tipo: TipoUnidade, soldados: numb
 }
 
 /** Exército do jogador e treino de tropas no quartel. */
-export default function PainelQuartel({ cidade, tropas, emMarcha, fila, soldados, agora, ocupado, onTreinar, onCancelar }: Props) {
+export default function PainelQuartel({ cidade, tropas, emMarcha, fila, acampamento, soldados, agora, ocupado, onTreinar, onCancelar }: Props) {
   const [tipo, setTipo] = useState<TipoUnidade>('lanceiro');
+  const [noAcampamento, setNoAcampamento] = useState(false);
+  const acampamentoPronto = !!acampamento && acampamento.prontoEm <= agora;
+  const destinoAcampamento = noAcampamento && acampamentoPronto;
   const [quantidade, setQuantidade] = useState(1);
   // Posição na fila do lote que o jogador quer cancelar (abre a confirmação).
   const [aCancelar, setACancelar] = useState<number | null>(null);
@@ -58,7 +63,7 @@ export default function PainelQuartel({ cidade, tropas, emMarcha, fila, soldados
   }
 
   const maximo = maximoTreinavel(cidade, tipo, soldados);
-  const verificacao = verificarTreino({ cidade, tipo, quantidade, soldados, fila, agora });
+  const verificacao = verificarTreino({ cidade, tipo, quantidade, soldados, fila, agora, ...(destinoAcampamento ? { noAcampamento: { pronto: true } } : {}) });
   const custo = custoTreino(tipo, quantidade);
   const atributos = BALANCEAMENTO.unidades[tipo];
   const imagem = imagemDoTreino(tipo);
@@ -155,8 +160,32 @@ export default function PainelQuartel({ cidade, tropas, emMarcha, fila, soldados
         {verificacao.ok && <span className="text-pergaminho-escuro">⏱ pronto em {formatarDuracao(verificacao.prontoEm - agora)}</span>}
       </div>
 
+      {acampamento && (
+        <fieldset className="mt-3 rounded-lg border border-couro bg-noite/50 p-2.5 text-sm">
+          <legend className="px-1 text-xs text-pergaminho-escuro">Ficam prontos em</legend>
+          <div className="flex flex-wrap gap-x-4">
+            <label className="flex items-center gap-2">
+              <input type="radio" name="destino-treino" checked={!destinoAcampamento} onChange={() => setNoAcampamento(false)} className="accent-[#d4a64a]" />
+              🏰 Cidade
+            </label>
+            <label className={`flex items-center gap-2 ${acampamentoPronto ? '' : 'opacity-50'}`}>
+              <input
+                type="radio"
+                name="destino-treino"
+                checked={destinoAcampamento}
+                disabled={!acampamentoPronto}
+                onChange={() => setNoAcampamento(true)}
+                className="accent-[#d4a64a]"
+              />
+              ⛺ {acampamento.nome}
+              {!acampamentoPronto && <span className="text-xs text-pergaminho-escuro">(pronto em {formatarDuracao(acampamento.prontoEm - agora)})</span>}
+            </label>
+          </div>
+        </fieldset>
+      )}
+
       <button
-        onClick={() => onTreinar(tipo, quantidade)}
+        onClick={() => onTreinar(tipo, quantidade, destinoAcampamento)}
         disabled={!verificacao.ok || ocupado}
         className="mt-3 w-full rounded-lg bg-ouro px-3 py-2 text-sm font-semibold text-noite hover:bg-ouro-claro disabled:cursor-not-allowed disabled:bg-couro disabled:text-pergaminho-escuro"
       >
@@ -179,6 +208,11 @@ export default function PainelQuartel({ cidade, tropas, emMarcha, fila, soldados
               <li key={`${lote.prontoEm}-${i}`} className="flex items-center gap-2 rounded-md bg-noite/60 px-2.5 py-1.5">
                 <span className="flex-1">
                   {UNIDADES_INFO[lote.tipo].icone} {lote.quantidade} {UNIDADES_INFO[lote.tipo].plural.toLowerCase()}
+                  {lote.territorioId && (
+                    <span className="block text-xs text-pergaminho-escuro">
+                      ⛺ no acampamento{acampamento?.territorioId === lote.territorioId ? ` em ${acampamento.nome}` : ''}
+                    </span>
+                  )}
                 </span>
                 <span className="tabular-nums text-pergaminho-escuro">{formatarDuracao(lote.prontoEm - agora)}</span>
                 <button

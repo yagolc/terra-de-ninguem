@@ -213,7 +213,14 @@ export const BALANCEAMENTO = {
     torre: { custo: { comida: 80, madeira: 0, ouro: 40 }, tempoMin: 20 },
     palicada: { custo: { comida: 150, madeira: 0, ouro: 60 }, tempoMin: 30 },
     entreposto: { custo: { comida: 120, madeira: 0, ouro: 50 }, tempoMin: 30 },
+    // Recruta tropas direto na frente de batalha: caro de propósito (desde a temporada 5).
+    acampamento: { custo: { comida: 300, madeira: 400, ouro: 200 }, tempoMin: 120 },
   } satisfies Record<TipoEstrutura, { custo: Recursos; tempoMin: number }>,
+  /**
+   * Acampamento militar: só em território conquistado (nunca na cidade principal) e no máximo tantos por jogador.
+   * O Quartel da cidade treina e as tropas ficam prontas lá; os soldados saem da população da cidade como sempre.
+   */
+  acampamento: { maximoPorJogador: 1 },
   /** Bônus de defesa da paliçada no território dela (soma com a muralha na cidade). */
   bonusPalicada: 0.2,
   /**

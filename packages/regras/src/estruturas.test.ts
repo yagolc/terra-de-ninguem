@@ -8,6 +8,7 @@ import {
   multiplicadorEstrada,
   tempoEstradaMs,
   tempoEstruturaMs,
+  verificarDestruicaoEstrutura,
   verificarEstrada,
   verificarEstrutura,
 } from './estruturas.ts';
@@ -16,7 +17,7 @@ import { TIPOS_ESTRUTURA } from './tipos.ts';
 import { MINUTO_MS, exercito } from './util.ts';
 
 const AGORA = 1_000_000;
-const RICO = { comida: 1000, madeira: 0, ouro: 1000 };
+const RICO = { comida: 1000, madeira: 1000, ouro: 1000 };
 
 describe('verificarEstrutura', () => {
   it('constrói em território próprio sem estrutura, cobrando o custo e marcando o fim da obra', () => {
@@ -26,8 +27,32 @@ describe('verificarEstrutura', () => {
     }
   });
 
-  it('as estruturas custam só comida e ouro', () => {
-    for (const tipo of TIPOS_ESTRUTURA) expect(custoEstrutura(tipo).madeira).toBe(0);
+  it('torre, paliçada e entreposto custam só comida e ouro; o acampamento é o mais caro de todos', () => {
+    for (const tipo of TIPOS_ESTRUTURA) if (tipo !== 'acampamento') expect(custoEstrutura(tipo).madeira).toBe(0);
+    const total = (t: (typeof TIPOS_ESTRUTURA)[number]) => Object.values(custoEstrutura(t)).reduce((s, v) => s + v, 0);
+    for (const tipo of TIPOS_ESTRUTURA) if (tipo !== 'acampamento') expect(total('acampamento')).toBeGreaterThan(3 * total(tipo));
+  });
+
+  it('acampamento: nunca na cidade principal e no máximo um por jogador', () => {
+    const base = { tipo: 'acampamento' as const, territorioDoJogador: true, jaTemEstrutura: false, recursos: RICO, agora: AGORA };
+    expect(verificarEstrutura(base)).toMatchObject({ ok: true });
+    expect(verificarEstrutura({ ...base, cidadePrincipal: true })).toEqual({ ok: false, motivo: 'acampamento_na_cidade' });
+    expect(BALANCEAMENTO.acampamento.maximoPorJogador).toBe(1);
+    expect(verificarEstrutura({ ...base, acampamentosDoJogador: 1 })).toEqual({ ok: false, motivo: 'limite_acampamentos' });
+    // As outras estruturas continuam podendo ir na cidade.
+    expect(verificarEstrutura({ ...base, tipo: 'torre', cidadePrincipal: true, acampamentosDoJogador: 1 })).toMatchObject({ ok: true });
+  });
+
+  it('destruir: só a estrutura do próprio jogador, no território dele', () => {
+    expect(verificarDestruicaoEstrutura({ territorioDoJogador: true, estruturaDoJogador: true })).toEqual({ ok: true });
+    expect(verificarDestruicaoEstrutura({ territorioDoJogador: false, estruturaDoJogador: true })).toEqual({
+      ok: false,
+      motivo: 'territorio_invalido',
+    });
+    expect(verificarDestruicaoEstrutura({ territorioDoJogador: true, estruturaDoJogador: false })).toEqual({
+      ok: false,
+      motivo: 'sem_estrutura',
+    });
   });
 
   it('recusa território alheio, território que já tem estrutura e falta de recursos', () => {

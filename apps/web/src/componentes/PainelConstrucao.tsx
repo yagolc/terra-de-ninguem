@@ -8,12 +8,16 @@ import Ilustracao from './Ilustracao';
 type Props = {
   territorioId: string;
   meuId: string;
+  /** É a cidade principal (o acampamento militar não vai nela). */
+  cidadePrincipal: boolean;
+  /** O jogador já tem um acampamento militar (pronto ou em obra). */
+  temAcampamento: boolean;
   /** Obra iniciada: mostra o aviso e relê o mapa. */
   onConstruido: (mensagem: string) => void;
 };
 
-/** Seção "Construir" de um território do jogador sem estrutura: as três opções com custo, tempo e o que falta. */
-export default function PainelConstrucao({ territorioId, meuId, onConstruido }: Props) {
+/** Seção "Construir" de um território do jogador sem estrutura: as opções com custo, tempo e o que falta. */
+export default function PainelConstrucao({ territorioId, meuId, cidadePrincipal, temAcampamento, onConstruido }: Props) {
   const { cidade, comandar } = useCidade(meuId);
   const [enviando, setEnviando] = useState<TipoEstrutura | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -34,7 +38,9 @@ export default function PainelConstrucao({ territorioId, meuId, onConstruido }: 
   return (
     <section>
       <h3 className="mb-1 text-sm text-pergaminho-escuro">Construir (uma estrutura por território)</h3>
-      <p className="mb-2 text-xs text-pergaminho-escuro/80">Se o território for conquistado, a estrutura é destruída.</p>
+      <p className="mb-2 text-xs text-pergaminho-escuro/80">
+        Se o território for conquistado, a estrutura é destruída. Você também pode destruir a sua para trocar por outra.
+      </p>
       <ul className="space-y-2">
         {TIPOS_ESTRUTURA.map((tipo) => {
           const info = ESTRUTURAS_INFO[tipo];
@@ -42,6 +48,14 @@ export default function PainelConstrucao({ territorioId, meuId, onConstruido }: 
           const faltam = cidade ? recursosQueFaltam(cidade.recursos, custo) : custo;
           const falta = RECURSOS.filter((r) => faltam[r] > 0);
           const imagem = imagemDaEstrutura(tipo);
+          const bloqueio =
+            tipo !== 'acampamento'
+              ? null
+              : cidadePrincipal
+                ? 'Só em território conquistado: a cidade já tem o Quartel.'
+                : temAcampamento
+                  ? 'Você já tem um acampamento militar (um por jogador).'
+                  : null;
           return (
             <li key={tipo} className="rounded-lg border border-couro bg-noite/50 p-3 text-sm">
               <div className="flex items-center gap-3">
@@ -61,14 +75,15 @@ export default function PainelConstrucao({ territorioId, meuId, onConstruido }: 
                 {' · ⏱ '}
                 {formatarDuracao(tempoEstruturaMs(tipo))}
               </p>
-              {cidade && falta.length > 0 && (
+              {bloqueio && <p className="mt-1 text-xs text-pergaminho-escuro">{bloqueio}</p>}
+              {cidade && !bloqueio && falta.length > 0 && (
                 <p className="mt-1 text-xs text-red-300 tabular-nums">
                   Faltam {falta.map((r) => `${formatarNumero(Math.ceil(faltam[r]))} ${RECURSOS_INFO[r].icone}`).join(' · ')}
                 </p>
               )}
               <button
                 onClick={() => void construir(tipo)}
-                disabled={!cidade || falta.length > 0 || enviando !== null}
+                disabled={!cidade || !!bloqueio || falta.length > 0 || enviando !== null}
                 className="mt-2 w-full rounded-lg border border-ouro/60 px-3 py-1.5 text-sm font-semibold text-ouro hover:bg-ouro/10 disabled:cursor-not-allowed disabled:border-couro disabled:text-pergaminho-escuro"
               >
                 {enviando === tipo ? 'Construindo…' : `Construir ${info.nome.toLowerCase()}`}

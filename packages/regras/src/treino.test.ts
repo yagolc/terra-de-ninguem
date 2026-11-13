@@ -36,6 +36,12 @@ describe('verificarTreino', () => {
     expect(r).toEqual({ ok: true, custo: custoTreino('lanceiro', 5), tempoMs, prontoEm: tempoMs });
   });
 
+  it('lote para o acampamento só com um acampamento pronto; o resto vale igual', () => {
+    const base = { cidade: cidadeComQuartel(), tipo: 'lanceiro' as const, quantidade: 5, soldados: 0, fila: [], agora: 0 };
+    expect(verificarTreino({ ...base, noAcampamento: { pronto: false } })).toEqual({ ok: false, motivo: 'sem_acampamento' });
+    expect(verificarTreino({ ...base, noAcampamento: { pronto: true } })).toEqual(verificarTreino(base));
+  });
+
   it('o lote novo começa quando o último da fila terminar', () => {
     const fila = [{ tipo: 'arqueiro' as const, quantidade: 2, prontoEm: 500_000 }];
     const r = verificarTreino({ cidade: cidadeComQuartel(), tipo: 'lanceiro', quantidade: 1, soldados: 2, fila, agora: 100_000 });

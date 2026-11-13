@@ -317,11 +317,11 @@ async function buscarMapa(): Promise<DadosMapa | null> {
     // O RLS devolve só a própria cidade.
     supabase
       .from('cidades')
-      .select('territorio_id, filas_treino(tipo_unidade, quantidade, pronto_em)')
+      .select('territorio_id, filas_treino(tipo_unidade, quantidade, pronto_em, territorio_id)')
       .eq('temporada_id', temporada.id)
       .maybeSingle<{
         territorio_id: string | null;
-        filas_treino: { tipo_unidade: TipoUnidade; quantidade: number; pronto_em: string }[];
+        filas_treino: { tipo_unidade: TipoUnidade; quantidade: number; pronto_em: string; territorio_id: string | null }[];
       }>(),
     buscarReconhecimentos(temporada.id),
     // Tipo e prazo só nas estruturas do próprio jogador; nas outras, nulos (o batedor descobre).
@@ -396,17 +396,15 @@ async function buscarMapa(): Promise<DadosMapa | null> {
   if (territorios.data.length === 0) return null;
 
   // Tropas paradas, mais os lotes de treino que já ficaram prontos e o servidor ainda não gravou
-  // (ele grava em até um minuto): entram no território da cidade, como a tela Cidade já mostra.
+  // (ele grava em até um minuto): entram no território da cidade ou do acampamento militar, como no servidor.
   const minhasTropas = new Map(tropas.data.map(({ territorio_id, ...t }) => [territorio_id, exercito(t)]));
   const cidade = minhaCidade.data;
   if (cidade?.territorio_id) {
-    const prontos = cidade.filas_treino.filter((l) => Date.parse(l.pronto_em) <= Date.now());
-    if (prontos.length > 0) {
-      const atual = minhasTropas.get(cidade.territorio_id) ?? exercito();
-      minhasTropas.set(
-        cidade.territorio_id,
-        somarExercitos(atual, ...prontos.map((l) => exercito({ [l.tipo_unidade]: l.quantidade }))),
-      );
+    const eu = territorios.data.find((t) => t.id === cidade.territorio_id)?.dono_id;
+    for (const l of cidade.filas_treino.filter((l) => Date.parse(l.pronto_em) <= Date.now())) {
+      const noAcampamento = l.territorio_id && territorios.data.some((t) => t.id === l.territorio_id && t.dono_id === eu);
+      const destino = noAcampamento ? l.territorio_id! : cidade.territorio_id;
+      minhasTropas.set(destino, somarExercitos(minhasTropas.get(destino) ?? exercito(), exercito({ [l.tipo_unidade]: l.quantidade })));
     }
   }
 

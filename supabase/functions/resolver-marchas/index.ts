@@ -265,6 +265,8 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number, retomada 
     await tx`update territorios set dono_id = ${m.jogador_id} where id = ${destino.id}`;
     // A estrutura e a estrada do território (prontas ou em obra) são destruídas na conquista.
     await tx`delete from estruturas where territorio_id = ${destino.id}`;
+    // Lotes que ficariam prontos no acampamento do território perdido: ficam prontos na cidade do dono antigo.
+    await tx`update filas_treino set territorio_id = null where territorio_id = ${destino.id}`;
     await tx`delete from estradas where territorio_id = ${destino.id}`;
     grupoEm(atacante, destino.id).tropas = batalha.sobreviventesAtacante;
     // Povoado: muda de dono. Neutro, é leal na hora (a vila já vem no nível 1); tomado de outro jogador,

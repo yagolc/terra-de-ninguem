@@ -30,6 +30,7 @@ export default function Cidade({ sessao }: { sessao: Session }) {
     tropas,
     emMarcha,
     fila,
+    acampamento,
     soldados,
     bonus,
     extras,
@@ -67,8 +68,11 @@ export default function Cidade({ sessao }: { sessao: Session }) {
 
   const evoluir = (tipo: TipoPredio) =>
     executar({ acao: 'evoluir_predio', tipo }, `${PREDIOS[tipo].nome} na fila de obras.`);
-  const treinar = (tipo: TipoUnidade, quantidade: number) =>
-    executar({ acao: 'treinar_tropas', tipo, quantidade }, `Treino iniciado: ${quantidade} ${UNIDADES_INFO[tipo].plural.toLowerCase()}.`);
+  const treinar = (tipo: TipoUnidade, quantidade: number, noAcampamento: boolean) =>
+    executar(
+      { acao: 'treinar_tropas', tipo, quantidade, ...(noAcampamento && acampamento ? { territorio_id: acampamento.territorioId } : {}) },
+      `Treino iniciado: ${quantidade} ${UNIDADES_INFO[tipo].plural.toLowerCase()}${noAcampamento && acampamento ? `, prontos no acampamento em ${acampamento.nome}` : ''}.`,
+    );
   const alocar = (alocacao: Recursos) =>
     executar({ acao: 'alocar_trabalhadores', alocacao }, 'Trabalhadores redistribuídos.');
   const recrutar = (nome: string, especialidade: Especialidade) =>
@@ -181,6 +185,7 @@ export default function Cidade({ sessao }: { sessao: Session }) {
             tropas={tropas}
             emMarcha={emMarcha}
             fila={fila}
+            acampamento={acampamento}
             soldados={soldados}
             agora={agora}
             ocupado={ocupado}

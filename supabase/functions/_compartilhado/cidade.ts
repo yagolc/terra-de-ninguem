@@ -123,7 +123,8 @@ export async function criarCidade(tx: Transacao, jogadorId: string, escolha: { r
 }
 
 export type GrupoTropas = { id: string | null; territorioId: string; tropas: Exercito };
-type LoteSalvo = LoteTreino & { id: string };
+/** Lote de treino gravado; `territorioId`: acampamento militar onde fica pronto (null = território da cidade). */
+type LoteSalvo = LoteTreino & { id: string; territorioId: string | null };
 type ObraSalva = Obra & { id: string };
 
 export type CidadeCarregada = {
@@ -153,6 +154,8 @@ export type CidadeCarregada = {
   grupos: GrupoTropas[];
   /** Tropas em marcha: comem e ocupam população, mas não desertam. */
   emMarcha: Exercito;
+  /** Territórios do jogador (um lote só fica pronto num acampamento se o território ainda for dele). */
+  territoriosProprios: Set<string>;
 };
 
 /** Lê e trava a cidade do jogador e as tropas paradas dele até o fim da transação. */
@@ -211,8 +214,10 @@ export async function carregarCidade(tx: Transacao, temporadaId: string, jogador
 
   const linhasObras = await tx<{ id: string; tipo: TipoPredio; pronto_em: Date }[]>`
     select id, tipo, pronto_em from obras where cidade_id = ${linha.id} order by pronto_em`;
-  const linhasFila = await tx<{ id: string; tipo_unidade: TipoUnidade; quantidade: number; pronto_em: Date }[]>`
-    select id, tipo_unidade, quantidade, pronto_em from filas_treino where cidade_id = ${linha.id} order by pronto_em`;
+  const linhasFila = await tx<
+    { id: string; tipo_unidade: TipoUnidade; quantidade: number; pronto_em: Date; territorio_id: string | null }[]
+  >`
+    select id, tipo_unidade, quantidade, pronto_em, territorio_id from filas_treino where cidade_id = ${linha.id} order by pronto_em`;
   const linhasTropas = await tx<{ id: string; territorio_id: string; lanceiro: number; arqueiro: number; cavalaria: number }[]>`
     select id, territorio_id, lanceiro, arqueiro, cavalaria
       from tropas where temporada_id = ${temporadaId} and dono_id = ${jogadorId}
@@ -228,7 +233,13 @@ export async function carregarCidade(tx: Transacao, temporadaId: string, jogador
     jogadorId,
     territorioId: linha.territorio_id,
     obras: linhasObras.map((o) => ({ id: o.id, tipo: o.tipo, prontoEm: o.pronto_em.getTime() })),
-    fila: linhasFila.map((l) => ({ id: l.id, tipo: l.tipo_unidade, quantidade: l.quantidade, prontoEm: l.pronto_em.getTime() })),
+    fila: linhasFila.map((l) => ({
+      id: l.id,
+      tipo: l.tipo_unidade,
+      quantidade: l.quantidade,
+      prontoEm: l.pronto_em.getTime(),
+      territorioId: l.territorio_id,
+    })),
     bonus: somarRecursos(
       bonusDeTerritorios(
         territorios.map((t) => t.bonus_recurso),
@@ -250,6 +261,7 @@ export async function carregarCidade(tx: Transacao, temporadaId: string, jogador
       tropas: exercito({ lanceiro: t.lanceiro, arqueiro: t.arqueiro, cavalaria: t.cavalaria }),
     })),
     emMarcha: exercito(emMarcha),
+    territoriosProprios: new Set(territorios.map((t) => t.id)),
     cidade: {
       recursos: { comida: linha.comida, madeira: linha.madeira, ouro: linha.ouro },
       populacao: linha.populacao,
@@ -275,7 +287,7 @@ export type CidadeAvancada = {
   /** Tropas paradas + em marcha, depois da deserção. */
   tropasTotais: Exercito;
   novaObra: Obra | null;
-  novoLote: LoteTreino | null;
+  novoLote: (LoteTreino & { territorioId: string | null }) | null;
 };
 
 /**
@@ -306,9 +318,11 @@ export function avancarAteAgora(c: CidadeCarregada, agora: number): CidadeAvanca
     novaObra: null,
     novoLote: null,
   };
-  if (c.territorioId) {
-    for (const lote of avancada.lotesConcluidos) {
-      const grupo = grupoEm(resultado, c.territorioId);
+  for (const lote of avancada.lotesConcluidos) {
+    // No acampamento militar, se o território ainda é do jogador; senão, na cidade.
+    const destino = lote.territorioId && c.territoriosProprios.has(lote.territorioId) ? lote.territorioId : c.territorioId;
+    if (destino) {
+      const grupo = grupoEm(resultado, destino);
       grupo.tropas = { ...grupo.tropas, [lote.tipo]: grupo.tropas[lote.tipo] + lote.quantidade };
     }
   }
@@ -379,8 +393,8 @@ export async function salvarCidade(tx: Transacao, c: CidadeAvancada): Promise<vo
   }
   if (c.novoLote) {
     await tx`
-      insert into filas_treino (cidade_id, tipo_unidade, quantidade, pronto_em)
-      values (${id}, ${c.novoLote.tipo}, ${c.novoLote.quantidade}, ${new Date(c.novoLote.prontoEm)})`;
+      insert into filas_treino (cidade_id, tipo_unidade, quantidade, pronto_em, territorio_id)
+      values (${id}, ${c.novoLote.tipo}, ${c.novoLote.quantidade}, ${new Date(c.novoLote.prontoEm)}, ${c.novoLote.territorioId})`;
   }
 }
 

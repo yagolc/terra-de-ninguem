@@ -154,6 +154,7 @@ export async function resolverHorda(id: string): Promise<boolean> {
       // O território volta a ser neutro, com a horda de guarda; quem sobrou do dono recua para a cidade dele.
       await tx`update territorios set dono_id = null where id = ${destino.id}`;
       await tx`delete from estruturas where territorio_id = ${destino.id}`;
+      await tx`update filas_treino set territorio_id = null where territorio_id = ${destino.id}`;
       await tx`delete from estradas where territorio_id = ${destino.id}`;
       grupo.tropas = exercito();
       if (defensor.carregada.territorioId) {

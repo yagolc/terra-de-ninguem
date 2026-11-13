@@ -23,6 +23,11 @@ Lista das mudanças para mandar aos jogadores. Cada temporada nova ganha uma se�
 - **Herói treina em qualquer território** seu onde estiver parado, não só na cidade.
 - **Relatório do batedor:** a análise de quantas tropas conquistam agora conta a muralha da cidade livre e o bônus de raça do dono, igual ao painel do mapa.
 
+### Estruturas
+
+- **Acampamento militar** (⛺, estrutura nova): só em território conquistado, um por jogador. Custa 300 de comida, 400 de madeira e 200 de ouro (2 h de obra). Pronto, o Quartel da cidade pode treinar tropas que **ficam prontas no acampamento**, já na frente de batalha, em vez de marcharem desde a cidade. Os soldados continuam saindo da população da cidade. Se o acampamento cair, os lotes dele ficam prontos na cidade.
+- **Destruir estrutura:** no painel de um território seu, dá para destruir a estrutura (nada do que ela custou volta) e construir outra no lugar.
+
 ### Raças
 
 - **Elfos:** +20% de madeira (era +10%).

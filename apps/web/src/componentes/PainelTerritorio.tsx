@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { origensQueAlcancam } from '../lib/corredor';
 import { chamarFuncao } from '../lib/funcoes';
 import InfoReconhecimento from './InfoReconhecimento';
+import DestruirEstrutura from './DestruirEstrutura';
 import PainelConstrucao from './PainelConstrucao';
 import PainelEstrada from './PainelEstrada';
 import PainelPovoado from './PainelPovoado';
@@ -154,7 +155,7 @@ export default function PainelTerritorio({
               <dd>
                 ❓ Desconhecida
                 <span className="block text-xs text-pergaminho-escuro">
-                  Pode ser torre, paliçada ou entreposto. Mande um batedor para descobrir.
+                  Pode ser torre, paliçada, entreposto ou acampamento militar. Mande um batedor para descobrir.
                 </span>
               </dd>
             )}
@@ -203,7 +204,17 @@ export default function PainelTerritorio({
         </div>
       )}
 
-      {meu && !estrutura && <PainelConstrucao territorioId={t.id} meuId={meuId} onConstruido={onConstruido} />}
+      {meu && estrutura?.tipo && <DestruirEstrutura territorioId={t.id} tipo={estrutura.tipo} onDestruida={onConstruido} />}
+      {meu && !estrutura && (
+        <PainelConstrucao
+          territorioId={t.id}
+          meuId={meuId}
+          cidadePrincipal={t.cidade_principal}
+          // As estruturas dos outros chegam sem tipo: um acampamento com tipo é sempre do próprio jogador.
+          temAcampamento={[...dados.estruturas.values()].some((e) => e.tipo === 'acampamento')}
+          onConstruido={onConstruido}
+        />
+      )}
 
       <PainelEstrada territorioId={t.id} estrada={dados.estradas.get(t.id)} meu={meu} meuId={meuId} agora={agora} onConstruido={onConstruido} />
 

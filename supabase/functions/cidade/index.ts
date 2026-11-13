@@ -1,9 +1,10 @@
 // Edge Function `cidade`: comandos do jogador, validados com o pacote de regras.
 // Corpo: { acao: 'entrar', raca, nome? } (funda a cidade, se ainda não houver, e sorteia o objetivo) | { acao: 'evoluir_predio', tipo } | { acao: 'alocar_trabalhadores', alocacao }
-//      | { acao: 'treinar_tropas', tipo, quantidade }
+//      | { acao: 'treinar_tropas', tipo, quantidade, territorio_id? } (territorio_id: acampamento militar onde fica pronto)
 //      | { acao: 'enviar_marcha', origem_id, destino_id, tipo: 'saque' | 'conquista' | 'movimento', tropas }
 //      | { acao: 'enviar_reconhecimento', origem_id, destino_id }
-//      | { acao: 'construir_estrutura', territorio_id, tipo: 'torre' | 'palicada' | 'entreposto' }
+//      | { acao: 'construir_estrutura', territorio_id, tipo: 'torre' | 'palicada' | 'entreposto' | 'acampamento' }
+//      | { acao: 'destruir_estrutura', territorio_id } (sem devolver nada; abre espaço para outra)
 //      | { acao: 'construir_estrada', territorio_id }
 //      | { acao: 'resgatar_missao', missao }
 //      | { acao: 'cancelar_obra', pronto_em } | { acao: 'cancelar_treino', pronto_em } (devolvem tudo; pronto_em identifica o item)
@@ -21,6 +22,7 @@ import {
   MENSAGENS_ALOCACAO,
   MENSAGENS_ATAQUE,
   MENSAGENS_CARTA,
+  MENSAGENS_DESTRUICAO,
   MENSAGENS_INSCRICAO_AVISOS,
   MENSAGENS_CANCELAMENTO,
   MENSAGENS_ESTRADA,
@@ -58,6 +60,7 @@ import {
   verificarAlocacao,
   verificarAtaque,
   verificarCarta,
+  verificarDestruicaoEstrutura,
   verificarInscricaoAvisos,
   verificarEstrada,
   verificarEstrutura,
@@ -222,6 +225,31 @@ async function enviarMarcha(
   return chegada;
 }
 
+/**
+ * Destrói a estrutura (pronta ou em obra) de um território do jogador, sem devolver nada, para dar lugar a outra.
+ * Se era um acampamento militar, os lotes que ficariam prontos nele passam a ficar prontos na cidade.
+ */
+async function destruirEstrutura(tx: Transacao, temporada: Temporada, c: CidadeAvancada, corpo: Record<string, unknown>) {
+  const territorioId = String(corpo.territorio_id ?? '');
+  if (!UUID.test(territorioId)) throw new ErroDoJogo('Território desconhecido.');
+  const jogadorId = c.carregada.jogadorId;
+  const [territorio] = await tx<{ dono_id: string | null }[]>`
+    select dono_id from territorios where temporada_id = ${temporada.id} and id = ${territorioId}`;
+  const [estrutura] = await tx<{ id: string; tipo: TipoEstrutura; jogador_id: string }[]>`
+    select id, tipo, jogador_id from estruturas where territorio_id = ${territorioId} for update`;
+  const v = verificarDestruicaoEstrutura({
+    territorioDoJogador: territorio?.dono_id === jogadorId,
+    estruturaDoJogador: estrutura?.jogador_id === jogadorId,
+  });
+  if (!v.ok) throw new ErroDoJogo(MENSAGENS_DESTRUICAO[v.motivo]);
+  await tx`delete from estruturas where id = ${estrutura!.id}`;
+  if (estrutura!.tipo === 'acampamento') {
+    await tx`update filas_treino set territorio_id = null where cidade_id = ${c.carregada.id} and territorio_id = ${territorioId}`;
+    for (const lote of c.fila) if (lote.territorioId === territorioId) lote.territorioId = null;
+  }
+  return estrutura!.tipo;
+}
+
 /** Manda um batedor (custa ouro) de um território próprio para um vizinho; ele volta com as informações. */
 async function enviarReconhecimento(
   tx: Transacao,
@@ -272,10 +300,13 @@ async function construirEstrutura(
   const territorioId = String(corpo.territorio_id ?? '');
   if (!TIPOS_ESTRUTURA.includes(tipo)) throw new ErroDoJogo('Estrutura desconhecida.');
   if (!UUID.test(territorioId)) throw new ErroDoJogo('Território desconhecido.');
-  const [territorio] = await tx<{ dono_id: string | null }[]>`
-    select dono_id from territorios where temporada_id = ${temporada.id} and id = ${territorioId}`;
+  const [territorio] = await tx<{ dono_id: string | null; cidade_principal: boolean }[]>`
+    select dono_id, cidade_principal from territorios where temporada_id = ${temporada.id} and id = ${territorioId}`;
   if (!territorio) throw new ErroDoJogo('Território desconhecido.');
   const [existente] = await tx`select 1 from estruturas where territorio_id = ${territorioId}`;
+  const [acampamentos] = await tx<{ n: number }[]>`
+    select count(*)::int as n from estruturas
+     where temporada_id = ${temporada.id} and jogador_id = ${c.carregada.jogadorId} and tipo = 'acampamento'`;
 
   const v = verificarEstrutura({
     tipo,
@@ -283,6 +314,8 @@ async function construirEstrutura(
     jaTemEstrutura: !!existente,
     recursos: c.estado.recursos,
     agora,
+    cidadePrincipal: territorio.cidade_principal,
+    acampamentosDoJogador: acampamentos?.n ?? 0,
   });
   if (!v.ok) throw new ErroDoJogo(MENSAGENS_ESTRUTURA[v.motivo]);
 
@@ -588,10 +621,27 @@ async function executar(jogadorId: string, corpo: Record<string, unknown>): Prom
         const quantidade = Number(corpo.quantidade);
         if (!TIPOS_UNIDADE.includes(tipo)) throw new ErroDoJogo('Unidade desconhecida.');
         if (!c.carregada.territorioId) throw new ErroDoJogo('Sua cidade não tem território nesta temporada.', 409);
-        const v = verificarTreino({ cidade: c.estado, tipo, quantidade, soldados: soldados(c), fila: c.fila, agora });
+        // Pronto num acampamento militar: território do jogador com o acampamento dele já construído.
+        const acampamentoId = corpo.territorio_id ? String(corpo.territorio_id) : null;
+        if (acampamentoId && !UUID.test(acampamentoId)) throw new ErroDoJogo('Território desconhecido.');
+        const [acampamento] = acampamentoId
+          ? await tx<{ ok: boolean }[]>`
+              select true as ok from estruturas e join territorios t on t.id = e.territorio_id
+               where e.territorio_id = ${acampamentoId} and e.tipo = 'acampamento' and e.jogador_id = ${jogadorId}
+                 and e.pronto_em <= ${new Date(agora)} and t.dono_id = ${jogadorId}`
+          : [];
+        const v = verificarTreino({
+          cidade: c.estado,
+          tipo,
+          quantidade,
+          soldados: soldados(c),
+          fila: c.fila,
+          agora,
+          ...(acampamentoId ? { noAcampamento: { pronto: !!acampamento } } : {}),
+        });
         if (!v.ok) throw new ErroDoJogo(MENSAGENS_TREINO[v.motivo]);
         c.estado = { ...c.estado, recursos: subtrairRecursos(c.estado.recursos, v.custo) };
-        c.novoLote = { tipo, quantidade, prontoEm: v.prontoEm };
+        c.novoLote = { tipo, quantidade, prontoEm: v.prontoEm, territorioId: acampamentoId };
         break;
       }
       case 'enviar_reconhecimento': {
@@ -600,6 +650,10 @@ async function executar(jogadorId: string, corpo: Record<string, unknown>): Prom
       }
       case 'construir_estrutura': {
         resultado.pronto_em = new Date(await construirEstrutura(tx, temporada, c, corpo, agora)).toISOString();
+        break;
+      }
+      case 'destruir_estrutura': {
+        resultado.tipo = await destruirEstrutura(tx, temporada, c, corpo);
         break;
       }
       case 'construir_estrada': {

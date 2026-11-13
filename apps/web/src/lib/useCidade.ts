@@ -47,8 +47,14 @@ type LinhaCidade = {
   missoes: string[];
   predios: { tipo: TipoPredio; nivel: number }[];
   obras: { tipo: TipoPredio; pronto_em: string }[];
-  filas_treino: { tipo_unidade: TipoUnidade; quantidade: number; pronto_em: string }[];
+  filas_treino: { tipo_unidade: TipoUnidade; quantidade: number; pronto_em: string; territorio_id: string | null }[];
 };
+
+/** Lote na fila do Quartel; `territorioId`: acampamento militar onde fica pronto (null = cidade). */
+export type LoteNaFila = LoteTreino & { territorioId: string | null };
+
+/** Acampamento militar do jogador (um por jogador), com o nome do território. */
+export type Acampamento = { territorioId: string; nome: string; prontoEm: number };
 
 type TerritorioDoJogador = { id: string; nome: string; terreno: Terreno; bonus_recurso: Recurso };
 type LinhaTropas = { lanceiro: number; arqueiro: number; cavalaria: number };
@@ -61,7 +67,8 @@ type CidadeSalva = {
   tropas: Exercito;
   /** Tropas em marcha: também comem e ocupam população. */
   emMarcha: Exercito;
-  fila: LoteTreino[];
+  fila: LoteNaFila[];
+  acampamento: Acampamento | null;
   /** Território onde fica a cidade (null na temporada de testes, sem mapa). */
   territorio: TerritorioDoJogador | null;
   territorios: number;
@@ -102,6 +109,7 @@ function converter(
   povoados: LinhaPovoado[],
   heroi: LinhaHeroi | null,
   contagens: { batedores: number; construcoes: number },
+  acampamento: Acampamento | null,
 ): CidadeSalva {
   const predios = Object.fromEntries(TIPOS_PREDIO.map((tipo) => [tipo, 0])) as NiveisPredios;
   for (const p of linha.predios) predios[p.tipo] = p.nivel;
@@ -116,7 +124,7 @@ function converter(
     tropas: somarExercitos(exercito(), ...tropas.map((t) => exercito(t))),
     emMarcha: somarExercitos(exercito(), ...marchas.map((m) => exercito(m))),
     fila: linha.filas_treino
-      .map((l) => ({ tipo: l.tipo_unidade, quantidade: l.quantidade, prontoEm: Date.parse(l.pronto_em) }))
+      .map((l) => ({ tipo: l.tipo_unidade, quantidade: l.quantidade, prontoEm: Date.parse(l.pronto_em), territorioId: l.territorio_id }))
       .sort((a, b) => a.prontoEm - b.prontoEm),
     territorio: territorios.find((t) => t.id === linha.territorio_id) ?? null,
     territorios: territorios.length,
@@ -126,6 +134,7 @@ function converter(
     missoes: linha.missoes,
     batedores: contagens.batedores,
     construcoes: contagens.construcoes,
+    acampamento,
     heroi: heroi && {
       nome: heroi.nome,
       especialidade: heroi.especialidade,
@@ -157,7 +166,7 @@ async function buscarCidade(jogadorId: string): Promise<CidadeSalva | null> {
   const { data, error } = await supabase
     .from('cidades')
     .select(
-      'temporada_id, territorio_id, comida, madeira, ouro, populacao, trabalhadores_comida, trabalhadores_madeira, trabalhadores_ouro, atualizado_em, raca, guarda_real, missoes, predios(tipo, nivel), obras(tipo, pronto_em), filas_treino(tipo_unidade, quantidade, pronto_em), temporadas!inner(status)',
+      'temporada_id, territorio_id, comida, madeira, ouro, populacao, trabalhadores_comida, trabalhadores_madeira, trabalhadores_ouro, atualizado_em, raca, guarda_real, missoes, predios(tipo, nivel), obras(tipo, pronto_em), filas_treino(tipo_unidade, quantidade, pronto_em, territorio_id), temporadas!inner(status)',
     )
     .eq('jogador_id', jogadorId)
     .eq('temporadas.status', 'ativa')
@@ -165,7 +174,7 @@ async function buscarCidade(jogadorId: string): Promise<CidadeSalva | null> {
   if (error) throw new Error('Não foi possível carregar sua cidade.');
   if (!data) return null;
 
-  const [territorios, tropas, marchas, entrepostos, povoados, heroi, batedores, estruturas, estradas] = await Promise.all([
+  const [territorios, tropas, marchas, entrepostos, povoados, heroi, batedores, estruturas, estradas, acampamento] = await Promise.all([
     supabase
       .from('territorios')
       .select('id, nome, terreno, bonus_recurso')
@@ -214,6 +223,14 @@ async function buscarCidade(jogadorId: string): Promise<CidadeSalva | null> {
       .eq('tipo', 'reconhecimento'),
     supabase.from('estruturas').select('id', { count: 'exact', head: true }).eq('temporada_id', data.temporada_id).eq('jogador_id', jogadorId),
     supabase.from('estradas').select('id', { count: 'exact', head: true }).eq('temporada_id', data.temporada_id).eq('jogador_id', jogadorId),
+    // Acampamento militar (o RLS só mostra as estruturas do próprio jogador com tipo e prazo).
+    supabase
+      .from('estruturas')
+      .select('territorio_id, pronto_em, territorios(nome)')
+      .eq('temporada_id', data.temporada_id)
+      .eq('jogador_id', jogadorId)
+      .eq('tipo', 'acampamento')
+      .maybeSingle<{ territorio_id: string; pronto_em: string; territorios: { nome: string } | null }>(),
   ]);
   if (!territorios.data || !tropas.data || !marchas.data || !entrepostos.data || !povoados.data) {
     throw new Error('Não foi possível carregar seus territórios e tropas.');
@@ -222,7 +239,9 @@ async function buscarCidade(jogadorId: string): Promise<CidadeSalva | null> {
   return converter(data, territorios.data, tropas.data, marchas.data, comEntreposto, povoados.data, heroi.data, {
     batedores: batedores.count ?? 0,
     construcoes: (estruturas.count ?? 0) + (estradas.count ?? 0),
-  });
+  }, acampamento.data
+    ? { territorioId: acampamento.data.territorio_id, nome: acampamento.data.territorios?.nome ?? 'Acampamento', prontoEm: Date.parse(acampamento.data.pronto_em) }
+    : null);
 }
 
 /**
@@ -309,6 +328,7 @@ export function useCidade(jogadorId: string) {
     tropas: atual && salva ? mapearExercito((t) => Math.max(0, atual.tropas[t] - salva.emMarcha[t])) : exercito(),
     emMarcha: salva?.emMarcha ?? exercito(),
     fila: atual?.treinos ?? [],
+    acampamento: salva?.acampamento ?? null,
     // O herói também é um habitante: conta como soldado na população.
     soldados: atual ? soldadosNaConta(totalUnidades(atual.tropas), atual.treinos) + (salva?.heroi ? 1 : 0) : 0,
     bonus: salva && intendente ? somarRecursos(salva.bonus, intendente.bonusTerritorios, efeitosRaca(salva.raca).producao) : null,

@@ -8,7 +8,7 @@ import { COR_NEUTRA, corDoJogador, type DadosMapa, type JogadorMapa, type Territ
 const ESCALA = 20;
 const CORES_TERRENO = { planicie: 0x7d8a45, floresta: 0x3d5e36, montanha: 0x6e6257 } as const;
 const ICONE_TERRENO = { planicie: '', floresta: '🌲', montanha: '⛰️' } as const;
-const ICONE_ESTRUTURA = { torre: '🗼', palicada: '🪵', entreposto: '🏪' } as const;
+const ICONE_ESTRUTURA = { torre: '🗼', palicada: '🪵', entreposto: '🏪', acampamento: '⛺' } as const;
 const COR_AMEACA = 0xff4d3d;
 const COR_HORDA = 0x9b1b30;
 const ARRASTO_MINIMO = 6;

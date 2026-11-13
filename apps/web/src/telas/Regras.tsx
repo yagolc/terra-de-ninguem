@@ -180,8 +180,9 @@ export default function Regras() {
 
       <Secao icone="🏗️" titulo="Estruturas nos territórios">
         <p>
-          No painel de um território seu (a cidade também conta), construa <b>uma estrutura</b>. Elas custam comida e ouro e não usam a
-          fila de obras da cidade. <b>Se o território for conquistado, a estrutura é destruída.</b>
+          No painel de um território seu (a cidade também conta), construa <b>uma estrutura</b>. Elas não usam a fila de obras da
+          cidade. <b>Se o território for conquistado, a estrutura é destruída.</b> Você também pode <b>destruir a sua</b> (nada do que
+          ela custou volta) para construir outra no lugar.
         </p>
         <ul className="space-y-1">
           {TIPOS_ESTRUTURA.map((t) => (
@@ -191,6 +192,12 @@ export default function Regras() {
             </li>
           ))}
         </ul>
+        <p>
+          ⛺ O <b>acampamento militar</b> só vai em território conquistado (nunca na cidade) e cada jogador tem no máximo{' '}
+          {B.acampamento.maximoPorJogador}. Com ele pronto, o Quartel da cidade escolhe onde o lote fica pronto: na cidade ou no
+          acampamento, já na frente de batalha. Custo, fila e população são os de sempre (os soldados saem da cidade). Se o acampamento
+          cair ou for destruído, os lotes que ficariam prontos nele ficam prontos na cidade.
+        </p>
         <p>
           <b>As estruturas dos outros são secretas:</b> no mapa aparece só um ❓. Para saber qual é (e se já está pronta),
           mande um batedor. A torre não mostra de que tipo são os soldados: para isso, também é preciso um batedor. Quando ela avista alguém, a aba Mapa

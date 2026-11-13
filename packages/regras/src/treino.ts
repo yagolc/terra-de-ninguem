@@ -22,6 +22,7 @@ export function soldadosNaConta(tropas: number, fila: readonly LoteTreino[]): nu
 }
 
 export type MotivoRecusaTreino =
+  | 'sem_acampamento'
   | 'quantidade_invalida'
   | 'fila_cheia'
   | 'sem_quartel'
@@ -40,9 +41,12 @@ export function verificarTreino(entrada: {
   soldados: number;
   fila: readonly LoteTreino[];
   agora: number;
+  /** Lote para ficar pronto num acampamento militar: se ele está pronto e é do jogador (`estruturaAtiva`). */
+  noAcampamento?: { pronto: boolean };
 }): Verificacao<{ custo: Recursos; tempoMs: number; prontoEm: number }, MotivoRecusaTreino> {
   const { cidade, tipo, quantidade, soldados, fila, agora } = entrada;
 
+  if (entrada.noAcampamento && !entrada.noAcampamento.pronto) return { ok: false, motivo: 'sem_acampamento' };
   if (!Number.isInteger(quantidade) || quantidade < 1) return { ok: false, motivo: 'quantidade_invalida' };
   if (cidade.predios.quartel < 1) return { ok: false, motivo: 'sem_quartel' };
   if (fila.length >= BALANCEAMENTO.treino.maxLotesNaFila) return { ok: false, motivo: 'fila_cheia' };
