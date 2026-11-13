@@ -11,6 +11,7 @@ Lista das mudanças para mandar aos jogadores. Cada temporada nova ganha uma se�
 - **Itens visuais** (para sempre): pacote de **bandeiras exclusivas** (10 💎: padrões Divisa, Pala, Aspa, Ponta e Listrada e as formas Estrela de 8, Cruz de Malta, Trevo e Diamante no emblema), **títulos** embaixo do nome no placar e no perfil (5 💎 cada: Mecenas da Coroa, Senhor do Ouro, Lobo da Fronteira e outros) e as cores **ouro real** e **prata** (8 💎 cada).
 - **Destaque da cidade** (5 💎, vale na temporada): sua cidade aparece maior no mapa, com um brilho dourado.
 - **Arauto** (📯): um anúncio seu no alto do mapa, para todos, por 24 h (e no celular de quem tem avisos de carta ligados). Um por vez; custa 3 gemas e dobra a cada arauto na temporada.
+- **Seu nome na Crônica** (📜, 10 💎 por temporada): você vira personagem do capítulo da temporada na Crônica do reino e pode contar como quer ser lembrado.
 - **Presentear gemas** (🎁): no perfil de outro jogador, dê gemas do seu saldo, sem taxa. Serve até para pagar acordos.
 
 ## Temporada 5

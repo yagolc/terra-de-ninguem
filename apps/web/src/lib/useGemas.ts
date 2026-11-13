@@ -145,8 +145,8 @@ export function useGemas() {
   );
 
   const comprar = useCallback(
-    async (item: string, variante?: string) => {
-      await chamarFuncao('cidade', { acao: 'comprar_item', item, ...(variante ? { variante } : {}) });
+    async (item: string, variante?: string, pedido?: string) => {
+      await chamarFuncao('cidade', { acao: 'comprar_item', item, ...(variante ? { variante } : {}), ...(pedido ? { pedido } : {}) });
       await recarregar();
     },
     [recarregar],

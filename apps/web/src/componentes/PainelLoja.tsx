@@ -66,7 +66,7 @@ export default function PainelLoja() {
       <ItensLoja
         gemas={gemas}
         ocupado={ocupado}
-        onComprar={(item, variante) => void fazer(() => comprar(item, variante), '💎 Comprado!')}
+        onComprar={(item, variante, pedido) => void fazer(() => comprar(item, variante, pedido), '💎 Comprado!')}
         onUsarTitulo={(titulo) => void fazer(() => usarTitulo(titulo), titulo ? 'Título em uso.' : 'Título tirado.')}
       />
 

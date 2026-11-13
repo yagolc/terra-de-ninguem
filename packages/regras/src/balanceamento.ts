@@ -360,7 +360,11 @@ export const BALANCEAMENTO = {
       cor_ouro: { preco: 8, escopo: 'permanente' },
       cor_prata: { preco: 8, escopo: 'permanente' },
       destaque_cidade: { preco: 5, escopo: 'temporada' },
+      // Nome na Crônica: o jogador aparece no capítulo desta temporada (escrito à mão pelo organizador).
+      cronica: { preco: 10, escopo: 'temporada' },
     },
+    /** Tamanho máximo do pedido de quem compra a Crônica (como quer ser lembrado). */
+    pedidoCronicaMaximo: 200,
     /**
      * Arauto: mensagem pública no alto do mapa por `duracaoHoras`. Um por jogador no ar; o preço dobra a cada
      * arauto do jogador na temporada (3, 6, 12…).

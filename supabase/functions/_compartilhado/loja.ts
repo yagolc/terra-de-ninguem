@@ -34,6 +34,7 @@ export async function comprarItem(tx: Transacao, jogadorId: string, corpo: Recor
   const v = verificarCompraItem({
     item: corpo.item,
     variante: corpo.variante,
+    pedido: corpo.pedido,
     saldo: saldo?.saldo ?? 0,
     comprados: await itensDoJogador(tx, jogadorId),
     temporadaId: ativa?.id ?? null,
@@ -42,8 +43,8 @@ export async function comprarItem(tx: Transacao, jogadorId: string, corpo: Recor
 
   await tx`update gemas set saldo = saldo - ${v.preco}, atualizado_em = now() where jogador_id = ${jogadorId}`;
   await tx`
-    insert into itens_comprados (jogador_id, item, variante, temporada_id, gemas)
-    values (${jogadorId}, ${v.item}, ${v.variante}, ${v.temporadaId}, ${v.preco})`;
+    insert into itens_comprados (jogador_id, item, variante, temporada_id, gemas, pedido)
+    values (${jogadorId}, ${v.item}, ${v.variante}, ${v.temporadaId}, ${v.preco}, ${v.pedido})`;
   if (v.item === 'titulo') await tx`update jogadores set titulo = ${v.variante} where id = ${jogadorId} and titulo is null`;
   return { item: v.item, variante: v.variante, gemas_gastas: v.preco };
 }

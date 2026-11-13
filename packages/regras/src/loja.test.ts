@@ -106,7 +106,14 @@ describe('verificarCompraItem', () => {
 
   it('compra item permanente pelo preço do balanceamento, sem temporada', () => {
     const r = verificarCompraItem({ ...base, item: 'bandeiras_exclusivas', temporadaId: null });
-    expect(r).toEqual({ ok: true, item: 'bandeiras_exclusivas', variante: null, preco: BALANCEAMENTO.loja.itens.bandeiras_exclusivas.preco, temporadaId: null });
+    expect(r).toEqual({
+      ok: true,
+      item: 'bandeiras_exclusivas',
+      variante: null,
+      preco: BALANCEAMENTO.loja.itens.bandeiras_exclusivas.preco,
+      temporadaId: null,
+      pedido: null,
+    });
   });
 
   it('título precisa de variante válida e cada título é um item', () => {
@@ -128,6 +135,17 @@ describe('verificarCompraItem', () => {
     expect(verificarCompraItem({ ...base, comprados, item: 'destaque_cidade' })).toEqual({ ok: false, motivo: 'ja_comprado' });
     const r = verificarCompraItem({ ...base, comprados, item: 'destaque_cidade', temporadaId: 'temporada-2' });
     expect(r.ok && r.temporadaId).toBe('temporada-2');
+  });
+
+  it('Crônica vale na temporada e leva o pedido limpo, até o tamanho máximo', () => {
+    const r = verificarCompraItem({ ...base, item: 'cronica', pedido: '  O lobo   que nunca\n recuou ' });
+    expect(r).toEqual({ ok: true, item: 'cronica', variante: null, preco: BALANCEAMENTO.loja.itens.cronica.preco, temporadaId: T, pedido: 'O lobo que nunca recuou' });
+    const sem = verificarCompraItem({ ...base, item: 'cronica' });
+    expect(sem.ok && sem.pedido).toBe(null);
+    const longo = 'a'.repeat(BALANCEAMENTO.loja.pedidoCronicaMaximo + 1);
+    expect(verificarCompraItem({ ...base, item: 'cronica', pedido: longo })).toEqual({ ok: false, motivo: 'pedido_longo' });
+    const outro = verificarCompraItem({ ...base, item: 'cor_ouro', pedido: 'ignorado' });
+    expect(outro.ok && outro.pedido).toBe(null);
   });
 
   it('recusa item desconhecido e saldo curto', () => {

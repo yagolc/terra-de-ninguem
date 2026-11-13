@@ -6,11 +6,11 @@ import JanelaConfirmacao from './JanelaConfirmacao';
 type Props = {
   gemas: Gemas;
   ocupado: boolean;
-  onComprar: (item: ItemLoja, variante?: TituloLoja) => void;
+  onComprar: (item: ItemLoja, variante?: TituloLoja, pedido?: string) => void;
   onUsarTitulo: (titulo: TituloLoja | null) => void;
 };
 
-type Compra = { item: ItemLoja; variante?: TituloLoja; nome: string };
+type Compra = { item: ItemLoja; variante?: TituloLoja; nome: string; pedido?: string };
 
 const INFO: Record<Exclude<ItemLoja, 'titulo'>, { nome: string; icone: string; descricao: string }> = {
   bandeiras_exclusivas: {
@@ -24,6 +24,11 @@ const INFO: Record<Exclude<ItemLoja, 'titulo'>, { nome: string; icone: string; d
     nome: 'Destaque da cidade',
     icone: '✨',
     descricao: 'Sua cidade aparece maior no mapa, com um brilho dourado, até o fim desta temporada.',
+  },
+  cronica: {
+    nome: 'Seu nome na Crônica',
+    icone: '📜',
+    descricao: 'Você vira personagem do capítulo desta temporada na Crônica do reino. Conte como quer ser lembrado.',
   },
 };
 
@@ -40,7 +45,7 @@ export default function ItensLoja({ gemas, ocupado, onComprar, onUsarTitulo }: P
         {(Object.keys(INFO) as (keyof typeof INFO)[]).map((item) => {
           const info = INFO[item];
           const comprado = tem(item);
-          const semTemporada = item === 'destaque_cidade' && !gemas.temporadaId;
+          const semTemporada = BALANCEAMENTO.loja.itens[item].escopo === 'temporada' && !gemas.temporadaId;
           return (
             <li key={item} className="flex flex-col gap-2 rounded-lg border border-couro bg-noite/50 p-3 text-sm">
               <p className="flex items-center gap-2 font-semibold text-pergaminho">
@@ -53,7 +58,9 @@ export default function ItensLoja({ gemas, ocupado, onComprar, onUsarTitulo }: P
               </p>
               <p className="flex-1 text-xs text-pergaminho-escuro">{info.descricao}</p>
               {comprado ? (
-                <p className="text-xs text-musgo">✅ {item === 'destaque_cidade' ? 'Ativo nesta temporada' : 'Seu'}</p>
+                <p className="text-xs text-musgo">
+                  ✅ {item === 'destaque_cidade' ? 'Ativo nesta temporada' : item === 'cronica' ? 'Você está no capítulo desta temporada' : 'Seu'}
+                </p>
               ) : (
                 <button
                   disabled={ocupado || semTemporada}
@@ -119,13 +126,29 @@ export default function ItensLoja({ gemas, ocupado, onComprar, onUsarTitulo }: P
           titulo="Comprar?"
           confirmar={gemas.saldo >= preco(compra.item) ? `Comprar por ${preco(compra.item)} 💎` : 'Entendi'}
           onConfirmar={() => {
-            if (gemas.saldo >= preco(compra.item)) onComprar(compra.item, compra.variante);
+            if (gemas.saldo >= preco(compra.item)) onComprar(compra.item, compra.variante, compra.pedido);
           }}
           onFechar={() => setCompra(null)}
         >
           <p>
             <b>{compra.nome}</b> por <b>{preco(compra.item)} gemas</b> (você tem {gemas.saldo}).
           </p>
+          {compra.item === 'cronica' && (
+            <label className="block space-y-1">
+              <span className="text-sm">Como quer ser lembrado? (opcional)</span>
+              <textarea
+                value={compra.pedido ?? ''}
+                onChange={(e) => setCompra({ ...compra, pedido: e.target.value })}
+                rows={3}
+                maxLength={BALANCEAMENTO.loja.pedidoCronicaMaximo}
+                placeholder="O lobo do norte que nunca recuou e traiu o próprio irmão por uma vila."
+                className="w-full rounded-lg border border-couro bg-noite px-3 py-2 text-sm text-pergaminho focus:border-ouro focus:outline-none"
+              />
+              <span className="block text-right text-xs text-pergaminho-escuro">
+                O capítulo sai quando a temporada acabar.
+              </span>
+            </label>
+          )}
           {gemas.saldo < preco(compra.item) && <p className="text-red-300">Gemas insuficientes: compre um pacote acima.</p>}
         </JanelaConfirmacao>
       )}

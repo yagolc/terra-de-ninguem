@@ -175,6 +175,7 @@ export const MENSAGENS_COMPRA: Record<MotivoRecusaCompra, string> = {
   ja_comprado: 'Você já tem esse item.',
   sem_temporada: 'Esse item vale para a temporada, e nenhuma está em andamento.',
   gemas_insuficientes: 'Gemas insuficientes. Compre mais na loja.',
+  pedido_longo: `Conte como quer ser lembrado em até ${BALANCEAMENTO.loja.pedidoCronicaMaximo} letras.`,
 };
 
 export const MENSAGENS_ARAUTO: Record<MotivoRecusaArauto, string> = {

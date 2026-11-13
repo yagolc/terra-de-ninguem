@@ -18,7 +18,7 @@
 //      | { acao: 'inscrever_avisos', inscricao, tipos } | { acao: 'cancelar_avisos', endpoint } | { acao: 'testar_avisos', endpoint }
 //        (avisos no celular deste aparelho; não precisam de temporada ativa)
 //      | { acao: 'pedir_gemas', gemas } | { acao: 'cancelar_pedido_gemas', codigo } (loja; não precisam de temporada ativa)
-//      | { acao: 'comprar_item', item, variante? } | { acao: 'usar_titulo', titulo } (loja; sem temporada, menos itens de temporada)
+//      | { acao: 'comprar_item', item, variante?, pedido? } | { acao: 'usar_titulo', titulo } (loja; sem temporada, menos itens de temporada)
 //      | { acao: 'publicar_arauto', texto } | { acao: 'presentear_gemas', destinatario_id, gemas }
 //      | { acao: 'terminar_obra', pronto_em } (gasta gemas para terminar na hora a obra que está sendo feita)
 // Publicar com: npx supabase functions deploy cidade --no-verify-jwt (o token é validado no código).

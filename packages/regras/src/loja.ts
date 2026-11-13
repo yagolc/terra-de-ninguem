@@ -77,17 +77,24 @@ export function itemComprado(comprados: readonly ItemComprado[], item: ItemLoja,
   );
 }
 
-export type MotivoRecusaCompra = 'item_invalido' | 'ja_comprado' | 'sem_temporada' | 'gemas_insuficientes';
+export type MotivoRecusaCompra = 'item_invalido' | 'ja_comprado' | 'sem_temporada' | 'gemas_insuficientes' | 'pedido_longo';
 
-/** Confere a compra de um item: item e variante válidos, ainda não comprado, temporada ativa (se for de temporada) e saldo. */
+/**
+ * Confere a compra de um item: item e variante válidos, ainda não comprado, temporada ativa (se for de temporada) e saldo.
+ * A Crônica aceita um `pedido` opcional (como o jogador quer ser lembrado), numa linha e até `pedidoCronicaMaximo` letras.
+ */
 export function verificarCompraItem(entrada: {
   item: unknown;
   variante?: unknown;
+  pedido?: unknown;
   saldo: number;
   comprados: readonly ItemComprado[];
   /** Temporada ativa (null fora de temporada). */
   temporadaId: string | null;
-}): Verificacao<{ item: ItemLoja; variante: string | null; preco: number; temporadaId: string | null }, MotivoRecusaCompra> {
+}): Verificacao<
+  { item: ItemLoja; variante: string | null; preco: number; temporadaId: string | null; pedido: string | null },
+  MotivoRecusaCompra
+> {
   const item = ITENS_LOJA.find((i) => i === entrada.item);
   if (!item) return { ok: false, motivo: 'item_invalido' };
   let variante: string | null = null;
@@ -100,7 +107,9 @@ export function verificarCompraItem(entrada: {
   if (escopo === 'temporada' && entrada.temporadaId === null) return { ok: false, motivo: 'sem_temporada' };
   if (itemComprado(entrada.comprados, item, variante, entrada.temporadaId)) return { ok: false, motivo: 'ja_comprado' };
   if (entrada.saldo < preco) return { ok: false, motivo: 'gemas_insuficientes' };
-  return { ok: true, item, variante, preco, temporadaId: escopo === 'temporada' ? entrada.temporadaId : null };
+  const pedido = item === 'cronica' ? limparTextoArauto(entrada.pedido) : '';
+  if ([...pedido].length > BALANCEAMENTO.loja.pedidoCronicaMaximo) return { ok: false, motivo: 'pedido_longo' };
+  return { ok: true, item, variante, preco, temporadaId: escopo === 'temporada' ? entrada.temporadaId : null, pedido: pedido || null };
 }
 
 /** Título que o jogador quer mostrar: nenhum (null) ou um que ele comprou. */
