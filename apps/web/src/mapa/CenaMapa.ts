@@ -35,6 +35,8 @@ export class CenaMapa extends Phaser.Scene {
   private formas = new Map<string, Phaser.Geom.Polygon>();
   private camadaMapa?: Phaser.GameObjects.Graphics;
   private camadaDestaque?: Phaser.GameObjects.Graphics;
+  /** Rios e cordilheiras: por cima do contorno na cor do dono, que senão os cobre. */
+  private camadaBarreiras?: Phaser.GameObjects.Graphics;
   private camadaMarchas?: Phaser.GameObjects.Graphics;
   private camadaBandeiras?: Phaser.GameObjects.Graphics;
   private rotulos: (Phaser.GameObjects.Text | Phaser.GameObjects.Image)[] = [];
@@ -55,6 +57,7 @@ export class CenaMapa extends Phaser.Scene {
     this.input.addPointer(1); // dois dedos para a pinça
     this.camadaMapa = this.add.graphics();
     this.camadaDestaque = this.add.graphics();
+    this.camadaBarreiras = this.add.graphics();
     this.camadaBandeiras = this.add.graphics();
     this.camadaMarchas = this.add.graphics();
     this.desenhar();
@@ -104,7 +107,8 @@ export class CenaMapa extends Phaser.Scene {
       g.strokePoints(forma.points, true);
     }
     this.desenharBordasDeRegiao(g, dados.territorios);
-    this.desenharBarreiras(g);
+    this.camadaBarreiras!.clear();
+    this.desenharBarreiras(this.camadaBarreiras!);
     this.desenharEstradas(g);
 
     this.camadaBandeiras!.clear();
