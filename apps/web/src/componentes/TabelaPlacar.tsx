@@ -32,6 +32,11 @@ export default function TabelaPlacar({ placar, meuId, vencedorId }: { placar: Li
                   {linha.nome}
                 </a>
                 {linha.jogadorId === vencedorId && ' 👑'}
+                {linha.usosGemas > 0 && (
+                  <span className="ml-1 text-xs text-ouro-claro" title={`Terminou ${linha.usosGemas} ${linha.usosGemas === 1 ? 'obra' : 'obras'} com gemas nesta temporada`}>
+                    ⚡{linha.usosGemas}
+                  </span>
+                )}
                 {linha.herdeiro && (
                   <span className="block text-[11px] text-ouro-claro" title="Cada batalha vencida contra ele vale pontos a mais">
                     {TITULO_HERDEIRO} · 🎯 cabeça a prêmio

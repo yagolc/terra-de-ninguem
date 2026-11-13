@@ -333,6 +333,25 @@ export const BALANCEAMENTO = {
     pontosPorVitoria: 10,
   },
 
+  /**
+   * Loja de gemas: só se ganha gema comprando (Pix, 1 gema = `reaisPorGema` reais). Terminar a obra que está sendo
+   * feita na hora custa `precoBase` gemas e dobra a cada uso na mesma temporada (2, 4, 8, 16…); a temporada nova
+   * volta ao preço base. Não vale para níveis acima de `nivelMaximoTerminar` nem para os prédios de
+   * `prediosProibidos` (não compra objetivo nem defesa de última hora).
+   */
+  loja: {
+    reaisPorGema: 1,
+    /** Pacotes de gemas à venda. */
+    pacotes: [2, 4, 8, 16, 32],
+    terminarObra: {
+      precoBase: 2,
+      nivelMaximo: 7,
+      prediosProibidos: ['muralha'] as readonly TipoPredio[],
+    },
+    /** Pedidos de gemas esperando o Pix ser conferido, por jogador. */
+    pedidosPendentesMaximo: 3,
+  },
+
   reconhecimento: {
     /** Custo de mandar um batedor. */
     custoOuro: 20,

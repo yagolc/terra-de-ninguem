@@ -8,6 +8,8 @@ import {
   limitePopulacao,
   nivelArmazemNecessario,
   niveisProjetados,
+  obraAceleravel,
+  precoTerminarObra,
   pombosDoPombal,
   producaoHora,
   protecaoArmazem,
@@ -66,6 +68,10 @@ type Props = {
   onEvoluir: (tipo: TipoPredio) => void;
   /** Cancela a obra que termina em `prontoEm` (depois da confirmação). */
   onCancelar: (prontoEm: number) => void;
+  /** Saldo de gemas e usos na temporada (null enquanto carrega): mostra o ⚡ na obra que está sendo feita. */
+  gemas: { saldo: number; usos: number } | null;
+  /** Termina com gemas a obra que termina em `prontoEm` (depois da confirmação). */
+  onTerminar: (prontoEm: number) => void;
 };
 
 /** "140 de madeira e 70 de ouro" */
@@ -74,9 +80,13 @@ function descreverFalta(falta: Recursos): string {
   return partes.length > 1 ? `${partes.slice(0, -1).join(', ')} e ${partes.at(-1)}` : (partes[0] ?? '');
 }
 
-export default function CartaoPredio({ tipo, cidade, bonus, obras, agora, ocupado, onEvoluir, onCancelar }: Props) {
+export default function CartaoPredio({ tipo, cidade, bonus, obras, agora, ocupado, onEvoluir, onCancelar, gemas, onTerminar }: Props) {
   // Posição na fila da obra que o jogador quer cancelar (abre a confirmação).
   const [aCancelar, setACancelar] = useState<number | null>(null);
+  // Confirmação de terminar com gemas a obra que está sendo feita.
+  const [aTerminar, setATerminar] = useState(false);
+  const precoAgora = gemas ? precoTerminarObra(gemas.usos) : 0;
+  const temGemas = !!gemas && gemas.saldo >= precoAgora;
   const info = PREDIOS[tipo];
   const nivel = cidade.predios[tipo];
   // Níveis contando as obras da fila: o próximo pedido deste prédio vai para o nível seguinte a eles.
@@ -138,6 +148,17 @@ export default function CartaoPredio({ tipo, cidade, bonus, obras, agora, ocupad
                 {posicao === 0 ? ' · faltam ' : ' · na fila, pronto em '}
                 <span className="tabular-nums">{formatarDuracao(obra.prontoEm - agora)}</span>
               </span>
+              {posicao === 0 && gemas && obraAceleravel(tipo, nivel + 1) && (
+                <button
+                  onClick={() => setATerminar(true)}
+                  disabled={ocupado}
+                  aria-label={`Terminar agora com gemas: ${info.nome}`}
+                  title={`Terminar agora: ${precoAgora} gemas`}
+                  className="-my-1 shrink-0 rounded-md border border-ouro/50 px-1.5 py-0.5 text-xs text-ouro-claro hover:bg-ouro/20 disabled:opacity-40"
+                >
+                  ⚡ {precoAgora}💎
+                </button>
+              )}
               <button
                 onClick={() => setACancelar(posicao)}
                 disabled={ocupado}
@@ -150,6 +171,28 @@ export default function CartaoPredio({ tipo, cidade, bonus, obras, agora, ocupad
             </div>
           </div>
         ))}
+        {aTerminar && gemas && obras[0] && (
+          <JanelaConfirmacao
+            titulo="Terminar agora?"
+            confirmar={temGemas ? `Terminar por ${precoAgora} 💎` : 'Ir para a loja'}
+            onConfirmar={() => {
+              if (temGemas) onTerminar(obras[0]!.prontoEm);
+              else location.hash = 'perfil';
+            }}
+            onFechar={() => setATerminar(false)}
+          >
+            <p>
+              {info.nome} {nivel === 0 ? '(construção)' : `nível ${nivel + 1}`} fica pronto na hora, em vez de daqui a{' '}
+              <span className="tabular-nums">{formatarDuracao(obras[0].prontoEm - agora)}</span>. As obras de depois andam para a frente.
+            </p>
+            <p>
+              Custa <b>{precoAgora} gemas</b> (você tem {gemas.saldo}). O próximo uso nesta temporada vai custar{' '}
+              {precoTerminarObra(gemas.usos + 1)}.
+            </p>
+            {!temGemas && <p className="text-red-300">Gemas insuficientes. Compre mais na loja, no seu perfil.</p>}
+            <p className="text-xs text-pergaminho-escuro">Todos veem no placar quantas vezes você usou (⚡).</p>
+          </JanelaConfirmacao>
+        )}
         {previa?.ok && (
           <JanelaConfirmacao
             titulo="Cancelar obra?"

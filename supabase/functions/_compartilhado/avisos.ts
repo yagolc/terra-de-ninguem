@@ -7,8 +7,11 @@ import webpush from 'npm:web-push@3.6.7';
 import { BALANCEAMENTO, relogioDoObjetivo, type TipoAviso, type TipoProposta } from '../../../packages/regras/src/index.ts';
 import { sql, type Transacao } from './db.ts';
 
-/** O que aparece na notificação: título, texto, aba que abre ao tocar e `tag` (avisos com a mesma tag se substituem). */
-export type Aviso = { jogadorId: string; tipo: TipoAviso; titulo: string; corpo: string; url: string; tag: string };
+/**
+ * O que aparece na notificação: título, texto, aba que abre ao tocar e `tag` (avisos com a mesma tag se substituem).
+ * Tipo `loja` (pedido de gemas, gemas creditadas) vai para todo aparelho inscrito, sem depender dos tipos escolhidos.
+ */
+export type Aviso = { jogadorId: string; tipo: TipoAviso | 'loja'; titulo: string; corpo: string; url: string; tag: string };
 type Inscricao = { id: string; jogador_id: string; endpoint: string; p256dh: string; auth: string; tipos: string[] };
 
 const SITE = 'https://terra-de-ninguem.vercel.app';
@@ -218,6 +221,45 @@ export async function coletarAvisos(tx: Transacao, agora: number): Promise<Aviso
     }
   }
 
+  // Loja: pedido novo de gemas para os organizadores (que conferem o Pix no banco).
+  const pedidos = await tx<{ id: string; codigo: string; gemas: number; valor_centavos: number; status: string; nome: string }[]>`
+    update pedidos_gemas p set avisado = true
+     where not p.avisado
+    returning p.id, p.codigo, p.gemas, p.valor_centavos, p.status, (select nome from jogadores where id = p.jogador_id) as nome`;
+  const pendentes = pedidos.filter((p) => p.status === 'pendente');
+  if (pendentes.length > 0) {
+    const organizadores = await tx<{ jogador_id: string }[]>`select jogador_id from organizadores`;
+    for (const p of pendentes) {
+      const reais = (p.valor_centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      for (const o of organizadores) {
+        avisos.push({
+          jogadorId: o.jogador_id,
+          tipo: 'loja',
+          titulo: `💎 ${p.nome} pediu ${p.gemas} gemas`,
+          corpo: `${reais} · código ${p.codigo}. Quando o Pix cair, confirme o pedido.`,
+          url: '/#perfil',
+          tag: `pedido-${p.id}`,
+        });
+      }
+    }
+  }
+
+  // Loja: gemas creditadas, para quem comprou.
+  const creditados = await tx<{ id: string; jogador_id: string; gemas: number }[]>`
+    update pedidos_gemas p set credito_avisado = true
+     where p.status = 'pago' and not p.credito_avisado
+    returning p.id, p.jogador_id, p.gemas`;
+  for (const p of creditados) {
+    avisos.push({
+      jogadorId: p.jogador_id,
+      tipo: 'loja',
+      titulo: `💎 ${p.gemas} gemas creditadas`,
+      corpo: 'Seu Pix foi conferido. Na cidade, o ⚡ termina na hora a obra que está sendo feita.',
+      url: '/#perfil',
+      tag: `credito-${p.id}`,
+    });
+  }
+
   return avisos;
 }
 
@@ -247,7 +289,7 @@ export async function enviarAvisos(avisos: Aviso[]): Promise<number> {
     select id, jogador_id, endpoint, p256dh, auth, tipos from inscricoes_avisos where jogador_id = any(${jogadores}::uuid[])`;
   const envios = avisos.flatMap((a) =>
     inscricoes
-      .filter((i) => i.jogador_id === a.jogadorId && i.tipos.includes(a.tipo))
+      .filter((i) => i.jogador_id === a.jogadorId && (a.tipo === 'loja' || i.tipos.includes(a.tipo)))
       .map((i) => mandar(i, { ...a, urgente: a.tipo === 'ataque' || a.tipo === 'horda' || a.tipo === 'objetivo' })),
   );
   const resultados = await Promise.all(envios);

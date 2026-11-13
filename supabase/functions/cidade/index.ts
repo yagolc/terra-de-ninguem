@@ -17,6 +17,8 @@
 //      | { acao: 'marcar_relatorios_lidos' } | { acao: 'marcar_cartas_lidas' }
 //      | { acao: 'inscrever_avisos', inscricao, tipos } | { acao: 'cancelar_avisos', endpoint } | { acao: 'testar_avisos', endpoint }
 //        (avisos no celular deste aparelho; não precisam de temporada ativa)
+//      | { acao: 'pedir_gemas', gemas } | { acao: 'cancelar_pedido_gemas', codigo } (loja; não precisam de temporada ativa)
+//      | { acao: 'terminar_obra', pronto_em } (gasta gemas para terminar na hora a obra que está sendo feita)
 // Publicar com: npx supabase functions deploy cidade --no-verify-jwt (o token é validado no código).
 import {
   MENSAGENS_ALOCACAO,
@@ -33,6 +35,7 @@ import {
   MENSAGENS_RECONHECIMENTO,
   MENSAGENS_RECRUTAMENTO,
   MENSAGENS_RESPOSTA_PACTO,
+  MENSAGENS_TERMINAR_OBRA,
   MENSAGENS_TREINO,
   MENSAGENS_TREINO_HEROI,
   MENSAGENS_VILA,
@@ -54,9 +57,13 @@ import {
   ligadosPorTerritoriosProprios,
   mapearExercito,
   multiplicadorEstrada,
+  pacoteValido,
+  precoPacoteReais,
   somarRecursos,
   subtrairRecursos,
+  terminarObraAgora,
   totalUnidades,
+  BALANCEAMENTO,
   verificarAlocacao,
   verificarAtaque,
   verificarCarta,
@@ -567,6 +574,34 @@ async function executar(jogadorId: string, corpo: Record<string, unknown>): Prom
     }
     return { ok: true };
   }
+  if (corpo.acao === 'pedir_gemas') {
+    // Pedido de um pacote: o código vai no Pix e o organizador confirma quando o pagamento cair.
+    if (!pacoteValido(corpo.gemas)) throw new ErroDoJogo('Pacote de gemas desconhecido.');
+    const gemas = corpo.gemas;
+    const pedido = await sql.begin(async (tx) => {
+      await tx`select id from jogadores where id = ${jogadorId} for update`;
+      const [{ pendentes } = { pendentes: 0 }] = await tx<{ pendentes: number }[]>`
+        select count(*)::int as pendentes from pedidos_gemas where jogador_id = ${jogadorId} and status = 'pendente'`;
+      const maximo = BALANCEAMENTO.loja.pedidosPendentesMaximo;
+      if (pendentes >= maximo) {
+        throw new ErroDoJogo(`Você já tem ${maximo} pedidos esperando o Pix ser conferido. Cancele um ou espere a confirmação.`);
+      }
+      const [linha] = await tx<{ codigo: string; valor_centavos: number }[]>`
+        insert into pedidos_gemas (jogador_id, gemas, valor_centavos)
+        values (${jogadorId}, ${gemas}, ${Math.round(precoPacoteReais(gemas) * 100)})
+        returning codigo, valor_centavos`;
+      return linha!;
+    });
+    return { ok: true, ...pedido };
+  }
+  if (corpo.acao === 'cancelar_pedido_gemas') {
+    const linhas = await sql`
+      update pedidos_gemas set status = 'cancelado'
+       where jogador_id = ${jogadorId} and codigo = ${String(corpo.codigo ?? '')} and status = 'pendente'
+       returning id`;
+    if (linhas.length === 0) throw new ErroDoJogo('Esse pedido não está mais esperando pagamento.');
+    return { ok: true };
+  }
   if (corpo.acao === 'marcar_cartas_lidas') {
     await sql`update cartas set lida = true where destinatario_id = ${jogadorId} and not lida and chega_em <= now()`;
     await sql`update cartas set resposta_vista = true where remetente_id = ${jogadorId} and resposta is not null and not resposta_vista`;
@@ -598,6 +633,31 @@ async function executar(jogadorId: string, corpo: Record<string, unknown>): Prom
         c.obras = v.obras;
         c.estado = { ...c.estado, recursos: somarRecursos(c.estado.recursos, v.devolver) };
         resultado.canceladas = v.canceladas;
+        break;
+      }
+      case 'terminar_obra': {
+        // A trava da cidade (carregarCidade) já impede dois usos ao mesmo tempo; o saldo também é travado.
+        const [saldo] = await tx<{ saldo: number }[]>`select saldo from gemas where jogador_id = ${jogadorId} for update`;
+        const [{ usos } = { usos: 0 }] = await tx<{ usos: number }[]>`
+          select count(*)::int as usos from usos_gemas where temporada_id = ${temporada.id} and jogador_id = ${jogadorId}`;
+        const v = terminarObraAgora({
+          predios: c.estado.predios,
+          obras: [...c.obras].sort((a, b) => a.prontoEm - b.prontoEm),
+          prontoEm: Date.parse(String(corpo.pronto_em ?? '')),
+          gemas: saldo?.saldo ?? 0,
+          usos,
+          agora,
+        });
+        if (!v.ok) throw new ErroDoJogo(MENSAGENS_TERMINAR_OBRA[v.motivo]);
+        c.obras = v.obras;
+        c.estado = { ...c.estado, predios: { ...c.estado.predios, [v.tipo]: v.nivelAlvo } };
+        await tx`update gemas set saldo = saldo - ${v.preco}, atualizado_em = now() where jogador_id = ${jogadorId}`;
+        await tx`
+          insert into usos_gemas (temporada_id, jogador_id, tipo, predio, nivel, gemas)
+          values (${temporada.id}, ${jogadorId}, 'terminar_obra', ${v.tipo}, ${v.nivelAlvo}, ${v.preco})`;
+        resultado.predio = v.tipo;
+        resultado.nivel = v.nivelAlvo;
+        resultado.gemas_gastas = v.preco;
         break;
       }
       case 'cancelar_treino': {

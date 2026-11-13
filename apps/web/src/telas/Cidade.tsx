@@ -19,6 +19,7 @@ import PainelMissoes from '../componentes/PainelMissoes';
 import PainelQuartel from '../componentes/PainelQuartel';
 import PainelTrabalhadores from '../componentes/PainelTrabalhadores';
 import { useCidade } from '../lib/useCidade';
+import { useGemas } from '../lib/useGemas';
 import { ESPECIALIDADES_INFO, MISSOES_INFO, PREDIOS, RACAS_INFO, RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarDuracao } from '../lib/textos';
 
 type Aviso = { tipo: 'erro' | 'ok'; texto: string };
@@ -45,6 +46,7 @@ export default function Cidade({ sessao }: { sessao: Session }) {
     erro,
     comandar,
   } = useCidade(sessao.user.id);
+  const { gemas, recarregar: recarregarGemas } = useGemas();
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState<Aviso | null>(null);
 
@@ -83,6 +85,10 @@ export default function Cidade({ sessao }: { sessao: Session }) {
   const treinarHeroi = () => executar({ acao: 'treinar_heroi' }, 'Treino do herói começou.');
   const cancelarObra = (prontoEm: number) =>
     executar({ acao: 'cancelar_obra', pronto_em: new Date(prontoEm).toISOString() }, 'Obra cancelada. Os recursos voltaram.');
+  const terminarObra = async (prontoEm: number) => {
+    await executar({ acao: 'terminar_obra', pronto_em: new Date(prontoEm).toISOString() }, '⚡ Obra pronta!');
+    await recarregarGemas();
+  };
   const cancelarTreino = (prontoEm: number) =>
     executar({ acao: 'cancelar_treino', pronto_em: new Date(prontoEm).toISOString() }, 'Treino cancelado. Os recursos voltaram.');
   const resgatarMissao = (missao: TipoMissao) =>
@@ -156,6 +162,11 @@ export default function Cidade({ sessao }: { sessao: Session }) {
               Fila de obras: {obras.length}/{BALANCEAMENTO.maxObrasNaFila}
               {obras.length > 0 &&
                 ` · ${obras.map((o) => PREDIOS[o.tipo].nome).join(' → ')} · tudo pronto em ${formatarDuracao(obras.at(-1)!.prontoEm - agora)}`}
+              {gemas && (
+                <a href="#perfil" title="Suas gemas (loja no perfil)" className="ml-2 text-ouro-claro hover:underline">
+                  💎 {gemas.saldo}
+                </a>
+              )}
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -170,6 +181,8 @@ export default function Cidade({ sessao }: { sessao: Session }) {
                 ocupado={ocupado}
                 onEvoluir={evoluir}
                 onCancelar={cancelarObra}
+                gemas={gemas && { saldo: gemas.saldo, usos: gemas.usos }}
+                onTerminar={(prontoEm) => void terminarObra(prontoEm)}
               />
             ))}
           </div>

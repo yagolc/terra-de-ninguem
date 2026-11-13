@@ -9,7 +9,7 @@ import { recursos, somarRecursos } from './util.ts';
  * anterior termina), então a duração de cada um é a distância até o fim do anterior. O primeiro, se ficou,
  * mantém o horário (já está andando); os outros começam quando o de antes termina, ou agora.
  */
-function reprogramar<T extends { prontoEm: number }>(fila: readonly T[], fica: readonly boolean[], agora: number): T[] {
+export function reprogramar<T extends { prontoEm: number }>(fila: readonly T[], fica: readonly boolean[], agora: number): T[] {
   const novos: T[] = [];
   let fim = agora;
   fila.forEach((item, i) => {

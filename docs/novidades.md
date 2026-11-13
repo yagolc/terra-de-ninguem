@@ -2,6 +2,13 @@
 
 Lista das mudanças para mandar aos jogadores. Cada temporada nova ganha uma seção; o que entrou no meio de uma temporada vai na próxima.
 
+## Temporada 6
+
+### Loja de gemas
+
+- **Gemas** (💎) se compram por Pix na loja do seu perfil (1 gema = R$ 1; pacotes de 2, 4, 8, 16 e 32). Escolha o pacote, pague pelo QR Code ou pelo Pix copia e cola e as gemas entram quando o organizador conferir o pagamento.
+- **Terminar agora** (⚡): no cartão do prédio, a obra que está sendo feita fica pronta na hora. O primeiro uso da temporada custa 2 gemas e o preço dobra a cada uso (2, 4, 8, 16…); na temporada nova volta para 2. Vale só até o nível 7 e nunca na Muralha. O placar mostra quantas vezes cada um usou.
+
 ## Temporada 5
 
 ### Vitória

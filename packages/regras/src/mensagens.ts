@@ -1,7 +1,9 @@
 // Textos para o jogador de cada motivo de recusa. Servidor e interface usam os mesmos.
 import type { MotivoRecusaAtaque, MotivoRecusaMovimento } from './ataques.ts';
 import type { MotivoRecusaInscricao } from './avisos.ts';
+import { BALANCEAMENTO } from './balanceamento.ts';
 import type { MotivoRecusaCancelamento } from './cancelamento.ts';
+import type { MotivoRecusaTerminarObra } from './loja.ts';
 import type { MotivoRecusaDestruicao, MotivoRecusaEstrada, MotivoRecusaEstrutura } from './estruturas.ts';
 import type { MotivoRecusaMissao } from './missoes.ts';
 import type { MotivoRecusaNome } from './nome.ts';
@@ -93,6 +95,14 @@ export const MENSAGENS_MISSAO: Record<MotivoRecusaMissao, string> = {
 
 export const MENSAGENS_CANCELAMENTO: Record<MotivoRecusaCancelamento, string> = {
   item_invalido: 'Esse item não está mais na fila. Talvez já tenha terminado.',
+};
+
+export const MENSAGENS_TERMINAR_OBRA: Record<MotivoRecusaTerminarObra, string> = {
+  sem_obra: 'Nenhuma obra sendo feita agora.',
+  item_invalido: 'Só dá para terminar a obra que está sendo feita agora. Talvez ela já tenha terminado.',
+  predio_proibido: 'A Muralha não pode ser terminada com gemas.',
+  nivel_alto: `Só obras até o nível ${BALANCEAMENTO.loja.terminarObra.nivelMaximo} podem ser terminadas com gemas.`,
+  gemas_insuficientes: 'Gemas insuficientes. Compre mais na loja (no seu perfil).',
 };
 
 export const MENSAGENS_VILA: Record<MotivoRecusaVila, string> = {
