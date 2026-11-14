@@ -136,7 +136,7 @@ export const MENSAGENS_CARTA: Record<MotivoRecusaCarta, string> = {
   sem_pombos: 'Todos os seus pombos estão voando. Espere um chegar ou evolua o Pombal.',
   destinatario_invalido: 'Escolha outro jogador desta temporada.',
   carta_vazia: 'Escreva a carta ou faça uma proposta.',
-  texto_longo: 'A carta pode ter no máximo 500 letras.',
+  texto_longo: `A carta pode ter no máximo ${BALANCEAMENTO.pombos.tamanhoTexto} letras.`,
   proposta_invalida: 'Proposta desconhecida.',
   horas_invalidas: 'O pacto dura de 1 a 12 horas.',
 };

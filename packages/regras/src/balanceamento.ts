@@ -203,7 +203,7 @@ export const BALANCEAMENTO = {
     pombosPorNivel: 2,
     duracaoMinimaMin: 2,
     /** Letras de uma carta (a tabela `cartas` tem o mesmo `check`). */
-    tamanhoTexto: 500,
+    tamanhoTexto: 1300,
     /** Pacto de não agressão: dura de 1 a 12 horas desde o aceite; a proposta pode ser respondida por algumas horas depois de chegar. */
     pacto: { horasMinimas: 1, horasMaximas: 12, validadePropostaHoras: 6 },
   },
