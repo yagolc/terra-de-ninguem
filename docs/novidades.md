@@ -22,6 +22,7 @@ Lista das mudanças para mandar aos jogadores. Cada temporada nova ganha uma se�
 - **Seu nome na Crônica** (📜, 10 💎 por temporada): você vira personagem do capítulo da temporada na Crônica do reino e pode contar como quer ser lembrado.
 - **Pets da cidade** (🐾): lobo, corvo, gato, urso e falcão (8 💎) e dragãozinho (15 💎), seus para sempre. Um mora na sua cidade e aparece no mapa. Um saque vencedor contra a sua cidade leva o pet como refém: quem sequestrou pode pedir um resgate em ouro, você pode ir buscar na marra saqueando a cidade dele, e na temporada nova ele volta sozinho.
 - **Presentear gemas** (🎁): no perfil de outro jogador, dê gemas do seu saldo, sem taxa. Serve até para pagar acordos.
+- **Correção:** na Loja, rolar até o fim e voltar não deixa mais a barra de baixo (Cidade, Mapa…) parada no meio da tela.
 
 ## Temporada 5
 

@@ -255,8 +255,9 @@ export default function Jogo({ sessao }: { sessao: Session }) {
       <AvisoInstalar />
 
       {/* Só o mapa tem rolagem própria. Com a aba Mapa no endereço, a fundação e o fim de temporada aparecem no lugar
-          dele e precisam rolar. */}
-      <main className={`min-h-0 flex-1 ${aba === 'mapa' && temporada && fundada ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+          dele e precisam rolar. O `relative` prende aqui dentro os elementos `absolute` sem pai posicionado (como o
+          `sr-only` do arauto na Loja): sem ele, a página inteira ganhava rolagem e a barra de baixo subia. */}
+      <main className={`relative min-h-0 flex-1 ${aba === 'mapa' && temporada && fundada ? 'overflow-hidden' : 'overflow-y-auto'}`}>
         {aba === 'regras' ? (
           <Regras />
         ) : aba === 'loja' ? (
