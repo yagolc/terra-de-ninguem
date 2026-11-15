@@ -9,6 +9,8 @@ import { RACAS_INFO } from '../lib/textos';
 
 type Props = {
   temporada: number;
+  /** Nome da sala, fora da Sala principal (lá não há crônica: os capítulos são da principal). */
+  sala: string | null;
   nomeAtual: string;
   /** O jogador é o herdeiro do trono caído (vencedor da temporada anterior). */
   herdeiro: boolean;
@@ -26,8 +28,8 @@ function cronicaJaVista(temporada: number): boolean {
 }
 
 /** Entrada na temporada: a crônica (uma vez) e depois nome e raça para fundar a cidade. */
-export default function Fundacao({ temporada, nomeAtual, herdeiro, onFundada }: Props) {
-  const capitulo = CRONICAS[temporada];
+export default function Fundacao({ temporada, sala, nomeAtual, herdeiro, onFundada }: Props) {
+  const capitulo = sala ? undefined : CRONICAS[temporada];
   const [lendo, setLendo] = useState(() => !!capitulo && !cronicaJaVista(temporada));
   const [nome, setNome] = useState(nomeAtual);
   const [raca, setRaca] = useState<Raca | null>(null);
@@ -64,7 +66,7 @@ export default function Fundacao({ temporada, nomeAtual, herdeiro, onFundada }: 
       <header>
         <h2 className="font-titulo text-xl text-ouro">Funde sua cidade</h2>
         <p className="text-sm text-pergaminho-escuro">
-          Temporada {temporada}. A raça vale só nesta temporada; na próxima, você escolhe de novo.
+          {sala ? `${sala}, temporada` : 'Temporada'} {temporada}. A raça vale só nesta temporada; na próxima, você escolhe de novo.
           {capitulo && (
             <>
               {' '}

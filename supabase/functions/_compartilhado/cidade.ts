@@ -30,18 +30,34 @@ import {
   type TipoPovoado,
   type TipoPredio,
   type TipoUnidade,
+  MENSAGENS_ENTRADA_SALA,
+  verificarEntradaSala,
+  type AcessoSala,
 } from '../../../packages/regras/src/index.ts';
 import type { Transacao } from './db.ts';
 import { heroiDoJogador, type HeroiSalvo } from './herois.ts';
 import { ErroDoJogo } from './http.ts';
 import { gravarNomeJogador } from './nome.ts';
 
-export type Temporada = { id: string; inicio: number };
+/** Sala de quem não diz a sala (o site antigo e o `temporada:nova`): as temporadas de antes das salas. */
+export const SALA_PRINCIPAL = '00000000-0000-0000-0000-000000000001';
 
-export async function temporadaAtiva(tx: Transacao): Promise<Temporada> {
-  const [t] = await tx<{ id: string; inicio: Date }[]>`select id, inicio from temporadas where status = 'ativa'`;
+export type Temporada = { id: string; inicio: number; salaId: string };
+
+/**
+ * A temporada em andamento em que o comando vale: a que o site mandou (`temporada_id`, a da sala escolhida) ou,
+ * sem ela, a da Sala principal.
+ */
+export async function temporadaAtiva(tx: Transacao, temporadaId?: unknown): Promise<Temporada> {
+  const pedida = typeof temporadaId === 'string' && temporadaId ? temporadaId : null;
+  const [t] = pedida
+    ? await tx<{ id: string; inicio: Date; sala_id: string; status: string }[]>`
+        select id, inicio, sala_id, status from temporadas where id::text = ${pedida}`
+    : await tx<{ id: string; inicio: Date; sala_id: string; status: string }[]>`
+        select id, inicio, sala_id, status from temporadas where status = 'ativa' and sala_id = ${SALA_PRINCIPAL}`;
   if (!t) throw new ErroDoJogo('Nenhuma temporada em andamento.', 409);
-  return { id: t.id, inicio: t.inicio.getTime() };
+  if (t.status !== 'ativa') throw new ErroDoJogo('Esta temporada já acabou.', 409);
+  return { id: t.id, inicio: t.inicio.getTime(), salaId: t.sala_id };
 }
 
 /**
@@ -70,25 +86,49 @@ async function territorioInicial(tx: Transacao, temporadaId: string, jogadorId: 
   return livre;
 }
 
-/** O vencedor da última temporada encerrada (o herdeiro do trono caído), ou null. */
+/** O vencedor da última temporada encerrada da mesma sala (o herdeiro do trono caído), ou null. */
 export async function herdeiroDoTrono(tx: Transacao, temporadaId: string): Promise<string | null> {
   const [linha] = await tx<{ vencedor_id: string | null }[]>`
-    select vencedor_id from temporadas
-     where status = 'encerrada' and numero < (select numero from temporadas where id = ${temporadaId})
-     order by numero desc limit 1`;
+    select anterior.vencedor_id from temporadas atual
+      join temporadas anterior on anterior.sala_id = atual.sala_id and anterior.numero < atual.numero
+     where atual.id = ${temporadaId} and anterior.status = 'encerrada'
+     order by anterior.numero desc limit 1`;
   return linha?.vencedor_id ?? null;
 }
 
 /**
- * Funda a cidade do jogador na temporada ativa, se ele ainda não tiver uma. Fundar exige escolher a raça
- * (e pode trocar o nome do jogador). O herdeiro do trono recebe a Guarda Real.
+ * Funda a cidade do jogador na temporada da sala, se ele ainda não tiver uma. Fundar exige escolher a raça
+ * (e pode trocar o nome do jogador), ter convite nas salas fechadas e não passar do limite de partidas ao mesmo
+ * tempo. O herdeiro do trono recebe a Guarda Real. Devolve a temporada.
  */
-export async function criarCidade(tx: Transacao, jogadorId: string, escolha: { raca?: unknown; nome?: unknown } = {}): Promise<void> {
-  const { id: temporadaId } = await temporadaAtiva(tx);
+export async function criarCidade(
+  tx: Transacao,
+  jogadorId: string,
+  escolha: { raca?: unknown; nome?: unknown } = {},
+  temporadaPedida?: unknown,
+): Promise<Temporada> {
+  const temporada = await temporadaAtiva(tx, temporadaPedida);
+  const temporadaId = temporada.id;
   // Dois jogadores chegando juntos não podem pegar o mesmo território livre.
   await tx`select pg_advisory_xact_lock(hashtext(${temporadaId}))`;
   const [existente] = await tx`select 1 from cidades where temporada_id = ${temporadaId} and jogador_id = ${jogadorId}`;
-  if (existente) return;
+  if (existente) return temporada;
+
+  const [sala] = await tx<{ acesso: AcessoSala; status: string; convidado: boolean }[]>`
+    select s.acesso, s.status,
+           exists (select 1 from salas_membros m where m.sala_id = s.id and m.jogador_id = ${jogadorId}) as convidado
+      from salas s where s.id = ${temporada.salaId}`;
+  const [{ partidas } = { partidas: 0 }] = await tx<{ partidas: number }[]>`
+    select count(*)::int as partidas from cidades c join temporadas t on t.id = c.temporada_id
+     where c.jogador_id = ${jogadorId} and t.status = 'ativa' and t.id <> ${temporadaId}`;
+  const entrada = verificarEntradaSala({
+    acesso: sala?.acesso ?? 'aberta',
+    arquivada: sala?.status === 'arquivada',
+    convidado: sala?.convidado ?? false,
+    jaTemCidade: false,
+    partidasEmAndamento: partidas,
+  });
+  if (!entrada.ok) throw new ErroDoJogo(MENSAGENS_ENTRADA_SALA[entrada.motivo], 409);
 
   const raca = TIPOS_RACA.find((r) => r === escolha.raca);
   if (!raca) throw new ErroDoJogo('Escolha sua raça para fundar a cidade.');
@@ -111,15 +151,23 @@ export async function criarCidade(tx: Transacao, jogadorId: string, escolha: { r
        where id = ${territorioId}`;
   }
 
-  // Cor no mapa: mantém a do jogador se ninguém mais nesta temporada a usa; senão, a primeira livre.
+  // Cor no mapa nesta sala: a preferida do jogador se ninguém mais nesta temporada a usa; senão, a primeira livre.
   const [eu] = await tx<{ cor: string | null }[]>`select cor from jogadores where id = ${jogadorId}`;
-  const outras = await tx<{ cor: string | null }[]>`
-    select j.cor from cidades c join jogadores j on j.id = c.jogador_id
-     where c.temporada_id = ${temporadaId} and c.jogador_id <> ${jogadorId}`;
-  const usadas = new Set(outras.map((o) => o.cor?.toLowerCase()));
-  if (!eu?.cor || usadas.has(eu.cor.toLowerCase())) {
-    await tx`update jogadores set cor = ${escolherCor(outras.map((o) => o.cor))} where id = ${jogadorId}`;
-  }
+  const outras = await coresNaTemporada(tx, temporadaId, jogadorId);
+  const usadas = new Set(outras.map((o) => o?.toLowerCase()));
+  const cor = eu?.cor && !usadas.has(eu.cor.toLowerCase()) ? eu.cor.toLowerCase() : escolherCor(outras);
+  await tx`update cidades set cor = ${cor} where id = ${criada!.id}`;
+  // Na Sala principal a preferida acompanha (o site antigo pinta o mapa com ela).
+  if (temporada.salaId === SALA_PRINCIPAL && cor !== eu?.cor) await tx`update jogadores set cor = ${cor} where id = ${jogadorId}`;
+  return temporada;
+}
+
+/** Cores no mapa dos outros jogadores da temporada (a da cidade ou, nas cidades antigas, a preferida). */
+export async function coresNaTemporada(tx: Transacao, temporadaId: string, menosJogador: string): Promise<(string | null)[]> {
+  const linhas = await tx<{ cor: string | null }[]>`
+    select coalesce(c.cor, j.cor) as cor from cidades c join jogadores j on j.id = c.jogador_id
+     where c.temporada_id = ${temporadaId} and c.jogador_id <> ${menosJogador}`;
+  return linhas.map((l) => l.cor);
 }
 
 export type GrupoTropas = { id: string | null; territorioId: string; tropas: Exercito };

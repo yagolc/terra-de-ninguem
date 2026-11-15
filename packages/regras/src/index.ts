@@ -25,6 +25,7 @@ export * from './producao.ts';
 export * from './racas.ts';
 export * from './reconhecimento.ts';
 export * from './reportes.ts';
+export * from './salas.ts';
 export * from './saque.ts';
 export * from './territorios.ts';
 export * from './tipos.ts';

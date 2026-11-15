@@ -478,9 +478,18 @@ Deno.serve(async (req) => {
   const segredo = Deno.env.get('SEGREDO_CRON');
   if (!segredo || req.headers.get('x-segredo-cron') !== segredo) return resposta(401, { erro: 'Não autorizado.' });
 
+  // Uma temporada ativa por sala; a Sala principal primeiro.
+  const ativas = await sql<{ id: string }[]>`
+    select t.id from temporadas t join salas s on s.id = t.sala_id
+     where t.status = 'ativa' order by s.principal desc, t.inicio`;
+  const temporadasAtivas = ativas.map((t) => t.id);
+  // Até 50 marchas por sala a cada minuto, as que chegaram primeiro antes.
   const pendentes = await sql<{ id: string }[]>`
-    select m.id from marchas m join temporadas t on t.id = m.temporada_id and t.status = 'ativa'
-     where m.status = 'a_caminho' and m.chegada_em <= now() order by m.chegada_em limit 50`;
+    select id from (
+      select m.id, m.chegada_em, row_number() over (partition by m.temporada_id order by m.chegada_em) as n
+        from marchas m join temporadas t on t.id = m.temporada_id and t.status = 'ativa'
+       where m.status = 'a_caminho' and m.chegada_em <= now()
+    ) p where n <= 50 order by chegada_em`;
   let resolvidas = 0;
   const erros: string[] = [];
   for (const { id } of pendentes) {
@@ -492,14 +501,16 @@ Deno.serve(async (req) => {
     }
   }
   // Hordas bárbaras: as que chegaram lutam; a próxima sai quando for a hora.
-  await cuidarDasHordas(erros);
-  // Depois das batalhas: placar, objetivos e, se for o caso, fim da temporada.
+  await cuidarDasHordas(erros, temporadasAtivas);
+  // Depois das batalhas: placar, objetivos e, se for o caso, fim da temporada. Cada sala na sua transação.
   let encerrada = false;
-  try {
-    encerrada = (await sql.begin((tx) => atualizarPlacar(tx))).encerrada;
-  } catch (erro) {
-    console.error('placar', erro);
-    erros.push('placar');
+  for (const temporadaId of temporadasAtivas) {
+    try {
+      if ((await sql.begin((tx) => atualizarPlacar(tx, temporadaId))).encerrada) encerrada = true;
+    } catch (erro) {
+      console.error('placar', temporadaId, erro);
+      erros.push(`placar ${temporadaId}`);
+    }
   }
   // Por último, os avisos no celular do que aconteceu (batalhas, torres, cartas, hordas, objetivo).
   let avisos = 0;

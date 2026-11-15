@@ -11,7 +11,16 @@ import { sql, type Transacao } from './db.ts';
  * O que aparece na notificação: título, texto, aba que abre ao tocar e `tag` (avisos com a mesma tag se substituem).
  * Tipo `loja` (pedido de gemas, gemas creditadas) vai para todo aparelho inscrito, sem depender dos tipos escolhidos.
  */
-export type Aviso = { jogadorId: string; tipo: TipoAviso | 'loja' | 'sistema'; titulo: string; corpo: string; url: string; tag: string };
+export type Aviso = {
+  jogadorId: string;
+  tipo: TipoAviso | 'loja' | 'sistema';
+  titulo: string;
+  corpo: string;
+  url: string;
+  tag: string;
+  /** Temporada da partida: o aviso diz a sala (fora da principal) e o toque abre a sala certa. */
+  temporadaId?: string;
+};
 type Inscricao = { id: string; jogador_id: string; endpoint: string; p256dh: string; auth: string; tipos: string[] };
 
 const SITE = 'https://terra-de-ninguem.vercel.app';
@@ -43,6 +52,7 @@ export async function coletarAvisos(tx: Transacao, agora: number): Promise<Aviso
   const relatorios = await tx<
     {
       id: string;
+      temporada_id: string;
       tipo: string;
       atacante_id: string;
       defensor_id: string | null;
@@ -58,10 +68,10 @@ export async function coletarAvisos(tx: Transacao, agora: number): Promise<Aviso
       from territorios t
      where r.id in (select id from relatorios where not avisado order by criado_em limit 200 for update skip locked)
        and t.id = r.territorio_id
-    returning r.id, r.tipo, r.atacante_id, r.defensor_id, r.vencedor, r.conquistou, r.dados->>'motivo' as motivo, r.dados->'pet' as pet,
+    returning r.id, r.temporada_id, r.tipo, r.atacante_id, r.defensor_id, r.vencedor, r.conquistou, r.dados->>'motivo' as motivo, r.dados->'pet' as pet,
               t.nome as territorio, (select nome from jogadores where id = r.atacante_id) as atacante`;
   for (const r of relatorios) {
-    const base = { tipo: 'batalha' as const, url: '/#relatorios', tag: `relatorio-${r.id}` };
+    const base = { tipo: 'batalha' as const, url: '/#relatorios', tag: `relatorio-${r.id}`, temporadaId: r.temporada_id };
     if (r.vencedor === null) {
       avisos.push({
         ...base,
@@ -101,14 +111,14 @@ export async function coletarAvisos(tx: Transacao, agora: number): Promise<Aviso
 
   // Marchas alheias rumo a um território com torre pronta do dono: a torre avisa (como o ⚠️ do mapa).
   const vistas = await tx<
-    { id: string; tipo: string; dono_id: string; territorio: string; soldados: number; chegada_em: Date; atacante: string }[]
+    { id: string; temporada_id: string; tipo: string; dono_id: string; territorio: string; soldados: number; chegada_em: Date; atacante: string }[]
   >`
     update marchas m set avisada_torre = true
       from territorios t, estruturas e
      where m.status = 'a_caminho' and not m.avisada_torre and m.tipo in ('saque', 'conquista', 'reconhecimento')
        and t.id = m.destino_id and t.dono_id is not null and t.dono_id <> m.jogador_id
        and e.territorio_id = m.destino_id and e.jogador_id = t.dono_id and e.tipo = 'torre' and e.pronto_em <= now()
-    returning m.id, m.tipo, t.dono_id, t.nome as territorio, (m.lanceiro + m.arqueiro + m.cavalaria)::int as soldados,
+    returning m.id, m.temporada_id, m.tipo, t.dono_id, t.nome as territorio, (m.lanceiro + m.arqueiro + m.cavalaria)::int as soldados,
               m.chegada_em, (select nome from jogadores where id = m.jogador_id) as atacante`;
   for (const m of vistas) {
     avisos.push({
@@ -121,16 +131,17 @@ export async function coletarAvisos(tx: Transacao, agora: number): Promise<Aviso
           : `${m.soldados} soldados de ${m.atacante} chegam ${quando(m.chegada_em)}.`,
       url: '/#mapa',
       tag: `marcha-${m.id}`,
+      temporadaId: m.temporada_id,
     });
   }
 
   // Cartas que chegaram.
   const cartas = await tx<
-    { id: string; destinatario_id: string; texto: string; proposta: TipoProposta | null; horas_pacto: number | null; remetente: string }[]
+    { id: string; temporada_id: string; destinatario_id: string; texto: string; proposta: TipoProposta | null; horas_pacto: number | null; remetente: string }[]
   >`
     update cartas c set avisada = true
      where not c.avisada and c.chega_em <= now()
-    returning c.id, c.destinatario_id, c.texto, c.proposta, c.horas_pacto,
+    returning c.id, c.temporada_id, c.destinatario_id, c.texto, c.proposta, c.horas_pacto,
               (select nome from jogadores where id = c.remetente_id) as remetente`;
   for (const c of cartas) {
     const proposta = c.proposta ? `Proposta de ${NOME_PROPOSTA[c.proposta]} por ${c.horas_pacto} h.` : '';
@@ -141,16 +152,17 @@ export async function coletarAvisos(tx: Transacao, agora: number): Promise<Aviso
       corpo: [resumo(c.texto), proposta].filter(Boolean).join(' '),
       url: '/#cartas',
       tag: `carta-${c.id}`,
+      temporadaId: c.temporada_id,
     });
   }
 
   // Respostas às propostas: para quem mandou.
   const respostas = await tx<
-    { id: string; remetente_id: string; resposta: 'aceita' | 'recusada'; proposta: TipoProposta | null; horas_pacto: number | null; destinatario: string }[]
+    { id: string; temporada_id: string; remetente_id: string; resposta: 'aceita' | 'recusada'; proposta: TipoProposta | null; horas_pacto: number | null; destinatario: string }[]
   >`
     update cartas c set resposta_avisada = true
      where c.resposta is not null and not c.resposta_avisada
-    returning c.id, c.remetente_id, c.resposta, c.proposta, c.horas_pacto,
+    returning c.id, c.temporada_id, c.remetente_id, c.resposta, c.proposta, c.horas_pacto,
               (select nome from jogadores where id = c.destinatario_id) as destinatario`;
   for (const r of respostas) {
     const nome = r.proposta ? NOME_PROPOSTA[r.proposta] : 'proposta';
@@ -161,15 +173,16 @@ export async function coletarAvisos(tx: Transacao, agora: number): Promise<Aviso
       corpo: r.resposta === 'aceita' ? `O ${nome} vale por ${r.horas_pacto} h a partir de agora.` : `Recusou o ${nome}.`,
       url: '/#cartas',
       tag: `resposta-${r.id}`,
+      temporadaId: r.temporada_id,
     });
   }
 
   // Horda que saiu: para o dono do alvo.
-  const hordas = await tx<{ id: string; alvo_id: string | null; territorio: string; chegada_em: Date; guerreiros: number }[]>`
+  const hordas = await tx<{ id: string; temporada_id: string; alvo_id: string | null; territorio: string; chegada_em: Date; guerreiros: number }[]>`
     update hordas h set avisada = true
       from territorios t
      where not h.avisada and t.id = h.territorio_id
-    returning h.id, h.alvo_id, t.nome as territorio, h.chegada_em, (h.lanceiro + h.arqueiro + h.cavalaria)::int as guerreiros`;
+    returning h.id, h.temporada_id, h.alvo_id, t.nome as territorio, h.chegada_em, (h.lanceiro + h.arqueiro + h.cavalaria)::int as guerreiros`;
   for (const h of hordas) {
     if (!h.alvo_id) continue;
     avisos.push({
@@ -179,15 +192,16 @@ export async function coletarAvisos(tx: Transacao, agora: number): Promise<Aviso
       corpo: `${h.guerreiros} guerreiros chegam ${quando(h.chegada_em)}.`,
       url: '/#mapa',
       tag: `horda-${h.id}`,
+      temporadaId: h.temporada_id,
     });
   }
 
   // Horda que atacou: para quem defendeu.
-  const ataquesDeHorda = await tx<{ id: string; defensor_id: string | null; vencedor: 'horda' | 'defensor' | null; conquistou: boolean; territorio: string }[]>`
+  const ataquesDeHorda = await tx<{ id: string; temporada_id: string; defensor_id: string | null; vencedor: 'horda' | 'defensor' | null; conquistou: boolean; territorio: string }[]>`
     update hordas h set resultado_avisado = true
       from territorios t
      where h.status = 'resolvida' and not h.resultado_avisado and t.id = h.territorio_id
-    returning h.id, h.defensor_id, h.vencedor, h.conquistou, t.nome as territorio`;
+    returning h.id, h.temporada_id, h.defensor_id, h.vencedor, h.conquistou, t.nome as territorio`;
   for (const h of ataquesDeHorda) {
     if (!h.defensor_id || !h.vencedor) continue;
     avisos.push({
@@ -197,6 +211,7 @@ export async function coletarAvisos(tx: Transacao, agora: number): Promise<Aviso
       corpo: h.vencedor === 'defensor' ? 'Você venceu a horda.' : h.conquistou ? 'A horda venceu e tomou o território.' : 'A horda venceu.',
       url: '/#relatorios',
       tag: `horda-${h.id}`,
+      temporadaId: h.temporada_id,
     });
   }
 
@@ -223,7 +238,8 @@ export async function coletarAvisos(tx: Transacao, agora: number): Promise<Aviso
           ? `Segure até ${quando(venceEm)} para vencer. Sem escudo nem pactos de não agressão até lá.`
           : `Vence ${quando(venceEm)} se mantiver. Está sem escudo nem pactos: é a hora de reagir.`,
         url: '/#objetivo',
-        tag: `objetivo-${r.jogador_id}`,
+        tag: `objetivo-${r.temporada_id}-${r.jogador_id}`,
+        temporadaId: r.temporada_id,
       });
     }
   }
@@ -271,6 +287,7 @@ export async function coletarAvisos(tx: Transacao, agora: number): Promise<Aviso
         corpo: `${e.sequestrador ?? 'Quem sequestrou'} pede ${e.resgate_ouro} de ouro para devolver. Pague na tela Cidade ou vá buscar na marra.`,
         url: '/#cidade',
         tag,
+        temporadaId: e.temporada_id,
       });
     } else if (e.evento === 'pago' && e.sequestrador_id) {
       avisos.push({
@@ -280,6 +297,7 @@ export async function coletarAvisos(tx: Transacao, agora: number): Promise<Aviso
         corpo: `Você recebeu ${e.resgate_ouro ?? 0} de ouro e o ${pet} voltou para a cidade de ${e.dono}.`,
         url: '/#cidade',
         tag,
+        temporadaId: e.temporada_id,
       });
     } else if (e.evento === 'libertado') {
       avisos.push({
@@ -289,6 +307,7 @@ export async function coletarAvisos(tx: Transacao, agora: number): Promise<Aviso
         corpo: `${e.sequestrador ?? 'Quem sequestrou'} devolveu de graça.`,
         url: '/#cidade',
         tag,
+        temporadaId: e.temporada_id,
       });
     }
   }
@@ -370,6 +389,7 @@ export async function coletarAvisos(tx: Transacao, agora: number): Promise<Aviso
         corpo: resumo(a.texto),
         url: '/#mapa',
         tag: `arauto-${a.id}`,
+        temporadaId: a.temporada_id,
       });
     }
   }
@@ -390,10 +410,30 @@ export async function coletarAvisos(tx: Transacao, agora: number): Promise<Aviso
     });
   }
 
+  await marcarSalas(tx, avisos);
   return avisos;
 }
 
 /** Manda uma notificação para uma inscrição. Devolve o código do serviço de push quando ele recusa. */
+/**
+ * Avisos de partida: o toque abre a sala certa (`?sala=`) e, fora da Sala principal, o título começa com o nome
+ * da sala, para quem joga em mais de uma saber de onde veio.
+ */
+async function marcarSalas(tx: Transacao, avisos: Aviso[]): Promise<void> {
+  const temporadas = [...new Set(avisos.flatMap((a) => (a.temporadaId ? [a.temporadaId] : [])))];
+  if (temporadas.length === 0) return;
+  const salas = await tx<{ temporada_id: string; sala_id: string; nome: string; principal: boolean }[]>`
+    select t.id as temporada_id, s.id as sala_id, s.nome, s.principal
+      from temporadas t join salas s on s.id = t.sala_id where t.id = any(${temporadas}::uuid[])`;
+  const porTemporada = new Map(salas.map((s) => [s.temporada_id, s]));
+  for (const a of avisos) {
+    const sala = a.temporadaId ? porTemporada.get(a.temporadaId) : undefined;
+    if (!sala) continue;
+    a.url = a.url.startsWith('/#') ? `/?sala=${sala.sala_id}${a.url.slice(1)}` : a.url;
+    if (!sala.principal) a.titulo = `[${sala.nome}] ${a.titulo}`;
+  }
+}
+
 async function mandar(inscricao: Inscricao, aviso: Pick<Aviso, 'titulo' | 'corpo' | 'url' | 'tag'> & { urgente: boolean }) {
   try {
     await webpush.sendNotification(

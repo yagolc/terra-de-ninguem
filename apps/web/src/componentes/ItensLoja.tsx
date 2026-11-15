@@ -12,6 +12,7 @@ import {
 } from '@terra/regras';
 import { useState } from 'react';
 import { PETS_INFO } from '../lib/pets';
+import { salaEscolhida } from '../lib/salas';
 import type { Gemas } from '../lib/useGemas';
 import JanelaConfirmacao from './JanelaConfirmacao';
 
@@ -54,7 +55,10 @@ export default function ItensLoja({ gemas, ocupado, onComprar, onUsarTitulo }: P
     <div className="space-y-3">
       <h4 className="font-titulo text-ouro">Itens</h4>
       <ul className="grid gap-2 sm:grid-cols-2">
-        {(Object.keys(INFO) as (keyof typeof INFO)[]).map((item) => {
+        {(Object.keys(INFO) as (keyof typeof INFO)[])
+          // A Crônica só tem capítulos na Sala principal.
+          .filter((item) => item !== 'cronica' || (salaEscolhida()?.principal ?? true))
+          .map((item) => {
           const info = INFO[item];
           const comprado = tem(item);
           const semTemporada = BALANCEAMENTO.loja.itens[item].escopo === 'temporada' && !gemas.temporadaId;

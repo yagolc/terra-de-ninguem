@@ -3,6 +3,7 @@ import Bandeira from '../componentes/Bandeira';
 import EditorPerfil from '../componentes/EditorPerfil';
 import PainelAvisos from '../componentes/PainelAvisos';
 import PresentearGemas from '../componentes/PresentearGemas';
+import { temporadaEmAndamento } from '../lib/salas';
 import { RACAS_INFO } from '../lib/textos';
 import { usePerfil, type TemporadaDoPerfil } from '../lib/usePerfil';
 
@@ -53,7 +54,9 @@ export default function Perfil({ jogadorId, meuId, onNomeMudou }: Props) {
   if (dados === undefined) return <p className="p-6 text-center text-pergaminho-escuro">Abrindo o perfil…</p>;
   if (dados === null) return <p className="p-6 text-center text-pergaminho-escuro">Jogador não encontrado.</p>;
 
-  const atual = dados.temporadas.find((t) => t.status === 'ativa');
+  // A temporada da sala aberta (com o banco antigo, a ativa).
+  const daSala = temporadaEmAndamento();
+  const atual = dados.temporadas.find((t) => t.status === 'ativa' && (t.temporadaId === null || t.temporadaId === daSala?.id));
   const encerradas = dados.temporadas.filter((t) => t.status === 'encerrada');
   const titulos = encerradas.filter((t) => t.venceu).length;
   const melhor = encerradas.reduce<number | null>((m, t) => (t.posicao && (m === null || t.posicao < m) ? t.posicao : m), null);
@@ -111,7 +114,7 @@ export default function Perfil({ jogadorId, meuId, onNomeMudou }: Props) {
       </section>
 
       {atual && (
-        <Secao titulo={`Temporada ${atual.numero}`}>
+        <Secao titulo={`${atual.sala ? `${atual.sala}: t` : 'T'}emporada ${atual.numero}`}>
           {atual.posicao ? (
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
               <Numero rotulo="colocação" valor={colocacao(atual)} />
@@ -138,9 +141,9 @@ export default function Perfil({ jogadorId, meuId, onNomeMudou }: Props) {
             </div>
             <ul className="divide-y divide-couro/60 text-sm">
               {encerradas.map((t) => (
-                <li key={t.numero} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 py-2">
+                <li key={t.temporadaId ?? t.numero} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 py-2">
                   <span>
-                    Temporada {t.numero}
+                    {t.sala ? `${t.sala}: temporada` : 'Temporada'} {t.numero}
                     {t.raca && <span className="text-pergaminho-escuro"> · {RACAS_INFO[t.raca].icone} {RACAS_INFO[t.raca].nome}</span>}
                   </span>
                   <span className={`tabular-nums ${t.venceu ? 'font-semibold text-ouro' : 'text-pergaminho-escuro'}`}>

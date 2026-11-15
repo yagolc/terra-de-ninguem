@@ -4,6 +4,14 @@ Lista das mudanças para mandar aos jogadores. Cada temporada nova ganha uma se�
 
 ## Temporada 6
 
+### Salas
+
+- **Salas** (🏰 no alto da tela): além da Sala principal, o organizador pode abrir outras partidas que rodam ao mesmo tempo, cada uma com mapa, placar, objetivos, hordas e herdeiro próprios (o herdeiro de uma sala é quem venceu a temporada anterior dela). Algumas salas são abertas a todos até lotar; outras, só para convidados. Cada sala pode ter outro número de jogadores (de 2 a 8) e outra duração.
+- **Até 3 partidas ao mesmo tempo**, contando a Sala principal. Cidade, tropas, herói, pets, cartas e pactos de uma sala não passam para outra; gemas, itens e perfil valem em todas. O ⚡ terminar obra conta separado em cada sala (o preço dobra dentro de cada uma).
+- **Cor no mapa por sala:** você mantém a sua cor onde ela estiver livre; numa sala em que outro jogador já a usa, recebe a primeira livre.
+- **Avisos no celular** de outra sala chegam com o nome dela no começo, e tocar abre a sala certa.
+- A Crônica continua só na Sala principal.
+
 ### Mapa
 
 - **Rios e cordilheiras mais claros:** o rio virou uma faixa de água ondulada e a cordilheira, uma fileira de montanhas com neve. Os dois estão na legenda do mapa, e o painel de um território diz com quem ele não tem passagem ("🌊 rio com…", "⛰️ cordilheira com…").

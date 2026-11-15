@@ -40,10 +40,10 @@ type Horda = {
   cavalaria: number;
 };
 
-/** Solta a próxima horda da temporada ativa, se já é a hora (a primeira no fim da proteção de iniciante). */
-export async function soltarHordaSeForHora(tx: Transacao, agora: number): Promise<boolean> {
+/** Solta a próxima horda da temporada (ativa), se já é a hora (a primeira no fim da proteção de iniciante). */
+export async function soltarHordaSeForHora(tx: Transacao, temporadaId: string, agora: number): Promise<boolean> {
   const [temporada] = await tx<{ id: string; inicio: Date }[]>`
-    select id, inicio from temporadas where status = 'ativa' for update`;
+    select id, inicio from temporadas where id = ${temporadaId} and status = 'ativa' for update`;
   if (!temporada) return false;
   const [ultima] = await tx<{ numero: number; partida_em: Date }[]>`
     select numero, partida_em from hordas where temporada_id = ${temporada.id} order by numero desc limit 1`;
@@ -204,8 +204,8 @@ export async function resolverHorda(id: string): Promise<boolean> {
   });
 }
 
-/** Resolve as hordas que já chegaram e solta a próxima, se for a hora. */
-export async function cuidarDasHordas(erros: string[]): Promise<void> {
+/** Resolve as hordas que já chegaram e solta a próxima de cada sala, se for a hora. */
+export async function cuidarDasHordas(erros: string[], temporadasAtivas: readonly string[]): Promise<void> {
   const pendentes = await sql<{ id: string }[]>`
     select h.id from hordas h join temporadas t on t.id = h.temporada_id and t.status = 'ativa'
      where h.status = 'a_caminho' and h.chegada_em <= now() order by h.chegada_em limit 10`;
@@ -217,10 +217,13 @@ export async function cuidarDasHordas(erros: string[]): Promise<void> {
       erros.push(`horda ${id}`);
     }
   }
-  try {
-    await sql.begin((tx) => soltarHordaSeForHora(tx, Date.now()));
-  } catch (erro) {
-    console.error('soltar horda', erro);
-    erros.push('soltar horda');
+  // Cada sala na sua transação: erro numa não segura as outras.
+  for (const temporadaId of temporadasAtivas) {
+    try {
+      await sql.begin((tx) => soltarHordaSeForHora(tx, temporadaId, Date.now()));
+    } catch (erro) {
+      console.error('soltar horda', temporadaId, erro);
+      erros.push(`soltar horda ${temporadaId}`);
+    }
   }
 }

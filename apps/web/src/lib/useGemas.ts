@@ -1,7 +1,11 @@
 import { desbloqueiosDe, type Desbloqueios, type ItemComprado, type TituloLoja } from '@terra/regras';
 import { useCallback, useEffect, useState } from 'react';
 import { chamarFuncao } from './funcoes';
+import { temporadaEmAndamento } from './salas';
 import { supabase } from './supabase';
+
+/** Id que não existe: sem temporada em andamento, as contagens da temporada dão zero. */
+const SEM_TEMPORADA = '00000000-0000-0000-0000-000000000000';
 
 export type PedidoGemas = {
   codigo: string;
@@ -44,12 +48,14 @@ async function buscarGemas(): Promise<Gemas> {
   // O RLS devolve só o saldo, os pedidos e os usos do próprio jogador.
   const { data: sessao } = await supabase.auth.getSession();
   const meuId = sessao.session?.user.id ?? '';
+  const temporada = temporadaEmAndamento();
   const [saldo, usos, pedidos, itens, ativa, eu, arautos, presentes] = await Promise.all([
     supabase.from('gemas').select('saldo').maybeSingle<{ saldo: number }>(),
+    // Usos de gemas: contados por sala (o preço do ⚡ dobra em cada uma).
     supabase
       .from('usos_gemas')
-      .select('id, temporadas!inner(status)', { count: 'exact', head: true })
-      .eq('temporadas.status', 'ativa'),
+      .select('id', { count: 'exact', head: true })
+      .eq('temporada_id', temporada?.id ?? SEM_TEMPORADA),
     supabase
       .from('pedidos_gemas')
       .select('codigo, gemas, valor_centavos, status, criado_em, pago_em')
@@ -58,13 +64,13 @@ async function buscarGemas(): Promise<Gemas> {
       .limit(10)
       .returns<LinhaPedido[]>(),
     supabase.from('itens_comprados').select('item, variante, temporada_id').returns<{ item: string; variante: string | null; temporada_id: string | null }[]>(),
-    supabase.from('temporadas').select('id').eq('status', 'ativa').maybeSingle<{ id: string }>(),
+    Promise.resolve({ data: temporada ? { id: temporada.id } : null }),
     supabase.from('jogadores').select('titulo').eq('id', meuId).maybeSingle<{ titulo: TituloLoja | null }>(),
     supabase
       .from('arautos')
-      .select('ate, temporadas!inner(status)')
+      .select('ate')
       .eq('jogador_id', meuId)
-      .eq('temporadas.status', 'ativa')
+      .eq('temporada_id', temporada?.id ?? SEM_TEMPORADA)
       .returns<{ ate: string }[]>(),
     // O RLS devolve só os presentes que o jogador mandou ou recebeu.
     supabase

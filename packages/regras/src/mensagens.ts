@@ -10,6 +10,7 @@ import type { MotivoRecusaNome } from './nome.ts';
 import type { MotivoRecusaPerfil } from './perfil.ts';
 import type { MotivoRecusaPet } from './pets.ts';
 import type { MotivoRecusaCarta, MotivoRecusaRespostaPacto } from './pombos.ts';
+import type { MotivoRecusaEntradaSala, MotivoRecusaSala } from './salas.ts';
 import type { MotivoRecusaRecrutamento, MotivoRecusaTreinoHeroi } from './herois.ts';
 import type { MotivoRecusaVila } from './povoados.ts';
 import type { MotivoRecusaEvolucao } from './predios.ts';
@@ -222,4 +223,21 @@ export const MENSAGENS_ATUALIZACAO_REPORTE: Record<MotivoRecusaAtualizacaoReport
 
 export const MENSAGENS_TITULO: Record<'titulo_nao_comprado', string> = {
   titulo_nao_comprado: 'Esse título ainda não é seu: compre na loja (💎).',
+};
+
+export const MENSAGENS_SALA: Record<MotivoRecusaSala, string> = {
+  nao_organizador: 'Só o organizador cria salas.',
+  nome_vazio: 'Dê um nome à sala.',
+  nome_longo: `O nome da sala pode ter no máximo ${BALANCEAMENTO.salas.nomeMaximo} letras.`,
+  nome_em_uso: 'Já existe uma sala com esse nome.',
+  acesso_invalido: 'Escolha se a sala é aberta ou só para convidados.',
+  jogadores_invalido: `A sala tem de ${BALANCEAMENTO.salas.jogadoresMinimo} a ${BALANCEAMENTO.mapa.jogadoresMaximo} jogadores.`,
+  duracao_invalida: `A temporada dura de ${BALANCEAMENTO.salas.duracaoMinimaDias} a ${BALANCEAMENTO.salas.duracaoMaximaDias} dias.`,
+  semente_invalida: 'A semente é um número inteiro de 0 a 999.999.999.',
+};
+
+export const MENSAGENS_ENTRADA_SALA: Record<MotivoRecusaEntradaSala, string> = {
+  sala_arquivada: 'Esta sala foi arquivada.',
+  sem_convite: 'Esta sala é só para convidados.',
+  partidas_demais: `Você já joga ${BALANCEAMENTO.salas.partidasPorJogador} partidas ao mesmo tempo. Entre nesta quando uma delas acabar.`,
 };

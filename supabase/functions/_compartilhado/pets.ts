@@ -29,8 +29,8 @@ async function petDe(tx: Transacao, temporadaId: string, donoId: string): Promis
 }
 
 /** Escolhe o pet que mora na cidade nesta temporada (null tira). Não troca enquanto o pet é refém. */
-export async function escolherPet(tx: Transacao, jogadorId: string, tipo: unknown) {
-  const temporada = await temporadaAtiva(tx);
+export async function escolherPet(tx: Transacao, jogadorId: string, tipo: unknown, temporadaId?: unknown) {
+  const temporada = await temporadaAtiva(tx, temporadaId);
   const atual = await petDe(tx, temporada.id, jogadorId);
   const v = verificarEscolhaPet({
     tipo: tipo ?? null,
@@ -49,8 +49,8 @@ export async function escolherPet(tx: Transacao, jogadorId: string, tipo: unknow
 }
 
 /** O sequestrador pede (ou muda) o resgate em ouro do pet de `donoId`. */
-export async function pedirResgate(tx: Transacao, jogadorId: string, donoId: unknown, ouro: unknown) {
-  const temporada = await temporadaAtiva(tx);
+export async function pedirResgate(tx: Transacao, jogadorId: string, donoId: unknown, ouro: unknown, temporadaId?: unknown) {
+  const temporada = await temporadaAtiva(tx, temporadaId);
   const pet = await petDe(tx, temporada.id, String(donoId ?? ''));
   const v = verificarPrecoResgate({ ouro, pet: pet && converter(pet), sequestradorId: jogadorId });
   if (!v.ok) throw new ErroDoJogo(MENSAGENS_PET[v.motivo]);
@@ -61,8 +61,8 @@ export async function pedirResgate(tx: Transacao, jogadorId: string, donoId: unk
 }
 
 /** O sequestrador devolve o pet de graça. */
-export async function libertarPet(tx: Transacao, jogadorId: string, donoId: unknown) {
-  const temporada = await temporadaAtiva(tx);
+export async function libertarPet(tx: Transacao, jogadorId: string, donoId: unknown, temporadaId?: unknown) {
+  const temporada = await temporadaAtiva(tx, temporadaId);
   const pet = await petDe(tx, temporada.id, String(donoId ?? ''));
   if (!pet || pet.mantido_por !== jogadorId || pet.dono_id === jogadorId) throw new ErroDoJogo(MENSAGENS_PET.pet_nao_e_refem);
   await tx`
@@ -75,8 +75,8 @@ export async function libertarPet(tx: Transacao, jogadorId: string, donoId: unkn
  * O dono paga o resgate pedido: o ouro sai da cidade dele e entra na do sequestrador (até o armazém dele), e o
  * pet volta. As duas cidades são travadas na ordem dos ids, como no resolver-marchas.
  */
-export async function pagarResgate(tx: Transacao, jogadorId: string, precoVisto: unknown) {
-  const temporada = await temporadaAtiva(tx);
+export async function pagarResgate(tx: Transacao, jogadorId: string, precoVisto: unknown, temporadaId?: unknown) {
+  const temporada = await temporadaAtiva(tx, temporadaId);
   const pet = await petDe(tx, temporada.id, jogadorId);
   if (!pet || pet.mantido_por === jogadorId) throw new ErroDoJogo(MENSAGENS_PET.pet_nao_e_refem);
   const ordem = await tx<{ jogador_id: string }[]>`

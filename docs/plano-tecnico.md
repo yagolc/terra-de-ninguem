@@ -36,7 +36,8 @@ Quase tudo pertence a uma temporada, então resetar o mapa é só criar uma temp
 | --- | --- | --- |
 | jogadores | id (do Auth), nome, cor | Atravessa temporadas |
 | convites | codigo, email, usado\_em | Só quem tem convite cria conta |
-| temporadas | numero, inicio, fim\_previsto, status, vencedor\_id | Uma ativa por vez |
+| salas | nome, principal, acesso, jogadores\_maximo, duracao\_dias, status | Partidas em paralelo (desde a temporada 6); a Sala principal guarda as temporadas de antes |
+| temporadas | sala\_id, numero, inicio, fim\_previsto, status, vencedor\_id | Uma ativa por sala; número contado em cada sala |
 | regioes | temporada\_id, nome | Os "continentes" do mapa gerado |
 | territorios | temporada\_id, regiao\_id, nome, terreno, bonus, dono\_id, x, y | x e y servem para desenhar o mapa |
 | fronteiras | territorio\_a, territorio\_b | Quem é vizinho de quem |

@@ -1,6 +1,7 @@
 import type { TipoProposta } from '@terra/regras';
 import { useCallback, useEffect, useState } from 'react';
 import { chamarFuncao } from './funcoes';
+import { cidadesNaTemporada, comCorDaSala, temporadaEmAndamento } from './salas';
 import { supabase } from './supabase';
 
 /** Carta mandada ou recebida pelo jogador (o RLS só mostra as recebidas depois de chegarem). */
@@ -52,7 +53,7 @@ const data = (v: string | null) => (v ? Date.parse(v) : null);
 
 async function buscar(meuId: string): Promise<EstadoCartas | null> {
   if (!supabase) throw new Error('O Supabase não está configurado.');
-  const { data: temporada } = await supabase.from('temporadas').select('id').eq('status', 'ativa').maybeSingle<{ id: string }>();
+  const temporada = temporadaEmAndamento();
   if (!temporada) return null;
 
   const [cartas, jogadores, racas, cidadesNoMapa, minhaCidade] = await Promise.all([
@@ -64,7 +65,7 @@ async function buscar(meuId: string): Promise<EstadoCartas | null> {
       .limit(200)
       .returns<LinhaCarta[]>(),
     supabase.from('jogadores').select('id, nome, cor').returns<{ id: string; nome: string; cor: string | null }[]>(),
-    supabase.rpc('racas_na_temporada', { p_temporada: temporada.id }),
+    cidadesNaTemporada(temporada.id),
     supabase
       .from('territorios')
       .select('dono_id, x, y')
@@ -110,7 +111,7 @@ async function buscar(meuId: string): Promise<EstadoCartas | null> {
       respostaVista: c.resposta_vista,
       pactoAte: data(c.pacto_ate),
     })),
-    correspondentes: jogadores.data
+    correspondentes: comCorDaSala(jogadores.data, racas.data)
       .filter((j) => j.id !== meuId && naTemporada.has(j.id))
       .map((j) => ({ id: j.id, nome: j.nome, cor: j.cor, cidade: cidades.get(j.id) ?? null }))
       .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
@@ -150,7 +151,7 @@ export function useCartas(meuId: string) {
 /** Cartas que chegaram sem ser lidas e respostas a propostas ainda não vistas (aviso na aba). */
 export async function contarCartasNaoLidas(jogadorId: string): Promise<number> {
   if (!supabase) return 0;
-  const { data: temporada } = await supabase.from('temporadas').select('id').eq('status', 'ativa').maybeSingle<{ id: string }>();
+  const temporada = temporadaEmAndamento();
   if (!temporada) return 0;
   const cartas = () => supabase!.from('cartas').select('id', { count: 'exact', head: true }).eq('temporada_id', temporada.id);
   const [recebidas, respostas] = await Promise.all([

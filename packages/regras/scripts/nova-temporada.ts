@@ -1,7 +1,7 @@
 // Cria uma temporada nova com mapa gerado. Uso (na raiz do repositório):
 //   npm run temporada:nova                      # gera e salva a prévia, sem gravar nada
 //   npm run temporada:nova -- --semente 1234    # outra semente
-//   npm run temporada:nova -- --semente 1234 --aplicar   # encerra a temporada ativa e grava a nova
+//   npm run temporada:nova -- --semente 1234 --aplicar   # encerra a temporada ativa da Sala principal e grava a nova
 // Usa o login da CLI do Supabase (npx supabase login + link), sem chave secreta.
 import { execSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
@@ -15,6 +15,8 @@ import { CORES_JOGADORES, escolherCor, grafoDeFronteiras } from '../src/territor
 import { TIPOS_UNIDADE } from '../src/tipos.ts';
 import { totalUnidades } from '../src/util.ts';
 
+// As outras salas ganham temporada nova pela tela Salas do site (função `salas`).
+const SALA_PRINCIPAL = '00000000-0000-0000-0000-000000000001';
 const RAIZ = fileURLToPath(new URL('../../../', import.meta.url));
 const PASTA_SAIDA = `${RAIZ}supabase/.temp`;
 const CORES_TERRENO = { planicie: '#8a9a4b', floresta: '#3f6b3a', montanha: '#7d6f63' } as const;
@@ -216,9 +218,10 @@ const sql = `do $$
 declare
   t uuid := ${texto(idTemporada)};
 begin
-  update public.temporadas set status = 'encerrada' where status = 'ativa';
-  insert into public.temporadas (id, numero, status, semente, inicio, fim_previsto)
-    values (t, (select coalesce(max(numero), 0) + 1 from public.temporadas), 'ativa', ${mapa.semente}, now(), now() + interval '${BALANCEAMENTO.temporada.duracaoDias} days');
+  update public.temporadas set status = 'encerrada' where status = 'ativa' and sala_id = '${SALA_PRINCIPAL}';
+  insert into public.temporadas (id, sala_id, numero, status, semente, inicio, fim_previsto)
+    values (t, '${SALA_PRINCIPAL}', (select coalesce(max(numero), 0) + 1 from public.temporadas where sala_id = '${SALA_PRINCIPAL}'), 'ativa',
+            ${mapa.semente}, now(), now() + interval '${BALANCEAMENTO.temporada.duracaoDias} days');
   insert into public.regioes (id, temporada_id, indice, nome, terreno) values
     ${valoresRegioes};
   insert into public.territorios (id, temporada_id, regiao_id, indice, nome, terreno, bonus_recurso, x, y, poligono, reservado_para, vaga_inicial, guarnicao_inicial) values
@@ -245,4 +248,4 @@ if (!opcoes.aplicar) {
 }
 execSync('npx supabase db query --linked --file supabase/.temp/nova-temporada.sql', { cwd: RAIZ, stdio: ['ignore', 'ignore', 'inherit'] });
 const [criada] = consultar<{ numero: number }>(`select numero from public.temporadas where id = '${idTemporada}'`);
-console.log(`\n  Temporada ${criada?.numero} criada e ativa. A anterior foi encerrada.\n`);
+console.log(`\n  Temporada ${criada?.numero} da Sala principal criada e ativa. A anterior foi encerrada.\n`);

@@ -85,13 +85,13 @@ async function sortearPara(tx: Transacao, temporadaId: string, jogadorId: string
 
 /**
  * Atualiza a cidade de todos (gravando o que ficou pronto), recalcula o placar, confere os objetivos e encerra a temporada se alguém cumpriu o seu,
- * se alguém fez o monopólio comercial (aberto a todos) ou se o prazo acabou (aí vence quem tem mais pontos). Chamado a cada minuto pelo resolver-marchas.
+ * se alguém fez o monopólio comercial (aberto a todos) ou se o prazo acabou (aí vence quem tem mais pontos). Chamado a cada minuto pelo resolver-marchas,
+ * uma vez para a temporada ativa de cada sala.
  */
-export async function atualizarPlacar(tx: Transacao): Promise<{ encerrada: boolean }> {
+export async function atualizarPlacar(tx: Transacao, temporadaId: string): Promise<{ encerrada: boolean }> {
   const [temporada] = await tx<{ id: string; inicio: Date; fim_previsto: Date | null }[]>`
-    select id, inicio, fim_previsto from temporadas where status = 'ativa' for update`;
+    select id, inicio, fim_previsto from temporadas where id = ${temporadaId} and status = 'ativa' for update`;
   if (!temporada) return { encerrada: false };
-  const temporadaId = temporada.id;
   const agora = Date.now();
 
   const territorios = await tx<{ id: string; regiao_id: string; dono_id: string | null; cidade_principal: boolean }[]>`

@@ -137,6 +137,16 @@ export const BALANCEAMENTO = {
     duracaoDias: 21,
   },
 
+  /** Salas: partidas em paralelo (desde a temporada 6). A Sala principal usa `temporada.duracaoDias`. */
+  salas: {
+    /** Partidas em andamento por jogador, contando a Sala principal. */
+    partidasPorJogador: 3,
+    nomeMaximo: 40,
+    jogadoresMinimo: 2,
+    duracaoMinimaDias: 3,
+    duracaoMaximaDias: 42,
+  },
+
   objetivos: {
     /** "Dominar mais da metade do mapa": fração dos territórios. */
     fracaoMetadeDoMapa: 0.55,

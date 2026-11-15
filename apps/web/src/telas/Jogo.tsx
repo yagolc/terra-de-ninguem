@@ -1,8 +1,9 @@
 import type { Session } from '@supabase/supabase-js';
-import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import AvisoInstalar from '../componentes/AvisoInstalar';
 import IndicadorEscudo from '../componentes/IndicadorEscudo';
 import NavegacaoInferior, { ABAS, type Aba } from '../componentes/NavegacaoInferior';
+import { buscarSalas, definirSalaEscolhida, salaPedida, type Sala } from '../lib/salas';
 import { supabase } from '../lib/supabase';
 import { buscarMarchasVistas } from '../lib/useMapa';
 import { contarCartasNaoLidas } from '../lib/useCartas';
@@ -17,6 +18,7 @@ import Feedback from './Feedback';
 import Loja from './Loja';
 import Regras from './Regras';
 import Relatorios from './Relatorios';
+import Salas from './Salas';
 
 // O Phaser (cerca de 1 MB) só é baixado quando o jogador abre o mapa.
 const Mapa = lazy(() => import('./Mapa'));
@@ -27,6 +29,7 @@ function abaDoEndereco(): Aba {
   if (location.hash === '#objetivo') return 'objetivo';
   if (location.hash === '#regras') return 'regras';
   if (location.hash === '#loja') return 'loja';
+  if (location.hash === '#salas') return 'salas';
   if (location.hash.startsWith('#feedback')) return 'feedback';
   if (location.hash.startsWith('#perfil')) return 'perfil';
   if (location.hash.startsWith('#cartas')) return 'cartas';
@@ -71,6 +74,13 @@ export default function Jogo({ sessao }: { sessao: Session }) {
   const [cartasNaoLidas, setCartasNaoLidas] = useState(0);
   // Marchas inimigas que as torres do jogador avistam (aviso vermelho na aba Mapa).
   const [ameacas, setAmeacas] = useState(0);
+  // Salas (partidas em paralelo) e a aberta agora. undefined = carregando.
+  const [salas, setSalas] = useState<Sala[] | undefined>(undefined);
+  const [sala, setSala] = useState<Sala | null>(null);
+  const [organizador, setOrganizador] = useState(false);
+  // A sala a abrir na próxima carga (a do endereço ou do aparelho na primeira; depois, a escolhida no menu).
+  const [salaInicial] = useState(salaPedida);
+  const salaQuerida = useRef<string | null>(salaInicial);
 
   // Aviso de relatórios novos: confere ao trocar de aba e a cada minuto (as batalhas são resolvidas de minuto em minuto).
   useEffect(() => {
@@ -82,7 +92,7 @@ export default function Jogo({ sessao }: { sessao: Session }) {
     conferir();
     const t = setInterval(conferir, 60_000);
     return () => clearInterval(t);
-  }, [aba, sessao.user.id]);
+  }, [aba, sessao.user.id, temporadaId]);
 
   // Cartas que chegaram e respostas a propostas: confere ao trocar de aba e a cada minuto (pombos chegam a qualquer hora).
   useEffect(() => {
@@ -94,17 +104,18 @@ export default function Jogo({ sessao }: { sessao: Session }) {
     conferir();
     const t = setInterval(conferir, 60_000);
     return () => clearInterval(t);
-  }, [aba, sessao.user.id]);
+  }, [aba, sessao.user.id, temporadaId]);
 
   useEffect(() => {
     const conferir = () => void buscarMarchasVistas().then((m) => setAmeacas(m.length));
     conferir();
     const t = setInterval(conferir, 60_000);
     return () => clearInterval(t);
-  }, [aba, sessao.user.id]);
+  }, [aba, sessao.user.id, temporadaId]);
 
   // O escudo nasce numa defesa perdida e some ao atacar: confere ao trocar de aba e a cada minuto.
   useEffect(() => {
+    setEscudoAte(null);
     if (!temporadaId) return;
     const conferir = () =>
       void supabase
@@ -133,33 +144,42 @@ export default function Jogo({ sessao }: { sessao: Session }) {
 
   const carregarEntrada = useCallback(async () => {
     if (!supabase) return;
-    const [jogador, ativa, encerradas] = await Promise.all([
+    const [jogador, lista, org] = await Promise.all([
       supabase.from('jogadores').select('nome').eq('id', sessao.user.id).maybeSingle<{ nome: string }>(),
-      supabase.from('temporadas').select('id, numero').eq('status', 'ativa').maybeSingle<{ id: string; numero: number }>(),
-      supabase
-        .from('temporadas')
-        .select('vencedor_id')
-        .eq('status', 'encerrada')
-        .order('numero', { ascending: false })
-        .limit(1)
-        .returns<{ vencedor_id: string | null }[]>(),
+      buscarSalas(sessao.user.id),
+      supabase.rpc('sou_organizador'),
     ]);
     setNome(jogador.data?.nome ?? null);
-    setHerdeiroId(encerradas.data?.[0]?.vencedor_id ?? null);
-    const t = ativa.data;
-    if (t) {
-      // O RLS devolve só a própria cidade.
-      const { data: cidade } = await supabase
-        .from('cidades')
-        .select('id')
-        .eq('temporada_id', t.id)
-        .eq('jogador_id', sessao.user.id)
-        .maybeSingle<{ id: string }>();
-      setFundada(!!cidade);
-    }
-    setTemporada(t?.numero ?? null);
-    setTemporadaId(t?.id ?? null);
+    const souOrganizador = org.data === true;
+    setOrganizador(souOrganizador);
+    // Sala só para convidados não aparece para quem não foi chamado (a sala de teste do organizador, por exemplo).
+    const visiveis = lista.filter((s) => s.acesso === 'aberta' || s.convidado || s.minhaCidade || souOrganizador);
+    setSalas(visiveis);
+    // A sala pedida, se ainda existe; senão a principal (a primeira da lista).
+    const escolhida = visiveis.find((s) => s.id === salaQuerida.current) ?? visiveis[0] ?? null;
+    if (escolhida) definirSalaEscolhida(escolhida);
+    salaQuerida.current = escolhida?.id ?? null;
+    setSala(escolhida);
+    const ativa = escolhida?.temporada?.status === 'ativa' ? escolhida.temporada : null;
+    setHerdeiroId(escolhida?.herdeiroId ?? null);
+    setFundada(escolhida?.minhaCidade ?? false);
+    setTemporada(ativa?.numero ?? null);
+    setTemporadaId(ativa?.id ?? null);
   }, [sessao.user.id]);
+
+  /** Abre outra sala: a tela recarrega tudo da temporada dela (cidade, mapa, placar, cartas). */
+  const abrirSala = useCallback(
+    async (id: string) => {
+      salaQuerida.current = id;
+      setNaoLidos(0);
+      setCartasNaoLidas(0);
+      setAmeacas(0);
+      await carregarEntrada();
+      location.hash = 'cidade';
+      setAba('cidade');
+    },
+    [carregarEntrada],
+  );
 
   useEffect(() => {
     void carregarEntrada();
@@ -194,6 +214,7 @@ export default function Jogo({ sessao }: { sessao: Session }) {
                 )}
               </h1>
               <p className="flex flex-wrap items-center gap-x-2 text-xs text-pergaminho-escuro">
+                {sala && (salas?.length ?? 0) > 1 && <span className="text-pergaminho">{sala.nome} ·</span>}
                 {temporada ? `Temporada ${temporada}` : ' '}
                 {temporada && escudoAte !== null && <IndicadorEscudo ate={escudoAte} />}
               </p>
@@ -220,6 +241,16 @@ export default function Jogo({ sessao }: { sessao: Session }) {
             ))}
           </nav>
           <div className="flex items-center gap-2">
+            {((salas?.length ?? 0) > 1 || organizador) && (
+              <button
+                onClick={() => irPara('salas')}
+                aria-current={aba === 'salas' ? 'page' : undefined}
+                title="Salas: partidas em paralelo"
+                className={`rounded-lg border px-3 py-1.5 text-sm ${aba === 'salas' ? 'border-ouro text-ouro' : 'border-couro text-pergaminho-escuro hover:text-pergaminho'}`}
+              >
+                🏰<span className="hidden sm:inline"> Salas</span>
+              </button>
+            )}
             <button
               onClick={() => irPara('feedback')}
               aria-current={aba === 'feedback' ? 'page' : undefined}
@@ -257,8 +288,18 @@ export default function Jogo({ sessao }: { sessao: Session }) {
       {/* Só o mapa tem rolagem própria. Com a aba Mapa no endereço, a fundação e o fim de temporada aparecem no lugar
           dele e precisam rolar. O `relative` prende aqui dentro os elementos `absolute` sem pai posicionado (como o
           `sr-only` do arauto na Loja): sem ele, a página inteira ganhava rolagem e a barra de baixo subia. */}
-      <main className={`relative min-h-0 flex-1 ${aba === 'mapa' && temporada && fundada ? 'overflow-hidden' : 'overflow-y-auto'}`}>
-        {aba === 'regras' ? (
+      {/* A chave é a sala: trocar de sala remonta as telas, que releem tudo da temporada dela. */}
+      <main key={sala?.id ?? 'sem-sala'} className={`relative min-h-0 flex-1 ${aba === 'mapa' && temporada && fundada ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+        {aba === 'salas' ? (
+          <Salas
+            meuId={sessao.user.id}
+            salas={salas ?? []}
+            salaAberta={sala?.id ?? null}
+            organizador={organizador}
+            onAbrir={(id) => void abrirSala(id)}
+            onMudou={() => void carregarEntrada()}
+          />
+        ) : aba === 'regras' ? (
           <Regras />
         ) : aba === 'loja' ? (
           <Loja />
@@ -270,7 +311,9 @@ export default function Jogo({ sessao }: { sessao: Session }) {
           <FimDeTemporada sessao={sessao} />
         ) : fundada === undefined ? null : !fundada ? (
           <Fundacao
+            key={sala?.id}
             temporada={temporada}
+            sala={sala && !sala.principal ? sala.nome : null}
             nomeAtual={nome ?? ''}
             herdeiro={herdeiroId === sessao.user.id}
             onFundada={() => void carregarEntrada()}

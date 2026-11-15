@@ -12,6 +12,7 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 import { bandeiraDoJogador, COLUNAS_BANDEIRA, nomeDoTitulo, type LinhaBandeira } from './bandeira';
 import { chamarFuncao } from './funcoes';
+import { cidadesNaTemporada, comCorDaSala, SALA_PRINCIPAL, salaEscolhida } from './salas';
 import { supabase } from './supabase';
 
 export type LinhaPlacar = {
@@ -86,13 +87,16 @@ const converterTemporada = (t: LinhaTemporada): TemporadaInfo => ({
 
 async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
   if (!supabase) throw new Error('O Supabase não está configurado.');
-  // A temporada ativa ou, se nenhuma estiver ativa, a última encerrada.
-  const { data: temporadas, error } = await supabase
+  // A temporada ativa da sala aberta ou, se ela não tiver uma, a última encerrada. Com `*`, o banco antigo (sem
+  // `sala_id`) também responde: lá tudo é da Sala principal.
+  const salaId = salaEscolhida()?.id ?? SALA_PRINCIPAL;
+  const { data: todas, error } = await supabase
     .from('temporadas')
-    .select('id, numero, inicio, fim_previsto, status, vencedor_id, motivo_fim, encerrada_em')
+    .select('*')
     .order('numero', { ascending: false })
-    .returns<LinhaTemporada[]>();
-  if (error || !temporadas) throw new Error('Não foi possível carregar a temporada.');
+    .returns<(LinhaTemporada & { sala_id?: string })[]>();
+  if (error || !todas) throw new Error('Não foi possível carregar a temporada.');
+  const temporadas = todas.filter((t) => (t.sala_id ?? SALA_PRINCIPAL) === salaId);
   const linha = temporadas.find((t) => t.status === 'ativa') ?? temporadas.find((t) => t.status === 'encerrada');
   if (!linha) return null;
   const temporada = converterTemporada(linha);
@@ -143,7 +147,7 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
       .select('territorio_id, tipo, nivel, posse_desde')
       .eq('temporada_id', temporada.id)
       .returns<{ territorio_id: string; tipo: 'vila' | 'cidade_livre'; nivel: number; posse_desde: string | null }[]>(),
-    supabase.rpc('racas_na_temporada', { p_temporada: temporada.id }),
+    cidadesNaTemporada(temporada.id),
     supabase.rpc('usos_de_gemas_na_temporada', { p_temporada: temporada.id }),
   ]);
   // Sem a função (migration antiga) o placar só não mostra o ⚡.
@@ -152,7 +156,8 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
     throw new Error('Não foi possível carregar o placar.');
   }
 
-  const nomesJogadores = new Map(jogadores.data.map((j) => [j.id, j]));
+  // A cor de cada um é a da cidade nesta sala.
+  const nomesJogadores = new Map(comCorDaSala(jogadores.data, racas.data).map((j) => [j.id, j]));
   const nomesRegioes = new Map(regioes.data.map((r) => [r.id, r.nome]));
   const nomeJogador = (id: string) => nomesJogadores.get(id)?.nome ?? 'um jogador';
   const meuObjetivo = objetivos.data.find((o) => o.jogador_id === jogadorId)?.objetivo ?? null;

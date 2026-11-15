@@ -18,6 +18,7 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 import { buscarHordas, type Horda } from './hordas';
 import { buscarPets, type PetDaTemporada } from './pets';
+import { cidadesNaTemporada, comCorDaSala, salaEscolhida, temporadaEmAndamento } from './salas';
 import { supabase } from './supabase';
 
 export type RegiaoMapa = { id: string; indice: number; nome: string; terreno: Terreno };
@@ -219,7 +220,11 @@ type LinhaMarchaVista = {
 /** Marchas alheias que as torres do jogador enxergam (a função do banco filtra; o RLS esconde o resto). */
 export async function buscarMarchasVistas(): Promise<MarchaVista[]> {
   if (!supabase) return [];
-  const { data } = await supabase.rpc('marchas_vistas_pela_torre');
+  // Só as da sala aberta; com o banco antigo (sem a função por temporada), todas.
+  const temporada = temporadaEmAndamento();
+  if (!temporada) return [];
+  const porSala = await supabase.rpc('marchas_vistas_na_temporada', { p_temporada: temporada.id });
+  const { data } = porSala.error ? await supabase.rpc('marchas_vistas_pela_torre') : porSala;
   return ((data ?? []) as LinhaMarchaVista[])
     .map((m) => ({
       id: m.id,
@@ -262,12 +267,9 @@ export async function buscarReconhecimentos(temporadaId: string): Promise<Reconh
 
 async function buscarMapa(): Promise<DadosMapa | null> {
   if (!supabase) throw new Error('O Supabase não está configurado.');
-  const { data: temporada } = await supabase
-    .from('temporadas')
-    .select('id, numero, inicio')
-    .eq('status', 'ativa')
-    .maybeSingle<{ id: string; numero: number; inicio: string }>();
-  if (!temporada) return null;
+  const daSala = temporadaEmAndamento();
+  if (!daSala) return null;
+  const temporada = { id: daSala.id, numero: daSala.numero, inicio: new Date(daSala.inicio).toISOString() };
 
   const [
     regioes,
@@ -355,14 +357,9 @@ async function buscarMapa(): Promise<DadosMapa | null> {
         treino_pronto_em: string | null;
         ferido_ate: string | null;
       }>(),
-    supabase.rpc('racas_na_temporada', { p_temporada: temporada.id }),
-    supabase
-      .from('temporadas')
-      .select('vencedor_id')
-      .eq('status', 'encerrada')
-      .order('numero', { ascending: false })
-      .limit(1)
-      .returns<{ vencedor_id: string | null }[]>(),
+    cidadesNaTemporada(temporada.id),
+    // Herdeiro do trono: o vencedor da temporada anterior desta sala.
+    Promise.resolve({ data: [{ vencedor_id: salaEscolhida()?.herdeiroId ?? null }] }),
     supabase
       .from('estradas')
       .select('territorio_id, jogador_id, pronto_em')
@@ -440,7 +437,8 @@ async function buscarMapa(): Promise<DadosMapa | null> {
     regioes: new Map(regioes.data.map((r) => [r.id, r])),
     territorios: territorios.data,
     vizinhos,
-    jogadores: new Map(jogadores.data.map((j) => [j.id, j])),
+    // A cor no mapa é a da cidade nesta sala.
+    jogadores: new Map(comCorDaSala(jogadores.data, racas.data).map((j) => [j.id, j])),
     minhasTropas,
     marchas: marchas.data.map((m) => ({
       id: m.id,

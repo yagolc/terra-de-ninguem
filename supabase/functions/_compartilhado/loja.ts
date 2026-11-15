@@ -14,6 +14,7 @@ import {
   type ItemComprado,
 } from '../../../packages/regras/src/index.ts';
 import type { Transacao } from './db.ts';
+import { SALA_PRINCIPAL, temporadaAtiva } from './cidade.ts';
 import { ErroDoJogo } from './http.ts';
 
 export async function itensDoJogador(tx: Transacao, jogadorId: string): Promise<ItemComprado[]> {
@@ -30,7 +31,15 @@ export async function desbloqueiosDoJogador(tx: Transacao, jogadorId: string): P
 export async function comprarItem(tx: Transacao, jogadorId: string, corpo: Record<string, unknown>) {
   // A trava do saldo serializa as compras do jogador (e o ⚡, que também trava esta linha).
   const [saldo] = await tx<{ saldo: number }[]>`select saldo from gemas where jogador_id = ${jogadorId} for update`;
-  const [ativa] = await tx<{ id: string }[]>`select id from temporadas where status = 'ativa'`;
+  // Itens de temporada valem na temporada da sala escolhida (sem ela, a da Sala principal).
+  const pedida = typeof corpo.temporada_id === 'string' ? corpo.temporada_id : null;
+  const [ativa] = pedida
+    ? await tx<{ id: string; sala_id: string }[]>`select id, sala_id from temporadas where id::text = ${pedida} and status = 'ativa'`
+    : await tx<{ id: string; sala_id: string }[]>`select id, sala_id from temporadas where status = 'ativa' and sala_id = ${SALA_PRINCIPAL}`;
+  // A Crônica só tem capítulos na Sala principal.
+  if (corpo.item === 'cronica' && ativa && ativa.sala_id !== SALA_PRINCIPAL) {
+    throw new ErroDoJogo('O nome na Crônica é só para a Sala principal.');
+  }
   const v = verificarCompraItem({
     item: corpo.item,
     variante: corpo.variante,
@@ -49,10 +58,9 @@ export async function comprarItem(tx: Transacao, jogadorId: string, corpo: Recor
   return { item: v.item, variante: v.variante, gemas_gastas: v.preco };
 }
 
-/** Publica um arauto na temporada ativa: um por jogador no ar, preço dobrando a cada arauto dele na temporada. */
-export async function publicarArauto(tx: Transacao, jogadorId: string, texto: unknown) {
-  const [ativa] = await tx<{ id: string }[]>`select id from temporadas where status = 'ativa'`;
-  if (!ativa) throw new ErroDoJogo('Nenhuma temporada em andamento.', 409);
+/** Publica um arauto na temporada da sala (só os jogadores dela veem): um por jogador no ar, preço dobrando a cada arauto dele na temporada. */
+export async function publicarArauto(tx: Transacao, jogadorId: string, texto: unknown, temporadaId?: unknown) {
+  const ativa = await temporadaAtiva(tx, temporadaId);
   const [saldo] = await tx<{ saldo: number }[]>`select saldo from gemas where jogador_id = ${jogadorId} for update`;
   const [meus] = await tx<{ usos: number; ate: Date | null }[]>`
     select count(*)::int as usos, max(ate) as ate from arautos where temporada_id = ${ativa.id} and jogador_id = ${jogadorId}`;

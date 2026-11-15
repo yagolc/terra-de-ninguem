@@ -427,3 +427,8 @@ verify_jwt = false
 # O token do jogador é validado no código (supabase.auth.getUser), compatível com as chaves novas.
 [functions.cidade]
 verify_jwt = false
+
+# Salas (só o organizador). O deno.json leva o d3-delaunay do gerador de mapa.
+[functions.salas]
+verify_jwt = false
+import_map = "./functions/salas/deno.json"

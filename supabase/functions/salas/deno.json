@@ -1,0 +1,5 @@
+{
+  "imports": {
+    "d3-delaunay": "npm:d3-delaunay@6.0.4"
+  }
+}

@@ -1,10 +1,15 @@
 import type { Bandeira, Raca } from '@terra/regras';
 import { useCallback, useEffect, useState } from 'react';
 import { bandeiraDoJogador, COLUNAS_BANDEIRA, nomeDoTitulo, type LinhaBandeira } from './bandeira';
+import { cidadesNaTemporada, comCorDaSala, temporadaEmAndamento } from './salas';
 import { supabase } from './supabase';
 
 export type TemporadaDoPerfil = {
+  /** null com o banco antigo (antes das salas). */
+  temporadaId: string | null;
   numero: number;
+  /** Nome da sala (null na Sala principal). */
+  sala: string | null;
   status: 'ativa' | 'encerrada';
   raca: Raca | null;
   venceu: boolean;
@@ -29,7 +34,7 @@ export type DadosPerfil = {
   bandeira: Bandeira;
   temporadas: TemporadaDoPerfil[];
   rivalidades: Rival[];
-  /** Cores principais de outros jogadores com cidade na temporada em andamento (não dá para escolher). */
+  /** Cores no mapa de outros jogadores com cidade na temporada em andamento da sala aberta (não dá para escolher). */
   coresEmUso: string[];
 };
 
@@ -37,6 +42,9 @@ type LinhaJogador = LinhaBandeira & { nome: string; descricao: string | null; ti
 
 type Resposta = {
   temporadas: {
+    temporada_id?: string;
+    sala?: string;
+    principal?: boolean;
     numero: number;
     status: 'ativa' | 'encerrada';
     raca: Raca | null;
@@ -54,10 +62,11 @@ type Resposta = {
 
 async function buscarPerfil(jogadorId: string): Promise<DadosPerfil | null> {
   if (!supabase) return null;
-  const [jogadores, estatisticas, ativa] = await Promise.all([
+  const ativa = temporadaEmAndamento();
+  const [jogadores, estatisticas, naSala] = await Promise.all([
     supabase.from('jogadores').select(`id, nome, descricao, titulo, ${COLUNAS_BANDEIRA}`).returns<LinhaJogador[]>(),
     supabase.rpc('perfil_jogador', { p_jogador: jogadorId }),
-    supabase.from('temporadas').select('id').eq('status', 'ativa').maybeSingle<{ id: string }>(),
+    ativa ? cidadesNaTemporada(ativa.id) : Promise.resolve({ data: [] }),
   ]);
   if (jogadores.error || estatisticas.error || !jogadores.data || !estatisticas.data) {
     throw new Error('Não foi possível carregar o perfil.');
@@ -66,12 +75,11 @@ async function buscarPerfil(jogadorId: string): Promise<DadosPerfil | null> {
   const jogador = porId.get(jogadorId);
   if (!jogador) return null;
 
-  // Quem tem cidade na temporada em andamento (a função devolve só jogador e raça).
-  let naTemporada: string[] = [];
-  if (ativa.data) {
-    const { data } = await supabase.rpc('racas_na_temporada', { p_temporada: ativa.data.id });
-    naTemporada = ((data ?? []) as { jogador_id: string }[]).map((r) => r.jogador_id);
-  }
+  // Quem tem cidade na temporada em andamento da sala aberta, com a cor no mapa de cada um.
+  const naTemporada = comCorDaSala(
+    (naSala.data ?? []).map((c) => ({ id: c.jogador_id, cor: porId.get(c.jogador_id)?.cor ?? null })),
+    naSala.data,
+  );
 
   const dados = estatisticas.data as Resposta;
   return {
@@ -81,7 +89,9 @@ async function buscarPerfil(jogadorId: string): Promise<DadosPerfil | null> {
     titulo: nomeDoTitulo(jogador.titulo),
     bandeira: bandeiraDoJogador(jogador),
     temporadas: dados.temporadas.map((t) => ({
+      temporadaId: t.temporada_id ?? null,
       numero: t.numero,
+      sala: t.principal === false ? (t.sala ?? null) : null,
       status: t.status,
       raca: t.raca,
       venceu: t.venceu,
@@ -99,12 +109,7 @@ async function buscarPerfil(jogadorId: string): Promise<DadosPerfil | null> {
         ? [{ jogadorId: rival.id, nome: rival.nome, bandeira: bandeiraDoJogador(rival), vitorias: r.vitorias, derrotas: r.derrotas }]
         : [];
     }),
-    coresEmUso: naTemporada
-      .filter((id) => id !== jogadorId)
-      .flatMap((id) => {
-        const cor = porId.get(id)?.cor;
-        return cor ? [cor.toLowerCase()] : [];
-      }),
+    coresEmUso: naTemporada.filter((j) => j.id !== jogadorId).flatMap((j) => (j.cor ? [j.cor.toLowerCase()] : [])),
   };
 }
 

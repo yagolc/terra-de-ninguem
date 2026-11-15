@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { chamarFuncao } from './funcoes';
 import { buscarHordas, type Horda } from './hordas';
 import { buscarReconhecimentos, type Reconhecimento } from './useMapa';
+import { cidadesNaTemporada, temporadaEmAndamento } from './salas';
 import { supabase } from './supabase';
 
 export type HeroiNoRelatorio = { nome: string; especialidade: Especialidade; nivel: number; ferido: boolean };
@@ -88,7 +89,7 @@ type Contexto = {
 
 async function buscar(): Promise<{ relatorios: Relatorio[] } & Contexto> {
   if (!supabase) throw new Error('O Supabase não está configurado.');
-  const { data: temporada } = await supabase.from('temporadas').select('id').eq('status', 'ativa').maybeSingle<{ id: string }>();
+  const temporada = temporadaEmAndamento();
   if (!temporada) {
     return {
       relatorios: [],
@@ -120,7 +121,7 @@ async function buscar(): Promise<{ relatorios: Relatorio[] } & Contexto> {
       .eq('temporada_id', temporada.id)
       .eq('tipo', 'cidade_livre')
       .returns<{ territorio_id: string }[]>(),
-    supabase.rpc('racas_na_temporada', { p_temporada: temporada.id }),
+    cidadesNaTemporada(temporada.id),
   ]);
   if (!relatorios.data || !territorios.data || !jogadores.data) throw new Error('Não foi possível carregar os relatórios.');
   const batalhas = relatorios.data.filter((r): r is Relatorio => r.tipo !== 'devolvida');
@@ -184,7 +185,7 @@ export function useRelatorios() {
  */
 export async function contarNaoLidos(jogadorId: string): Promise<number> {
   if (!supabase) return 0;
-  const { data: temporada } = await supabase.from('temporadas').select('id').eq('status', 'ativa').maybeSingle<{ id: string }>();
+  const temporada = temporadaEmAndamento();
   if (!temporada) return 0;
   const naTemporada = (tabela: 'relatorios' | 'reconhecimentos') =>
     supabase!.from(tabela).select('id', { count: 'exact', head: true }).eq('temporada_id', temporada.id);

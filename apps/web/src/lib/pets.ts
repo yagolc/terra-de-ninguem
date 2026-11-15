@@ -1,6 +1,7 @@
 import type { TipoPet } from '@terra/regras';
 import { useCallback, useEffect, useState } from 'react';
 import { chamarFuncao } from './funcoes';
+import { temporadaEmAndamento } from './salas';
 import { supabase } from './supabase';
 
 export const PETS_INFO: Record<TipoPet, { nome: string; icone: string }> = {
@@ -47,7 +48,7 @@ export function usePets() {
 
   const recarregar = useCallback(async () => {
     if (!supabase) return;
-    const { data: ativa } = await supabase.from('temporadas').select('id').eq('status', 'ativa').maybeSingle<{ id: string }>();
+    const ativa = temporadaEmAndamento();
     if (!ativa) return setPets([]);
     const lista = await buscarPets(ativa.id);
     const ids = [...new Set(lista.flatMap((p) => [p.donoId, p.mantidoPor]))];

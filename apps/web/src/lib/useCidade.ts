@@ -29,6 +29,7 @@ import {
 } from '@terra/regras';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { chamarFuncao } from './funcoes';
+import { temporadaEmAndamento } from './salas';
 import { supabase } from './supabase';
 
 type LinhaCidade = {
@@ -163,13 +164,16 @@ function converter(
 
 async function buscarCidade(jogadorId: string): Promise<CidadeSalva | null> {
   if (!supabase) throw new Error('O Supabase não está configurado.');
+  // A cidade da temporada em andamento da sala aberta.
+  const temporada = temporadaEmAndamento();
+  if (!temporada) return null;
   const { data, error } = await supabase
     .from('cidades')
     .select(
-      'temporada_id, territorio_id, comida, madeira, ouro, populacao, trabalhadores_comida, trabalhadores_madeira, trabalhadores_ouro, atualizado_em, raca, guarda_real, missoes, predios(tipo, nivel), obras(tipo, pronto_em), filas_treino(tipo_unidade, quantidade, pronto_em, territorio_id), temporadas!inner(status)',
+      'temporada_id, territorio_id, comida, madeira, ouro, populacao, trabalhadores_comida, trabalhadores_madeira, trabalhadores_ouro, atualizado_em, raca, guarda_real, missoes, predios(tipo, nivel), obras(tipo, pronto_em), filas_treino(tipo_unidade, quantidade, pronto_em, territorio_id)',
     )
     .eq('jogador_id', jogadorId)
-    .eq('temporadas.status', 'ativa')
+    .eq('temporada_id', temporada.id)
     .maybeSingle<LinhaCidade>();
   if (error) throw new Error('Não foi possível carregar sua cidade.');
   if (!data) return null;

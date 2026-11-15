@@ -24,6 +24,8 @@
 //      | { acao: 'escolher_pet', tipo } | { acao: 'pedir_resgate', dono_id, ouro } | { acao: 'libertar_pet', dono_id } | { acao: 'pagar_resgate', ouro } (ouro: o preço que o dono viu)
 //      | { acao: 'publicar_arauto', texto } | { acao: 'presentear_gemas', destinatario_id, gemas }
 //      | { acao: 'terminar_obra', pronto_em } (gasta gemas para terminar na hora a obra que está sendo feita)
+// Salas: todo comando de partida aceita `temporada_id` (a temporada da sala aberta no site). Sem ele, vale a
+// temporada da Sala principal (o site antigo, guardado no celular, não manda).
 // Publicar com: npx supabase functions deploy cidade --no-verify-jwt (o token é validado no código).
 import {
   MENSAGENS_ALOCACAO,
@@ -529,12 +531,17 @@ async function responderPacto(tx: Transacao, temporada: Temporada, jogadorId: st
   return v.pactoAte;
 }
 
+/** Temporada da sala aberta no site, se o comando disse (o site antigo não diz). */
+function temporadaDoCorpo(corpo: Record<string, unknown>): string | null {
+  return typeof corpo.temporada_id === 'string' && corpo.temporada_id ? corpo.temporada_id : null;
+}
+
 async function executar(jogadorId: string, corpo: Record<string, unknown>): Promise<Record<string, unknown>> {
   if (corpo.acao === 'entrar') {
     // Funda a cidade (se ainda não houver) e sorteia o objetivo secreto (se ainda não houver).
     await sql.begin(async (tx) => {
-      await criarCidade(tx, jogadorId, { raca: corpo.raca, nome: corpo.nome });
-      await garantirObjetivo(tx, (await temporadaAtiva(tx)).id, jogadorId);
+      const temporada = await criarCidade(tx, jogadorId, { raca: corpo.raca, nome: corpo.nome }, corpo.temporada_id);
+      await garantirObjetivo(tx, temporada.id, jogadorId);
     });
     return { ok: true };
   }
@@ -544,9 +551,14 @@ async function executar(jogadorId: string, corpo: Record<string, unknown>): Prom
     return { ok: true, ...perfil };
   }
   if (corpo.acao === 'marcar_relatorios_lidos') {
-    await sql`update relatorios set lido_atacante = true where atacante_id = ${jogadorId} and not lido_atacante`;
-    await sql`update relatorios set lido_defensor = true where defensor_id = ${jogadorId} and not lido_defensor`;
-    await sql`update reconhecimentos set lido = true where jogador_id = ${jogadorId} and not lido and disponivel_em <= now()`;
+    // Só os da sala aberta no site (sem `temporada_id`, o site antigo: todos).
+    const t = temporadaDoCorpo(corpo);
+    await sql`update relatorios set lido_atacante = true
+               where atacante_id = ${jogadorId} and not lido_atacante and (${t}::text is null or temporada_id::text = ${t})`;
+    await sql`update relatorios set lido_defensor = true
+               where defensor_id = ${jogadorId} and not lido_defensor and (${t}::text is null or temporada_id::text = ${t})`;
+    await sql`update reconhecimentos set lido = true
+               where jogador_id = ${jogadorId} and not lido and disponivel_em <= now() and (${t}::text is null or temporada_id::text = ${t})`;
     return { ok: true };
   }
   if (corpo.acao === 'inscrever_avisos') {
@@ -615,19 +627,19 @@ async function executar(jogadorId: string, corpo: Record<string, unknown>): Prom
     return { ok: true, ...(await sql.begin((tx) => atualizarReporte(tx, jogadorId, corpo))) };
   }
   if (corpo.acao === 'escolher_pet') {
-    return { ok: true, ...(await sql.begin((tx) => escolherPet(tx, jogadorId, corpo.tipo))) };
+    return { ok: true, ...(await sql.begin((tx) => escolherPet(tx, jogadorId, corpo.tipo, corpo.temporada_id))) };
   }
   if (corpo.acao === 'pedir_resgate') {
-    return { ok: true, ...(await sql.begin((tx) => pedirResgate(tx, jogadorId, corpo.dono_id, corpo.ouro))) };
+    return { ok: true, ...(await sql.begin((tx) => pedirResgate(tx, jogadorId, corpo.dono_id, corpo.ouro, corpo.temporada_id))) };
   }
   if (corpo.acao === 'libertar_pet') {
-    return { ok: true, ...(await sql.begin((tx) => libertarPet(tx, jogadorId, corpo.dono_id))) };
+    return { ok: true, ...(await sql.begin((tx) => libertarPet(tx, jogadorId, corpo.dono_id, corpo.temporada_id))) };
   }
   if (corpo.acao === 'pagar_resgate') {
-    return { ok: true, ...(await sql.begin((tx) => pagarResgate(tx, jogadorId, corpo.ouro))) };
+    return { ok: true, ...(await sql.begin((tx) => pagarResgate(tx, jogadorId, corpo.ouro, corpo.temporada_id))) };
   }
   if (corpo.acao === 'publicar_arauto') {
-    return { ok: true, ...(await sql.begin((tx) => publicarArauto(tx, jogadorId, corpo.texto))) };
+    return { ok: true, ...(await sql.begin((tx) => publicarArauto(tx, jogadorId, corpo.texto, corpo.temporada_id))) };
   }
   if (corpo.acao === 'presentear_gemas') {
     return { ok: true, ...(await sql.begin((tx) => presentearGemas(tx, jogadorId, corpo.destinatario_id, corpo.gemas))) };
@@ -644,14 +656,18 @@ async function executar(jogadorId: string, corpo: Record<string, unknown>): Prom
     return { ok: true };
   }
   if (corpo.acao === 'marcar_cartas_lidas') {
-    await sql`update cartas set lida = true where destinatario_id = ${jogadorId} and not lida and chega_em <= now()`;
-    await sql`update cartas set resposta_vista = true where remetente_id = ${jogadorId} and resposta is not null and not resposta_vista`;
+    const t = temporadaDoCorpo(corpo);
+    await sql`update cartas set lida = true
+               where destinatario_id = ${jogadorId} and not lida and chega_em <= now() and (${t}::text is null or temporada_id::text = ${t})`;
+    await sql`update cartas set resposta_vista = true
+               where remetente_id = ${jogadorId} and resposta is not null and not resposta_vista
+                 and (${t}::text is null or temporada_id::text = ${t})`;
     return { ok: true };
   }
 
   return await sql.begin(async (tx) => {
     const agora = Date.now();
-    const temporada = await temporadaAtiva(tx);
+    const temporada = await temporadaAtiva(tx, corpo.temporada_id);
     const c = avancarAteAgora(await carregarCidade(tx, temporada.id, jogadorId), agora);
     const resultado: Record<string, unknown> = { ok: true };
 
