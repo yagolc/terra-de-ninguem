@@ -1,4 +1,5 @@
 import type { Session } from '@supabase/supabase-js';
+import { BALANCEAMENTO } from '@terra/regras';
 import { useState } from 'react';
 import DetalheRelatorio from '../componentes/DetalheRelatorio';
 import InfoReconhecimento from '../componentes/InfoReconhecimento';
@@ -16,13 +17,14 @@ export default function Relatorios({ sessao }: { sessao: Session }) {
   if (erro) return <p className="p-6 text-center text-pergaminho-escuro">{erro}</p>;
   if (!estado) return <p className="p-6 text-center text-pergaminho-escuro">Buscando os relatórios…</p>;
 
-  const { relatorios, nomesTerritorios, nomesJogadores, reconhecimentos, hordas, devolvidas, cidadesLivres, racas } = estado;
+  const { relatorios, nomesTerritorios, nomesJogadores, reconhecimentos, hordas, devolvidas, rebelioes, cidadesLivres, racas } = estado;
   // Batalhas, batedores e hordas bárbaras contra o jogador numa lista só, do mais recente para o mais antigo.
   const itens = [
     ...relatorios.map((r) => ({ tipo: 'batalha' as const, quando: Date.parse(r.criado_em), r })),
     ...reconhecimentos.map((rec) => ({ tipo: 'batedor' as const, quando: rec.disponivelEm, rec })),
     ...hordas.filter((h) => h.defensorId === meuId).map((h) => ({ tipo: 'horda' as const, quando: h.chegadaEm, h })),
     ...devolvidas.map((d) => ({ tipo: 'devolvida' as const, quando: d.criadoEm, d })),
+    ...rebelioes.map((rb) => ({ tipo: 'rebeliao' as const, quando: rb.criadoEm, rb })),
   ].sort((a, b) => b.quando - a.quando);
   const nomeTerritorio = (id: string) => nomesTerritorios.get(id) ?? 'território desconhecido';
   const nomeDefensor = (r: Relatorio) => (r.defensor_id ? (nomesJogadores.get(r.defensor_id) ?? 'Defensor') : 'Bárbaros');
@@ -37,6 +39,29 @@ export default function Relatorios({ sessao }: { sessao: Session }) {
       ) : (
         <ul className="space-y-2">
           {itens.map((item) => {
+            if (item.tipo === 'rebeliao') {
+              const { rb } = item;
+              return (
+                <li key={`rebeliao-${rb.id}`} className={`rounded-xl border bg-carvao/90 p-4 ${rb.lido ? 'border-couro' : 'border-ouro/60'}`}>
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl leading-none" aria-hidden>
+                      🏴
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-semibold">
+                        {nomeTerritorio(rb.territorioId)} se rebelou
+                        {!rb.lido && <span className="ml-2 rounded bg-ouro px-1.5 py-0.5 text-[10px] font-bold text-noite">NOVO</span>}
+                      </span>
+                      <span className="block text-sm text-pergaminho-escuro">
+                        Você ficou {BALANCEAMENTO.ausencia.diasParaAusente} dias sem aparecer e o território passou para os bárbaros,
+                        com as tropas que estavam lá e mais rebeldes. Para tê-lo de volta, só conquistando de novo.
+                      </span>
+                      <span className="block text-xs text-pergaminho-escuro">{quando.format(new Date(rb.criadoEm))}</span>
+                    </span>
+                  </div>
+                </li>
+              );
+            }
             if (item.tipo === 'devolvida') {
               const { d } = item;
               const novoDono = d.novoDonoId ? (nomesJogadores.get(d.novoDonoId) ?? 'outro jogador') : 'outro jogador';

@@ -4,6 +4,15 @@ Lista das mudanças para mandar aos jogadores. Cada temporada nova ganha uma se�
 
 ## Temporada 6
 
+### Jogador ausente (já vale na temporada 5)
+
+- **💤 Ausente:** quem fica **3 dias** sem abrir o jogo aparece com 💤 no mapa, na legenda e no placar. Abrir o jogo já conta, sem precisar fazer nada.
+- **Terras rebeldes:** a partir daí, a cada **12 h** um território do ausente se rebela e vira dos bárbaros, começando pelo mais longe da cidade. Não fica de graça: a guarnição rebelde é a maior entre as tropas que ele deixou ali e 40% do exército médio de quem está jogando (no fim da temporada, é bem mais forte que um território neutro comum). A estrutura e a estrada caem junto. A cidade principal nunca se rebela, mas pode ser saqueada como sempre.
+- **Aviso antes:** um dia antes de ficar ausente, o celular de quem tem avisos ligados recebe "Seu reino sente sua falta", e cada rebelião também avisa. Em Relatórios aparece 🏴 para cada território perdido assim.
+- **Quem volta** ganha **12 h de escudo** para se reorganizar. Os territórios rebelados só voltam conquistando de novo.
+- O ausente não é alvo das hordas bárbaras: elas vão atrás de quem está jogando.
+- Na temporada 5, a contagem começou quando a regra entrou: ninguém ficou ausente na hora.
+
 ### Salas
 
 - **Salas** (🏰 no alto da tela): além da Sala principal, o organizador pode abrir outras partidas que rodam ao mesmo tempo, cada uma com mapa, placar, objetivos, hordas e herdeiro próprios (o herdeiro de uma sala é quem venceu a temporada anterior dela). Algumas salas são abertas a todos até lotar; outras, só para convidados. Cada sala pode ter outro número de jogadores (de 2 a 8) e outra duração.

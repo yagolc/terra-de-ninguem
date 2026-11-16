@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase';
 import { buscarMarchasVistas } from '../lib/useMapa';
 import { contarCartasNaoLidas } from '../lib/useCartas';
 import { contarNaoLidos } from '../lib/useRelatorios';
+import { usePresenca } from '../lib/presenca';
 import Cartas from './Cartas';
 import Cidade from './Cidade';
 import FimDeTemporada from './FimDeTemporada';
@@ -70,6 +71,8 @@ export default function Jogo({ sessao }: { sessao: Session }) {
   const [herdeiroId, setHerdeiroId] = useState<string | null>(null);
   // Fim do escudo do próprio jogador (null = sem escudo).
   const [escudoAte, setEscudoAte] = useState<number | null>(null);
+  // Regra do ausente: abrir a partida (com cidade fundada) conta como presença.
+  usePresenca(fundada ? temporadaId : null);
   const [naoLidos, setNaoLidos] = useState(0);
   const [cartasNaoLidas, setCartasNaoLidas] = useState(0);
   // Marchas inimigas que as torres do jogador avistam (aviso vermelho na aba Mapa).

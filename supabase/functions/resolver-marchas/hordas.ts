@@ -51,8 +51,12 @@ export async function soltarHordaSeForHora(tx: Transacao, temporadaId: string, a
 
   const numero = (ultima?.numero ?? 0) + 1;
   const aleatorio = geradorComSemente(sementeDeTexto(`${temporada.id}:horda:${numero}`));
+  // Quem está 💤 Ausente não é alvo: a horda vai atrás de quem está jogando.
   const placar = await tx<{ jogador_id: string; pontos: number; territorios: number }[]>`
-    select jogador_id, pontos, territorios from placar where temporada_id = ${temporada.id}`;
+    select p.jogador_id, p.pontos, p.territorios from placar p
+     where p.temporada_id = ${temporada.id}
+       and not exists (select 1 from cidades c
+                        where c.temporada_id = p.temporada_id and c.jogador_id = p.jogador_id and c.ausente_desde is not null)`;
   const territorios = await tx<{ id: string; dono_id: string | null; x: number; y: number; poligono: [number, number][] }[]>`
     select id, dono_id, x, y, poligono from territorios where temporada_id = ${temporada.id}`;
   const territoriosDe = new Map<string, string[]>();

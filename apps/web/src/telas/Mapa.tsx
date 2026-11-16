@@ -186,6 +186,9 @@ export default function Mapa({ sessao }: { sessao: Session }) {
                 <span className="size-2.5 rounded-full" style={{ background: corDoJogador(j) }} />
                 {j.nome}
                 {j.id === meuId && ' (você)'}
+                {dados.ausentes.has(j.id) && (
+                  <span title="Ausente: dias sem abrir o jogo. Os territórios dele se rebelam aos poucos">💤</span>
+                )}
               </li>
             ))}
             <li className="flex items-center gap-1.5 text-pergaminho-escuro">

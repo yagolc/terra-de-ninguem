@@ -156,6 +156,8 @@ export type DadosMapa = {
   herdeiroId: string | null;
   /** Jogadores com o destaque da cidade comprado na loja nesta temporada. */
   destaques: Set<string>;
+  /** Jogadores 💤 ausentes (dias sem abrir o jogo): os territórios deles se rebelam aos poucos. */
+  ausentes: Set<string>;
   /** Pets da temporada: em que cidade está cada um (`mantidoPor`). */
   pets: PetDaTemporada[];
   /** Arautos no ar (anúncios públicos da loja), o mais novo primeiro. */
@@ -295,6 +297,7 @@ async function buscarMapa(): Promise<DadosMapa | null> {
     destaques,
     arautos,
     pets,
+    ausentes,
   ] = await Promise.all([
     supabase.from('regioes').select('id, indice, nome, terreno').eq('temporada_id', temporada.id).returns<RegiaoMapa[]>(),
     supabase
@@ -397,6 +400,8 @@ async function buscarMapa(): Promise<DadosMapa | null> {
       .returns<{ id: string; jogador_id: string; texto: string; ate: string }[]>(),
     // Pets da cidade (públicos): moram com o dono ou estão reféns na cidade de quem sequestrou.
     buscarPets(temporada.id),
+    // Quem está 💤 ausente (público; não diz quando cada um foi visto).
+    supabase.rpc('ausentes_na_temporada', { p_temporada: temporada.id }),
   ]);
   if (
     !regioes.data ||
@@ -494,6 +499,7 @@ async function buscarMapa(): Promise<DadosMapa | null> {
     pets,
     arautos: (arautos.data ?? []).map((a) => ({ id: a.id, jogadorId: a.jogador_id, texto: a.texto, ate: Date.parse(a.ate) })),
     destaques: new Set(((destaques.data ?? []) as { jogador_id: string }[]).map((d) => d.jogador_id)),
+    ausentes: new Set(((ausentes.data ?? []) as { jogador_id: string }[]).map((a) => a.jogador_id)),
     acessosMilitares: (acessos.data ?? []).map((a) => ({
       jogadores: [a.remetente_id, a.destinatario_id] as const,
       ate: Date.parse(a.pacto_ate),

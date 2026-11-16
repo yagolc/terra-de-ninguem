@@ -24,6 +24,7 @@
 //      | { acao: 'escolher_pet', tipo } | { acao: 'pedir_resgate', dono_id, ouro } | { acao: 'libertar_pet', dono_id } | { acao: 'pagar_resgate', ouro } (ouro: o preço que o dono viu)
 //      | { acao: 'publicar_arauto', texto } | { acao: 'presentear_gemas', destinatario_id, gemas }
 //      | { acao: 'terminar_obra', pronto_em } (gasta gemas para terminar na hora a obra que está sendo feita)
+//      | { acao: 'presenca' } (o site abriu a partida; todo comando também conta: regra do ausente)
 // Salas: todo comando de partida aceita `temporada_id` (a temporada da sala aberta no site). Sem ele, vale a
 // temporada da Sala principal (o site antigo, guardado no celular, não manda).
 // Publicar com: npx supabase functions deploy cidade --no-verify-jwt (o token é validado no código).
@@ -114,6 +115,7 @@ import { atualizarReporte, enviarReporte, votarReporte } from '../_compartilhado
 import { salvarPerfil } from '../_compartilhado/perfil.ts';
 import { fimDoPacto, terrasParaMarchar } from '../_compartilhado/pombos.ts';
 import { testarAviso } from '../_compartilhado/avisos.ts';
+import { marcarPresenca } from '../_compartilhado/ausencia.ts';
 import { garantirObjetivo } from '../_compartilhado/objetivos.ts';
 import { CORS, ErroDoJogo, resposta } from '../_compartilhado/http.ts';
 
@@ -559,6 +561,8 @@ async function executar(jogadorId: string, corpo: Record<string, unknown>): Prom
                where defensor_id = ${jogadorId} and not lido_defensor and (${t}::text is null or temporada_id::text = ${t})`;
     await sql`update reconhecimentos set lido = true
                where jogador_id = ${jogadorId} and not lido and disponivel_em <= now() and (${t}::text is null or temporada_id::text = ${t})`;
+    await sql`update rebelioes set lido = true
+               where jogador_id = ${jogadorId} and not lido and (${t}::text is null or temporada_id::text = ${t})`;
     return { ok: true };
   }
   if (corpo.acao === 'inscrever_avisos') {
@@ -822,6 +826,13 @@ Deno.serve(async (req) => {
   try {
     const jogadorId = await jogadorDaRequisicao(req);
     const corpo = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    // Qualquer comando conta como presença na partida (regra do ausente); se falhar, o comando segue.
+    try {
+      await marcarPresenca(jogadorId, temporadaDoCorpo(corpo));
+    } catch (erro) {
+      console.error('presença', erro);
+    }
+    if (corpo.acao === 'presenca') return resposta(200, { ok: true });
     return resposta(200, await executar(jogadorId, corpo));
   } catch (erro) {
     if (erro instanceof ErroDoJogo) return resposta(erro.status, { erro: erro.message });

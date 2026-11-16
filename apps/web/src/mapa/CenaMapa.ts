@@ -342,6 +342,10 @@ export class CenaMapa extends Phaser.Scene {
           this.rotulos.push(this.add.text(x + 18, y - 38, textoPets, { ...estilo, fontSize: '13px', strokeThickness: 0 }).setOrigin(0, 0.5));
         }
       }
+      // 💤 à esquerda do castelo de quem está ausente: os territórios dele estão se rebelando.
+      if (dono && this.opcoes.dados.ausentes.has(dono.id)) {
+        this.rotulos.push(this.add.text(x + 30, y - 30, '💤', { ...estilo, fontSize: '16px', strokeThickness: 0 }).setOrigin(0.5));
+      }
       // Coroa sobre a bandeira do herdeiro do trono caído (vencedor da temporada anterior).
       if (dono && dono.id === this.opcoes.dados.herdeiroId) {
         this.rotulos.push(

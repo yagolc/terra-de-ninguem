@@ -444,4 +444,21 @@ export const BALANCEAMENTO = {
     unidadesPorDistancia: 6,
     variacao: 0.3,
   },
+
+  /**
+   * Jogador que some: depois de `diasParaAusente` sem abrir o jogo ele fica 💤 Ausente e, a cada
+   * `horasEntreRebelioes`, um território dele (o mais longe da cidade primeiro) se rebela e vira neutro. A guarnição
+   * rebelde é a maior entre as tropas que ele deixou ali e uma fração do exército médio dos jogadores ativos
+   * (acompanha o ritmo da temporada), nunca abaixo de `guarnicaoMinima`. A cidade principal nunca se rebela.
+   * Quem volta ganha um escudo de `escudoRetornoHoras`; o aviso no celular sai `avisoHorasAntes` antes de ficar ausente.
+   */
+  ausencia: {
+    diasParaAusente: 3,
+    horasEntreRebelioes: 12,
+    fracaoExercitoMedio: 0.4,
+    guarnicaoMinima: 20,
+    composicao: { lanceiro: 0.45, arqueiro: 0.35, cavalaria: 0.2 },
+    escudoRetornoHoras: 12,
+    avisoHorasAntes: 24,
+  },
 } as const;

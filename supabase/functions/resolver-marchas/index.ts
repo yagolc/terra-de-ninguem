@@ -1,7 +1,7 @@
 // Edge Function `resolver-marchas`: chamada a cada minuto pelo pg_cron (migration 0007).
 // Resolve as marchas que já chegaram: batalha, perdas, saque, conquista, escudo e relatório;
 // e entrega as tropas (e o saque) das marchas de volta. Cada marcha numa transação própria.
-// Depois resolve e solta as hordas bárbaras (hordas.ts), atualiza o placar e encerra a temporada se alguém
+// Depois cuida dos ausentes (territórios rebeldes), resolve e solta as hordas bárbaras (hordas.ts), atualiza o placar e encerra a temporada se alguém
 // cumpriu o objetivo ou o prazo acabou.
 // Publicar com: npx supabase functions deploy resolver-marchas --no-verify-jwt
 // Exige o cabeçalho x-segredo-cron igual à variável SEGREDO_CRON (npx supabase secrets set).
@@ -44,6 +44,7 @@ import { atualizarPlacar } from '../_compartilhado/objetivos.ts';
 import { moverPetNoSaque } from '../_compartilhado/pets.ts';
 import { fimDoPacto } from '../_compartilhado/pombos.ts';
 import { avisarJogadores } from '../_compartilhado/avisos.ts';
+import { cuidarDosAusentes } from '../_compartilhado/ausencia.ts';
 import { resposta } from '../_compartilhado/http.ts';
 import { cuidarDasHordas } from './hordas.ts';
 
@@ -500,6 +501,8 @@ Deno.serve(async (req) => {
       erros.push(id);
     }
   }
+  // Ausentes: quem sumiu há dias fica 💤 e perde um território para os rebeldes a cada intervalo.
+  const rebelioes = await cuidarDosAusentes(erros, temporadasAtivas);
   // Hordas bárbaras: as que chegaram lutam; a próxima sai quando for a hora.
   await cuidarDasHordas(erros, temporadasAtivas);
   // Depois das batalhas: placar, objetivos e, se for o caso, fim da temporada. Cada sala na sua transação.
@@ -520,5 +523,5 @@ Deno.serve(async (req) => {
     console.error('avisos', erro);
     erros.push('avisos');
   }
-  return resposta(200, { resolvidas, erros, encerrada, avisos });
+  return resposta(200, { resolvidas, rebelioes, erros, encerrada, avisos });
 });

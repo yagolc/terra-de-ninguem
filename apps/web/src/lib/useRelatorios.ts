@@ -72,6 +72,9 @@ export type Devolvida = {
   lido: boolean;
 };
 
+/** Território que se rebelou (virou dos bárbaros) enquanto o jogador estava 💤 ausente. */
+export type Rebeliao = { id: string; territorioId: string; criadoEm: number; lido: boolean };
+
 /** Linha como vem do banco: batalha ou tropas devolvidas (sem vencedor). */
 type LinhaRelatorio = Omit<Relatorio, 'tipo' | 'vencedor'> & { tipo: Relatorio['tipo'] | 'devolvida'; vencedor: Relatorio['vencedor'] | null };
 
@@ -82,6 +85,7 @@ type Contexto = {
   /** Hordas bárbaras já resolvidas (públicas); a tela mostra as que atacaram o jogador. */
   hordas: Horda[];
   devolvidas: Devolvida[];
+  rebelioes: Rebeliao[];
   /** Territórios com cidade livre (muralha própria) e raça de cada jogador: entram na análise do batedor, como no mapa. */
   cidadesLivres: Set<string>;
   racas: Map<string, Raca>;
@@ -98,12 +102,13 @@ async function buscar(): Promise<{ relatorios: Relatorio[] } & Contexto> {
       reconhecimentos: [],
       hordas: [],
       devolvidas: [],
+      rebelioes: [],
       cidadesLivres: new Set(),
       racas: new Map(),
     };
   }
 
-  const [relatorios, territorios, jogadores, reconhecimentos, hordas, cidadesLivres, racas] = await Promise.all([
+  const [relatorios, territorios, jogadores, reconhecimentos, hordas, cidadesLivres, racas, rebelioes] = await Promise.all([
     supabase
       .from('relatorios')
       .select('id, tipo, atacante_id, defensor_id, origem_id, territorio_id, vencedor, conquistou, dados, criado_em, lido_atacante, lido_defensor')
@@ -122,6 +127,14 @@ async function buscar(): Promise<{ relatorios: Relatorio[] } & Contexto> {
       .eq('tipo', 'cidade_livre')
       .returns<{ territorio_id: string }[]>(),
     cidadesNaTemporada(temporada.id),
+    // O RLS só mostra as do próprio jogador.
+    supabase
+      .from('rebelioes')
+      .select('id, territorio_id, criado_em, lido')
+      .eq('temporada_id', temporada.id)
+      .order('criado_em', { ascending: false })
+      .limit(50)
+      .returns<{ id: string; territorio_id: string; criado_em: string; lido: boolean }[]>(),
   ]);
   if (!relatorios.data || !territorios.data || !jogadores.data) throw new Error('Não foi possível carregar os relatórios.');
   const batalhas = relatorios.data.filter((r): r is Relatorio => r.tipo !== 'devolvida');
@@ -143,6 +156,8 @@ async function buscar(): Promise<{ relatorios: Relatorio[] } & Contexto> {
   return {
     relatorios: batalhas,
     devolvidas,
+    // Sem a tabela (migration antiga), só não aparecem.
+    rebelioes: (rebelioes.data ?? []).map((r) => ({ id: r.id, territorioId: r.territorio_id, criadoEm: Date.parse(r.criado_em), lido: r.lido })),
     nomesTerritorios: new Map(territorios.data.map((t) => [t.id, t.nome])),
     nomesJogadores: new Map(jogadores.data.map((j) => [j.id, j.nome])),
     reconhecimentos,
@@ -166,7 +181,7 @@ export function useRelatorios() {
     try {
       const dados = await buscar();
       setEstado(dados);
-      if (dados.relatorios.length > 0 || dados.reconhecimentos.length > 0) void chamarFuncao('cidade', { acao: 'marcar_relatorios_lidos' }).catch(() => {});
+      if (dados.relatorios.length > 0 || dados.reconhecimentos.length > 0 || dados.rebelioes.length > 0) void chamarFuncao('cidade', { acao: 'marcar_relatorios_lidos' }).catch(() => {});
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Erro ao carregar os relatórios.');
     }
@@ -187,13 +202,14 @@ export async function contarNaoLidos(jogadorId: string): Promise<number> {
   if (!supabase) return 0;
   const temporada = temporadaEmAndamento();
   if (!temporada) return 0;
-  const naTemporada = (tabela: 'relatorios' | 'reconhecimentos') =>
+  const naTemporada = (tabela: 'relatorios' | 'reconhecimentos' | 'rebelioes') =>
     supabase!.from(tabela).select('id', { count: 'exact', head: true }).eq('temporada_id', temporada.id);
-  const [comoAtacante, comoDefensor, batedores] = await Promise.all([
+  const [comoAtacante, comoDefensor, batedores, rebelioes] = await Promise.all([
     naTemporada('relatorios').eq('atacante_id', jogadorId).eq('lido_atacante', false),
     naTemporada('relatorios').eq('defensor_id', jogadorId).eq('lido_defensor', false),
     // O RLS só conta batedores que já voltaram.
     naTemporada('reconhecimentos').eq('jogador_id', jogadorId).eq('lido', false),
+    naTemporada('rebelioes').eq('jogador_id', jogadorId).eq('lido', false),
   ]);
-  return (comoAtacante.count ?? 0) + (comoDefensor.count ?? 0) + (batedores.count ?? 0);
+  return (comoAtacante.count ?? 0) + (comoDefensor.count ?? 0) + (batedores.count ?? 0) + (rebelioes.count ?? 0);
 }

@@ -31,6 +31,8 @@ export type LinhaPlacar = {
   objetivoVenceEm: number | null;
   /** Vezes que usou gemas na temporada (público; não diz em quê). */
   usosGemas: number;
+  /** 💤 Ausente: dias sem abrir o jogo (os territórios dele se rebelam aos poucos). */
+  ausente: boolean;
   /** Título comprado na loja (nome pronto), ou null. */
   titulo: string | null;
 };
@@ -101,7 +103,7 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
   if (!linha) return null;
   const temporada = converterTemporada(linha);
 
-  const [jogadores, regioes, placar, objetivos, territorios, tropas, batalhas, cidade, povoados, racas, usosGemas] = await Promise.all([
+  const [jogadores, regioes, placar, objetivos, territorios, tropas, batalhas, cidade, povoados, racas, usosGemas, ausentes] = await Promise.all([
     supabase.from('jogadores').select(`id, nome, titulo, ${COLUNAS_BANDEIRA}`).returns<(LinhaBandeira & { nome: string; titulo: string | null })[]>(),
     supabase.from('regioes').select('id, nome').eq('temporada_id', temporada.id).returns<{ id: string; nome: string }[]>(),
     supabase
@@ -149,7 +151,9 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
       .returns<{ territorio_id: string; tipo: 'vila' | 'cidade_livre'; nivel: number; posse_desde: string | null }[]>(),
     cidadesNaTemporada(temporada.id),
     supabase.rpc('usos_de_gemas_na_temporada', { p_temporada: temporada.id }),
+    supabase.rpc('ausentes_na_temporada', { p_temporada: temporada.id }),
   ]);
+  const ausentesIds = new Set(((ausentes.data ?? []) as { jogador_id: string }[]).map((a) => a.jogador_id));
   // Sem a função (migration antiga) o placar só não mostra o ⚡.
   const usosDe = new Map(((usosGemas.data ?? []) as { jogador_id: string; usos: number }[]).map((u) => [u.jogador_id, u.usos]));
   if (!jogadores.data || !regioes.data || !placar.data || !objetivos.data || !territorios.data || !tropas.data || !batalhas.data || !povoados.data) {
@@ -255,6 +259,7 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
             .venceEm
         : null,
       usosGemas: usosDe.get(p.jogador_id) ?? 0,
+      ausente: ausentesIds.has(p.jogador_id),
       titulo: nomeDoTitulo(nomesJogadores.get(p.jogador_id)?.titulo),
     })),
     nomeRegiao: (id) => nomesRegioes.get(id) ?? 'uma região',

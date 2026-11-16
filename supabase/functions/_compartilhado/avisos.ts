@@ -4,7 +4,7 @@
 // aquele tipo. Push é "melhor esforço": se o serviço do navegador falhar, o aviso se perde (o jogo continua igual).
 // Chaves VAPID nos segredos das funções (VAPID_PUBLICA, VAPID_PRIVADA), nunca no git; a pública também vai no site.
 import webpush from 'npm:web-push@3.6.7';
-import { BALANCEAMENTO, relogioDoObjetivo, type TipoAviso, type TipoProposta } from '../../../packages/regras/src/index.ts';
+import { BALANCEAMENTO, ausenteAPartirDe, relogioDoObjetivo, type TipoAviso, type TipoProposta } from '../../../packages/regras/src/index.ts';
 import { sql, type Transacao } from './db.ts';
 
 /**
@@ -407,6 +407,48 @@ export async function coletarAvisos(tx: Transacao, agora: number): Promise<Aviso
       corpo: 'Seu Pix foi conferido. Na cidade, o ⚡ termina na hora a obra que está sendo feita.',
       url: '/#loja',
       tag: `credito-${p.id}`,
+    });
+  }
+
+  // Ausência: um dia antes de ficar 💤 Ausente, o jogador é lembrado de que as terras vão se rebelar (uma vez por
+  // ausência: `ausencia_avisada_em` fica para trás quando ele volta). Vai para todo aparelho dele, como `sistema`.
+  const A = BALANCEAMENTO.ausencia;
+  const vistoAte = new Date(agora - (A.diasParaAusente * 24 - A.avisoHorasAntes) * 3_600_000);
+  const sumindo = await tx<{ id: string; jogador_id: string; temporada_id: string; visto_em: Date }[]>`
+    update cidades c set ausencia_avisada_em = now()
+      from temporadas t
+     where t.id = c.temporada_id and t.status = 'ativa'
+       and c.ausente_desde is null and c.visto_em <= ${vistoAte}
+       and (c.ausencia_avisada_em is null or c.ausencia_avisada_em < c.visto_em)
+    returning c.id, c.jogador_id, c.temporada_id, c.visto_em`;
+  for (const c of sumindo) {
+    avisos.push({
+      jogadorId: c.jogador_id,
+      tipo: 'sistema',
+      titulo: '💤 Seu reino sente sua falta',
+      corpo: `Se você não aparecer até ${quando(ausenteAPartirDe(c.visto_em.getTime()))}, seus territórios começam a se rebelar. Basta abrir o jogo.`,
+      url: '/#cidade',
+      tag: `ausencia-${c.id}`,
+      temporadaId: c.temporada_id,
+    });
+  }
+
+  // Território que se rebelou enquanto o dono estava ausente: para ele.
+  const rebelioes = await tx<{ id: string; jogador_id: string; temporada_id: string; territorio: string }[]>`
+    update rebelioes r set avisado = true
+      from territorios t
+     where r.id in (select id from rebelioes where not avisado order by criado_em limit 100 for update skip locked)
+       and t.id = r.territorio_id
+    returning r.id, r.jogador_id, r.temporada_id, t.nome as territorio`;
+  for (const r of rebelioes) {
+    avisos.push({
+      jogadorId: r.jogador_id,
+      tipo: 'sistema',
+      titulo: `🏴 ${r.territorio} se rebelou`,
+      corpo: `Você está ausente: a cada ${A.horasEntreRebelioes} h outro território vira dos bárbaros. Abra o jogo para parar.`,
+      url: '/#relatorios',
+      tag: `rebeliao-${r.id}`,
+      temporadaId: r.temporada_id,
     });
   }
 
