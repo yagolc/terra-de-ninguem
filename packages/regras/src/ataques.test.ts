@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { escudoAte, fimProtecaoIniciante, receberSaque, verificarAtaque, verificarMovimento } from './ataques.ts';
+import { defensorGanhaEscudo, escudoAte, fimProtecaoIniciante, receberSaque, verificarAtaque, verificarMovimento } from './ataques.ts';
 import { BALANCEAMENTO } from './balanceamento.ts';
 import { capacidadeArmazem } from './predios.ts';
 import { HORA_MS, exercito, recursos } from './util.ts';
@@ -61,6 +61,17 @@ describe('verificarAtaque', () => {
     const escudo = escudoAte(DEPOIS_DA_PROTECAO - HORA_MS);
     expect(ataque({ alvo, escudoDoAlvoAte: escudo })).toEqual({ ok: false, motivo: 'alvo_com_escudo' });
     expect(ataque({ alvo, escudoDoAlvoAte: escudo, agora: escudo }).ok).toBe(true);
+  });
+
+  it('escudo só para quem perdeu o território ou teve a cidade saqueada', () => {
+    const base = { atacanteVenceu: true, conquistou: false, cidadePrincipal: false } as const;
+    expect(defensorGanhaEscudo({ ...base, tipo: 'conquista', conquistou: true })).toBe(true);
+    expect(defensorGanhaEscudo({ ...base, tipo: 'saque', cidadePrincipal: true })).toBe(true);
+    // Conquista vencida sem folga para tomar, e vila saqueada: o território continua dele, sem escudo.
+    expect(defensorGanhaEscudo({ ...base, tipo: 'conquista' })).toBe(false);
+    expect(defensorGanhaEscudo({ ...base, tipo: 'saque' })).toBe(false);
+    // Defendeu: nada.
+    expect(defensorGanhaEscudo({ ...base, atacanteVenceu: false, tipo: 'saque', cidadePrincipal: true })).toBe(false);
   });
 });
 

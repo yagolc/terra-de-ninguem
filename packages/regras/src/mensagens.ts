@@ -50,7 +50,7 @@ export const MENSAGENS_ATAQUE: Record<MotivoRecusaAtaque, string> = {
   tropas_insuficientes: 'Você não tem tantas tropas nesse território.',
   cidade_nao_conquistavel: 'Cidades principais podem ser saqueadas, mas nunca conquistadas.',
   protecao_iniciante: 'Nas primeiras 48 horas da temporada ninguém ataca jogadores. Os territórios neutros já podem ser atacados.',
-  alvo_com_escudo: 'Esse jogador perdeu uma defesa há pouco e está protegido por um escudo.',
+  alvo_com_escudo: 'Esse jogador perdeu um território ou foi saqueado há pouco e está protegido por um escudo.',
   pacto_nao_agressao: 'Você tem um pacto de não agressão com esse jogador. Espere o pacto acabar para atacá-lo.',
 };
 

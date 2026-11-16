@@ -30,6 +30,21 @@ export function escudoAte(agora: number): number {
 }
 
 /**
+ * O defensor que perdeu ganha escudo só quando a perda é real: o território foi conquistado ou a cidade principal
+ * foi saqueada (ela nunca é conquistada; sem escudo, poderia ser saqueada sem parar). Vila saqueada e conquista
+ * vencida sem a folga para tomar o território não dão escudo.
+ */
+export function defensorGanhaEscudo(batalha: {
+  atacanteVenceu: boolean;
+  conquistou: boolean;
+  tipo: 'saque' | 'conquista';
+  cidadePrincipal: boolean;
+}): boolean {
+  if (!batalha.atacanteVenceu) return false;
+  return batalha.conquistou || (batalha.tipo === 'saque' && batalha.cidadePrincipal);
+}
+
+/**
  * Confere um ataque antes de a marcha sair. Só se ataca a partir de um território próprio e contra um
  * vizinho dele; jogadores ficam protegidos no começo da temporada, enquanto tiverem escudo e enquanto durar
  * um pacto de não agressão com o atacante; a cidade principal pode ser saqueada, mas nunca conquistada.

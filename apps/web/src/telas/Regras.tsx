@@ -314,7 +314,8 @@ export default function Regras() {
           territórios neutros já podem ser atacados.
         </p>
         <p>
-          <b>Escudo:</b> quem perde uma defesa para outro jogador fica {B.protecoes.escudoHoras} h sem poder ser atacado. Mas{' '}
+          <b>Escudo:</b> quem perde um território ou tem a cidade saqueada por outro jogador fica {B.protecoes.escudoHoras} h sem poder
+          ser atacado (vila saqueada ou defesa perdida sem perder o território não dão escudo). Mas{' '}
           <b>atacar quebra o seu próprio escudo</b>, até um ataque contra bárbaros. O escudo é conferido quando a marcha sai.
         </p>
       </Secao>

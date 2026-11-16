@@ -11,6 +11,7 @@ import {
   bonusHeroi,
   bonusSeDisponivel,
   calcularSaque,
+  defensorGanhaEscudo,
   distribuirPerdas,
   duracaoMarchaMs,
   duracaoReconhecimentoMs,
@@ -358,8 +359,9 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number, retomada 
     });
   }
 
-  // Quem perde uma defesa ganha escudo, menos quem está segurando o objetivo cumprido (relógio no placar).
-  if (defensor && atacanteVenceu) {
+  // Quem perde o território ou tem a cidade saqueada ganha escudo, menos quem está segurando o objetivo cumprido
+  // (relógio no placar). Vila saqueada e conquista vencida sem tomar o território não dão escudo.
+  if (defensor && defensorGanhaEscudo({ atacanteVenceu, conquistou, tipo, cidadePrincipal: destino.cidade_principal })) {
     await tx`
       insert into protecoes (temporada_id, jogador_id, tipo, ate)
       select ${m.temporada_id}, ${destino.dono_id}, 'escudo', ${new Date(escudoAte(agora))}

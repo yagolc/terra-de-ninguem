@@ -13,6 +13,10 @@ Lista das mudanças para mandar aos jogadores. Cada temporada nova ganha uma se�
 - O ausente não é alvo das hordas bárbaras: elas vão atrás de quem está jogando.
 - Na temporada 5, a contagem começou quando a regra entrou: ninguém ficou ausente na hora.
 
+### Escudo (já vale na temporada 5)
+
+- **Escudo só com perda real:** o escudo de 8 h agora vem só quando você **perde um território** ou tem a **cidade saqueada**. Vila saqueada e ataque de conquista que vence sem tomar o território (sem a folga de 1,5×) não dão mais escudo, e o atacante pode tentar de novo logo em seguida.
+
 ### Vilas e cidades livres
 
 - **O povo volta ao antigo senhor:** quem retoma um povoado que tinha acabado de perder recupera a lealdade que tinha. Se já era leal, volta leal na hora, sem esperar as 24 h. Vale para o último dono que o perdeu. Já vale na temporada 5, inclusive para a vila retomada antes da mudança.

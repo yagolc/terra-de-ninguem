@@ -195,7 +195,7 @@ export const BALANCEAMENTO = {
   protecoes: {
     /** Começo de temporada sem ataques entre jogadores (neutros podem ser atacados). */
     inicianteHoras: 48,
-    /** Escudo de quem perde uma defesa. Atacar alguém quebra o próprio escudo. */
+    /** Escudo de quem perde um território ou tem a cidade saqueada (`defensorGanhaEscudo`). Atacar alguém quebra o próprio escudo. */
     escudoHoras: 8,
   },
 
