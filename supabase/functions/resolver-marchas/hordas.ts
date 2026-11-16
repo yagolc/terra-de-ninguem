@@ -172,7 +172,9 @@ export async function resolverHorda(id: string): Promise<boolean> {
           values (${h.temporada_id}, ${destino.id}, null, ${s.lanceiro}, ${s.arqueiro}, ${s.cavalaria})`;
       }
       if (povoado) {
-        await tx`update povoados set posse_desde = null, leal_desde = null, milicia = 0 where id = ${povoado.id}`;
+        await tx`
+          update povoados set posse_desde = null, leal_desde = null, milicia = 0, dono_anterior_id = null, leal_anterior = null
+           where id = ${povoado.id}`;
       }
     } else {
       grupo.tropas = sobreviventesDono;

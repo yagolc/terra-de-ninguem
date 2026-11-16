@@ -91,9 +91,12 @@ export function verificarMelhoriaVila(entrada: {
 
 /**
  * A partir de quando o povoado conquistado dá bônus: na hora, se era neutro; depois de `lealdadeHoras`, se
- * foi tomado de outro jogador (a lealdade ao antigo dono demora a passar).
+ * foi tomado de outro jogador (a lealdade ao antigo dono demora a passar). Se quem conquista é o último dono que o
+ * perdeu, o povo volta ao antigo senhor: a lealdade é a que ele tinha ao perder (`lealAntesDePerder`), leal na hora
+ * se já era, ou no mesmo horário de antes se ainda não era.
  */
-export function lealDesdeNaConquista(agora: number, tomadoDeJogador: boolean): number {
+export function lealDesdeNaConquista(agora: number, tomadoDeJogador: boolean, lealAntesDePerder: number | null = null): number {
+  if (tomadoDeJogador && lealAntesDePerder !== null) return lealAntesDePerder;
   return tomadoDeJogador ? agora + BALANCEAMENTO.povoados.lealdadeHoras * HORA_MS : agora;
 }
 

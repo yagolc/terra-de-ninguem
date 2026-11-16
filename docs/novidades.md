@@ -13,6 +13,10 @@ Lista das mudanças para mandar aos jogadores. Cada temporada nova ganha uma se�
 - O ausente não é alvo das hordas bárbaras: elas vão atrás de quem está jogando.
 - Na temporada 5, a contagem começou quando a regra entrou: ninguém ficou ausente na hora.
 
+### Vilas e cidades livres
+
+- **O povo volta ao antigo senhor:** quem retoma um povoado que tinha acabado de perder recupera a lealdade que tinha. Se já era leal, volta leal na hora, sem esperar as 24 h. Vale para o último dono que o perdeu. Já vale na temporada 5, inclusive para a vila retomada antes da mudança.
+
 ### Salas
 
 - **Salas** (🏰 no alto da tela): além da Sala principal, o organizador pode abrir outras partidas que rodam ao mesmo tempo, cada uma com mapa, placar, objetivos, hordas e herdeiro próprios (o herdeiro de uma sala é quem venceu a temporada anterior dela). Algumas salas são abertas a todos até lotar; outras, só para convidados. Cada sala pode ter outro número de jogadores (de 2 a 8) e outra duração.

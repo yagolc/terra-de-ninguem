@@ -80,7 +80,9 @@ async function rebelar(tx: Transacao, temporadaId: string, jogadorId: string, ag
   await tx`delete from estruturas where territorio_id = ${alvo}`;
   await tx`delete from estradas where territorio_id = ${alvo}`;
   await tx`update filas_treino set territorio_id = null where territorio_id = ${alvo}`;
-  await tx`update povoados set posse_desde = null, leal_desde = null, milicia = 0 where territorio_id = ${alvo}`;
+  await tx`
+    update povoados set posse_desde = null, leal_desde = null, milicia = 0, dono_anterior_id = null, leal_anterior = null
+     where territorio_id = ${alvo}`;
   if (totalUnidades(guarnicao) > 0) {
     await tx`
       insert into tropas (temporada_id, territorio_id, dono_id, lanceiro, arqueiro, cavalaria)

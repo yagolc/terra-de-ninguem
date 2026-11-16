@@ -102,6 +102,18 @@ describe('lealdade e bônus', () => {
     expect(povoadoLeal(null, AGORA)).toBe(false);
   });
 
+  it('retomado pelo último dono que o perdeu, volta com a lealdade que ele tinha', () => {
+    // Já era leal havia um dia: volta leal na hora.
+    const antes = AGORA - 24 * HORA_MS;
+    expect(lealDesdeNaConquista(AGORA, true, antes)).toBe(antes);
+    expect(povoadoLeal(lealDesdeNaConquista(AGORA, true, antes), AGORA)).toBe(true);
+    // Perdeu antes de ficar leal: continua esperando o mesmo horário de antes.
+    const faltava = AGORA + 3 * HORA_MS;
+    expect(lealDesdeNaConquista(AGORA, true, faltava)).toBe(faltava);
+    // Neutro continua leal na hora.
+    expect(lealDesdeNaConquista(AGORA, false, antes)).toBe(AGORA);
+  });
+
   it('vilas leais dão população; cidades livres leais dão ouro', () => {
     const bonus = bonusDosPovoados(
       [
