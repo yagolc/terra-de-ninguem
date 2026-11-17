@@ -168,6 +168,29 @@ recruta é sempre melhor); dá para dar a ele uma vantagem depois (treino mais r
 lista: tropas, marchas, fila de treino, relatórios, batedor, `analisarDefesa` e telas passam a guardar a qualidade
 além do tipo. Alternativa mais leve, se pesar demais: veterania (tropas que vencem batalhas ficam mais fortes).
 
+## 8. Encontro na estrada
+
+**Problema (17/11/2026):** um exército sai do território A para atacar B; em resposta, o dono de B manda o dele para A,
+que ficou vazio. Hoje as duas marchas passam uma pela outra sem lutar.
+
+**Proposta:** duas marchas inimigas que fazem **o mesmo caminho em sentidos opostos** (A→B e B→A, entre os mesmos dois
+territórios) e se cruzam no tempo **se encontram e lutam no meio do caminho**, antes de qualquer uma chegar.
+- **Campo aberto:** sem muralha, paliçada nem bônus de terreno para ninguém.
+- **Quem luta:** tropas e heróis dos dois lados, com a mesma fórmula (`resolverBatalha`, sorte ±10%, perdedor perde 70%).
+- **Depois:** quem vence segue para o destino com os sobreviventes (e luta de novo lá se houver defesa); quem perde
+  volta com o que sobrou para onde saiu. Relatório "⚔️ Encontro na estrada" para os dois (tipo novo em `relatorios`),
+  com aviso no celular.
+- **Não lutam:** quem tem pacto de não agressão (passam um pelo outro) e batedores (marchas de reconhecimento).
+- **Tática de defesa:** com a torre vendo o ataque vindo de A, o defensor manda tropas de B para A pelo mesmo caminho:
+  intercepta o ataque em campo aberto ou acerta A vazio. Quem ataca pensa duas vezes antes de esvaziar a origem.
+- **Cálculo:** as marchas andam em linha reta entre os centros; o encontro é o instante em que as posições coincidem no
+  segmento, se as duas estiverem na estrada nesse instante (regra pura, por exemplo `encontroDeMarchas`, com teste).
+  O `resolver-marchas` confere a cada minuto os pares de marchas opostas e resolve a batalha no horário do encontro,
+  antes das chegadas.
+- **Com as ordens por pombo (item 6):** marcha redirecionada muda de segmento; aí a regra vira "caminhos que se cruzam"
+  (interseção de segmentos no tempo). Começar pelo caso simples (mesmo caminho, sentidos opostos) e generalizar junto
+  com o item 6.
+
 ### Reserva
 
 Se o teste da 6 mostrar o ouro apertado mesmo com câmbio e acordos, subir a produção de ouro de 4 para 5 por
