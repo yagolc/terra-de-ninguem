@@ -14,7 +14,7 @@ import {
   type Objetivo,
   type Raca,
 } from '../../../packages/regras/src/index.ts';
-import { avancarAteAgora, carregarCidade, herdeiroDoTrono, salvarCidade } from './cidade.ts';
+import { avancarAteAgora, carregarCidade, herdeiroDoTrono, SALA_PRINCIPAL, salvarCidade } from './cidade.ts';
 import type { Transacao } from './db.ts';
 
 /** Sorteia o objetivo do jogador na temporada, se ele ainda não tiver um. */
@@ -69,7 +69,9 @@ async function sortearPara(tx: Transacao, temporadaId: string, jogadorId: string
     : [];
   const jaSorteados = await tx<{ objetivo: Objetivo }[]>`
     select objetivo from objetivos where temporada_id = ${temporadaId} and jogador_id <> ${jogadorId}`;
-  const [temporada] = await tx<{ numero: number }[]>`select numero from temporadas where id = ${temporadaId}`;
+  // As regras antigas de objetivo só valem para a Sala principal antes da temporada 6 (quem entra atrasado nela); as
+  // outras salas numeram as próprias temporadas desde 1 e já nascem com as regras novas.
+  const [temporada] = await tx<{ numero: number; sala_id: string }[]>`select numero, sala_id from temporadas where id = ${temporadaId}`;
   const [vilas] = await tx<{ total: number }[]>`
     select count(*)::int as total from povoados where temporada_id = ${temporadaId} and tipo = 'vila'`;
 
@@ -81,7 +83,7 @@ async function sortearPara(tx: Transacao, temporadaId: string, jogadorId: string
     jaSorteados: jaSorteados.map((o) => o.objetivo),
     vilasNoMapa: vilas?.total ?? 0,
     ...(cidade ? { cidade } : {}),
-    ...(temporada ? { numeroTemporada: temporada.numero } : {}),
+    ...(temporada?.sala_id === SALA_PRINCIPAL ? { numeroTemporada: temporada.numero } : {}),
   });
 }
 
