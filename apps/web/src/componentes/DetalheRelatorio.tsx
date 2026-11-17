@@ -2,6 +2,7 @@ import { BALANCEAMENTO, RECURSOS, TIPOS_UNIDADE, bonusDefesaRaca, totalUnidades,
 import type { HeroiNoRelatorio, Relatorio } from '../lib/useRelatorios';
 import { PETS_INFO } from '../lib/pets';
 import { ESPECIALIDADES_INFO, RACAS_INFO, RECURSOS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarNumero } from '../lib/textos';
+import Icone from './Icone';
 
 function LinhaExercito({ rotulo, exercito, perdas }: { rotulo: string; exercito: Exercito; perdas: Exercito }) {
   return (
@@ -21,7 +22,7 @@ function LinhaHeroi({ lado, heroi }: { lado: string; heroi: HeroiNoRelatorio }) 
   const info = ESPECIALIDADES_INFO[heroi.especialidade];
   return (
     <p className="text-xs">
-      🎖️ {lado}: {heroi.nome} ({info.icone} {info.nome} nível {heroi.nivel}){heroi.ferido && <span className="text-red-300"> · ferido</span>}
+      <Icone de="🎖️" /> {lado}: {heroi.nome} (<Icone de={info.icone} /> {info.nome} nível {heroi.nivel}){heroi.ferido && <span className="text-red-300"> · ferido</span>}
     </p>
   );
 }
@@ -44,7 +45,7 @@ export default function DetalheRelatorio({ relatorio, nomeDefensor }: { relatori
     <div className="space-y-3 text-sm">
       {d.retomada && (
         <p className="rounded-lg border border-couro bg-noite/60 px-3 py-2">
-          🔁 As tropas iam como reforço, mas o território caiu enquanto marchavam. Ao chegar, lutaram para retomá-lo.
+          <Icone de="🔁" /> As tropas iam como reforço, mas o território caiu enquanto marchavam. Ao chegar, lutaram para retomá-lo.
         </p>
       )}
       <table className="w-full">
@@ -53,7 +54,7 @@ export default function DetalheRelatorio({ relatorio, nomeDefensor }: { relatori
             <th />
             {TIPOS_UNIDADE.map((t) => (
               <th key={t} className="px-1 font-normal">
-                {UNIDADES_INFO[t].icone}
+                <Icone de={UNIDADES_INFO[t].icone} />
               </th>
             ))}
           </tr>
@@ -76,17 +77,17 @@ export default function DetalheRelatorio({ relatorio, nomeDefensor }: { relatori
 
       {saqueTotal > 0 && (
         <p>
-          💰 Saque:{' '}
+          <Icone de="💰" /> Saque:{' '}
           {RECURSOS.filter((r) => d.saque[r] > 0)
             .map((r) => `${RECURSOS_INFO[r].icone} ${formatarNumero(d.saque[r])}`)
             .join(' · ')}
           {d.povoado?.tipo === 'vila' && (d.vilaZerada ? ' · a vila foi saqueada e voltou ao nível 0' : ' · do estoque da vila')}
         </p>
       )}
-      {d.vilaZerada && saqueTotal === 0 && <p>🏘️ A vila foi saqueada e voltou ao nível 0.</p>}
+      {d.vilaZerada && saqueTotal === 0 && <p><Icone de="🏘️" /> A vila foi saqueada e voltou ao nível 0.</p>}
       {d.pet && (
         <p>
-          {PETS_INFO[d.pet.tipo].icone}{' '}
+          <Icone de={PETS_INFO[d.pet.tipo].icone} />{' '}
           {d.pet.acao === 'resgatou'
             ? `O atacante resgatou o próprio ${PETS_INFO[d.pet.tipo].nome.toLowerCase()}, que estava refém aqui.`
             : `O ${PETS_INFO[d.pet.tipo].nome.toLowerCase()} do defensor foi levado como refém.`}
@@ -94,7 +95,7 @@ export default function DetalheRelatorio({ relatorio, nomeDefensor }: { relatori
       )}
       {d.milicia && (
         <p>
-          ⚖️ A cidade livre jurou lealdade: {BALANCEAMENTO.povoados.cidadeLivre.milicia} lanceiros de milícia passam a defendê-la para o
+          <Icone de="⚖️" /> A cidade livre jurou lealdade: {BALANCEAMENTO.povoados.cidadeLivre.milicia} lanceiros de milícia passam a defendê-la para o
           conquistador, sem ocupar população.
         </p>
       )}

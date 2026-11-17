@@ -4,6 +4,7 @@ import { imagemDaEstrutura } from '../lib/arte';
 import { ESTRUTURAS_INFO, RECURSOS_INFO, formatarDuracao, formatarNumero } from '../lib/textos';
 import { useCidade } from '../lib/useCidade';
 import Ilustracao from './Ilustracao';
+import Icone from './Icone';
 
 type Props = {
   territorioId: string;
@@ -72,7 +73,7 @@ export default function PainelConstrucao({ territorioId, meuId, cidadePrincipal,
                 {RECURSOS.filter((r) => custo[r] > 0)
                   .map((r) => `${formatarNumero(custo[r])} ${RECURSOS_INFO[r].icone}`)
                   .join(' · ')}
-                {' · ⏱ '}
+                {<>{' · '}<Icone de="⏱" />{' '}</>}
                 {formatarDuracao(tempoEstruturaMs(tipo))}
               </p>
               {bloqueio && <p className="mt-1 text-xs text-pergaminho-escuro">{bloqueio}</p>}

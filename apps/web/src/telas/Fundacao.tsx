@@ -6,6 +6,7 @@ import { chamarFuncao } from '../lib/funcoes';
 import Ilustracao from '../componentes/Ilustracao';
 import { imagemDaRaca } from '../lib/arte';
 import { RACAS_INFO } from '../lib/textos';
+import Icone from '../componentes/Icone';
 
 type Props = {
   temporada: number;
@@ -80,7 +81,7 @@ export default function Fundacao({ temporada, sala, nomeAtual, herdeiro, onFunda
 
       {herdeiro && (
         <p className="rounded-lg border border-ouro/50 bg-ouro/10 px-3 py-2 text-sm">
-          👑 Você é o <b>Herdeiro do Trono Caído</b>. Sua cidade começa com a Guarda Real, mas cada batalha vencida contra você vale
+          <Icone de="👑" /> Você é o <b>Herdeiro do Trono Caído</b>. Sua cidade começa com a Guarda Real, mas cada batalha vencida contra você vale
           pontos a mais para os outros.
         </p>
       )}
@@ -110,10 +111,10 @@ export default function Fundacao({ temporada, sala, nomeAtual, herdeiro, onFunda
               {retrato && <Ilustracao src={retrato} className="size-24 shrink-0" />}
               <span>
                 <span className="block font-titulo text-lg text-ouro">
-                  {info.icone} {info.nome}
+                  <Icone de={info.icone} /> {info.nome}
                 </span>
-                <span className="mt-1 block text-sm text-pergaminho">✅ {info.vantagem}</span>
-                <span className="mt-0.5 block text-sm text-pergaminho-escuro">⚠️ {info.desvantagem}</span>
+                <span className="mt-1 block text-sm text-pergaminho"><Icone de="✅" /> {info.vantagem}</span>
+                <span className="mt-0.5 block text-sm text-pergaminho-escuro"><Icone de="⚠️" /> {info.desvantagem}</span>
               </span>
             </button>
           );

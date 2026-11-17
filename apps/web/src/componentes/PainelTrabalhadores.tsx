@@ -11,6 +11,7 @@ import {
 } from '@terra/regras';
 import { useEffect, useState } from 'react';
 import { PREDIOS, RECURSOS_INFO, formatarTaxa } from '../lib/textos';
+import Icone from './Icone';
 
 type Props = {
   cidade: EstadoCidade;
@@ -54,7 +55,7 @@ export default function PainelTrabalhadores({ cidade, bonus, soldados, ocupado, 
           return (
             <li key={r} className="flex items-center gap-3">
               <span className="text-xl" aria-hidden>
-                {predio.icone}
+                <Icone de={predio.icone} />
               </span>
               <div className="min-w-0 flex-1">
                 <div className="text-sm">{predio.nome}</div>

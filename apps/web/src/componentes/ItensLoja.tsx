@@ -15,6 +15,7 @@ import { PETS_INFO } from '../lib/pets';
 import { salaEscolhida } from '../lib/salas';
 import type { Gemas } from '../lib/useGemas';
 import JanelaConfirmacao from './JanelaConfirmacao';
+import Icone from './Icone';
 
 type Props = {
   gemas: Gemas;
@@ -68,14 +69,14 @@ export default function ItensLoja({ gemas, ocupado, onComprar, onUsarTitulo }: P
                 {item === 'cor_ouro' || item === 'cor_prata' ? (
                   <span className="inline-block size-4 rounded-full border border-pergaminho/40" style={{ background: CORES_LOJA[item] }} aria-hidden />
                 ) : (
-                  <span aria-hidden>{info.icone}</span>
+                  <span aria-hidden><Icone de={info.icone} /></span>
                 )}
                 {info.nome}
               </p>
               <p className="flex-1 text-xs text-pergaminho-escuro">{info.descricao}</p>
               {comprado ? (
                 <p className="text-xs text-musgo">
-                  ✅ {item === 'destaque_cidade' ? 'Ativo nesta temporada' : item === 'cronica' ? 'Você está no capítulo desta temporada' : 'Seu'}
+                  <Icone de="✅" /> {item === 'destaque_cidade' ? 'Ativo nesta temporada' : item === 'cronica' ? 'Você está no capítulo desta temporada' : 'Seu'}
                 </p>
               ) : (
                 <button
@@ -83,7 +84,7 @@ export default function ItensLoja({ gemas, ocupado, onComprar, onUsarTitulo }: P
                   onClick={() => setCompra({ item, nome: info.nome })}
                   className="rounded-lg border border-ouro/60 px-3 py-1.5 text-xs font-semibold text-ouro hover:bg-ouro/10 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  {semTemporada ? 'Sem temporada em andamento' : `Comprar · ${preco(item)} 💎`}
+                  {semTemporada ? 'Sem temporada em andamento' : <>{'Comprar · '}{preco(item)}{' '}<Icone de="💎" /></>}
                 </button>
               )}
             </li>
@@ -92,7 +93,7 @@ export default function ItensLoja({ gemas, ocupado, onComprar, onUsarTitulo }: P
       </ul>
 
       <div className="space-y-2">
-        <h4 className="font-titulo text-ouro">🐾 Pets</h4>
+        <h4 className="font-titulo text-ouro"><Icone de="🐾" /> Pets</h4>
         <p className="text-xs text-pergaminho-escuro">
           Seu para sempre; um mora na sua cidade (tela Cidade) e aparece no mapa. Um saque vencedor contra a sua cidade leva o pet
           como refém: você resgata pagando o ouro que pedirem, saqueando de volta ou na temporada nova.
@@ -103,18 +104,18 @@ export default function ItensLoja({ gemas, ocupado, onComprar, onUsarTitulo }: P
             return (
               <li key={tipo} className="flex flex-col items-center gap-1 rounded-lg border border-couro bg-noite/50 p-2 text-sm">
                 <span className="text-3xl" aria-hidden>
-                  {PETS_INFO[tipo].icone}
+                  <Icone de={PETS_INFO[tipo].icone} />
                 </span>
                 {PETS_INFO[tipo].nome}
                 {meu ? (
-                  <span className="text-xs text-musgo">✅ Seu</span>
+                  <span className="text-xs text-musgo"><Icone de="✅" /> Seu</span>
                 ) : (
                   <button
                     disabled={ocupado}
                     onClick={() => setCompra({ item: 'pet', variante: tipo, nome: `Pet: ${PETS_INFO[tipo].nome}` })}
                     className="rounded-md border border-ouro/60 px-2 py-0.5 text-xs text-ouro hover:bg-ouro/10 disabled:opacity-40"
                   >
-                    {preco('pet', tipo)} 💎
+                    {preco('pet', tipo)} <Icone de="💎" />
                   </button>
                 )}
               </li>
@@ -126,7 +127,7 @@ export default function ItensLoja({ gemas, ocupado, onComprar, onUsarTitulo }: P
       <div className="space-y-2">
         <h4 className="font-titulo text-ouro">Títulos</h4>
         <p className="text-xs text-pergaminho-escuro">
-          Aparecem embaixo do seu nome no placar e no perfil. {preco('titulo')} 💎 cada, para sempre; você escolhe qual mostrar.
+          Aparecem embaixo do seu nome no placar e no perfil. {preco('titulo')} <Icone de="💎" /> cada, para sempre; você escolhe qual mostrar.
         </p>
         <ul className="grid gap-1.5 sm:grid-cols-2">
           {TIPOS_TITULO.map((titulo) => {
@@ -135,7 +136,7 @@ export default function ItensLoja({ gemas, ocupado, onComprar, onUsarTitulo }: P
             return (
               <li key={titulo} className="flex items-center gap-2 rounded-lg border border-couro bg-noite/50 px-3 py-1.5 text-sm">
                 <span className={`flex-1 ${emUso ? 'text-ouro-claro' : ''}`}>
-                  {emUso && '👑 '}
+                  {emUso && <><Icone de="👑" />{' '}</>}
                   {TITULOS_LOJA[titulo]}
                 </span>
                 {!meu ? (
@@ -144,7 +145,7 @@ export default function ItensLoja({ gemas, ocupado, onComprar, onUsarTitulo }: P
                     onClick={() => setCompra({ item: 'titulo', variante: titulo, nome: `Título "${TITULOS_LOJA[titulo]}"` })}
                     className="rounded-md border border-ouro/60 px-2 py-0.5 text-xs text-ouro hover:bg-ouro/10 disabled:opacity-40"
                   >
-                    {preco('titulo')} 💎
+                    {preco('titulo')} <Icone de="💎" />
                   </button>
                 ) : emUso ? (
                   <button

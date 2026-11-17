@@ -1,5 +1,6 @@
 import { BALANCEAMENTO, type AvaliacaoObjetivo, type Objetivo } from '@terra/regras';
 import { PREDIOS, descreverObjetivo, formatarNumero } from '../lib/textos';
+import Icone from './Icone';
 
 type Props = {
   objetivo: Objetivo;
@@ -53,13 +54,13 @@ export default function CartaObjetivo({ objetivo, progresso, nomeRegiao, nomeJog
       {dono && <p className="mb-1 text-xs uppercase tracking-wider text-pergaminho-escuro">Objetivo de {dono}</p>}
       <div className="flex items-start gap-3">
         <span className="text-4xl leading-none" aria-hidden>
-          {carta.icone}
+          <Icone de={carta.icone} />
         </span>
         <div>
           <h3 className="font-titulo text-lg text-ouro">{carta.titulo}</h3>
           <p className="mt-1 text-sm text-pergaminho">{carta.texto}</p>
           {textoExigencias(objetivo) && (
-            <p className="mt-1 text-sm text-ouro-claro">🏛️ E também: {textoExigencias(objetivo)}.</p>
+            <p className="mt-1 text-sm text-ouro-claro"><Icone de="🏛️" /> E também: {textoExigencias(objetivo)}.</p>
           )}
         </div>
       </div>

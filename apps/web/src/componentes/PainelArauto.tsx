@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { Gemas } from '../lib/useGemas';
 import { formatarDuracao } from '../lib/textos';
 import JanelaConfirmacao from './JanelaConfirmacao';
+import Icone from './Icone';
 
 type Props = { gemas: Gemas; agora: number; ocupado: boolean; onPublicar: (texto: string) => Promise<boolean> };
 
@@ -19,7 +20,7 @@ export default function PainelArauto({ gemas, agora, ocupado, onPublicar }: Prop
 
   return (
     <div className="space-y-2">
-      <h4 className="font-titulo text-ouro">📯 Arauto</h4>
+      <h4 className="font-titulo text-ouro"><Icone de="📯" /> Arauto</h4>
       <p className="text-xs text-pergaminho-escuro">
         Seu anúncio aparece no alto do mapa para todos por {duracaoHoras} h, e quem tem avisos de carta ligados recebe no celular. Um por vez;
         o preço dobra a cada arauto na temporada ({[0, 1, 2].map(precoArauto).join(', ')}…).
@@ -48,7 +49,7 @@ export default function PainelArauto({ gemas, agora, ocupado, onPublicar }: Prop
             onClick={() => setConfirmando(true)}
             className="rounded-lg border border-ouro/60 px-3 py-1.5 text-sm font-semibold text-ouro hover:bg-ouro/10 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Anunciar · {preco} 💎
+            Anunciar · {preco} <Icone de="💎" />
           </button>
         </>
       )}
@@ -61,7 +62,7 @@ export default function PainelArauto({ gemas, agora, ocupado, onPublicar }: Prop
           }}
           onFechar={() => setConfirmando(false)}
         >
-          <p className="break-words rounded-lg border border-couro bg-noite/60 px-3 py-2">📯 {limpo}</p>
+          <p className="break-words rounded-lg border border-couro bg-noite/60 px-3 py-2"><Icone de="📯" /> {limpo}</p>
           <p>
             Fica {duracaoHoras} h no alto do mapa, para todos. Custa <b>{preco} gemas</b> (você tem {gemas.saldo}); o próximo vai custar{' '}
             {precoArauto(gemas.arautos.usos + 1)}.

@@ -3,6 +3,7 @@ import { useRef, useState, type PointerEvent as EventoPonteiro } from 'react';
 import { NOMES_CORES } from '../lib/bandeira';
 import { EMBLEMAS_PRONTOS, FORMAS, partesDaForma, transformacaoDaCamada } from '../lib/formasEmblema';
 import Emblema from './Emblema';
+import Icone from './Icone';
 
 type Props = {
   camadas: CamadaEmblema[];
@@ -194,7 +195,7 @@ export default function EditorEmblema({ camadas, onMudar, fundo, exclusivas }: P
               aria-label={trancada ? `${FORMAS[forma].nome}, exclusiva da loja` : `Adicionar ${FORMAS[forma].nome}`}
               className={`relative grid aspect-square place-items-center rounded-lg border-2 border-couro bg-noite/60 p-1 hover:border-ouro/60 ${trancada ? 'opacity-50' : ''}`}
             >
-              {trancada && <span className="absolute right-0 top-0 text-[10px]" aria-hidden>🔒</span>}
+              {trancada && <span className="absolute right-0 top-0 text-[10px]" aria-hidden><Icone de="🔒" /></span>}
               <Emblema camadas={[{ forma, x: 50, y: 50, escala: 0.8, largura: 1, altura: 1, rotacao: 0, cor: '#f1e6cf', espelhar: false }]} tamanho={30} />
             </button>
             );

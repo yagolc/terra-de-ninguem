@@ -5,6 +5,7 @@ import DetalheRelatorio from '../componentes/DetalheRelatorio';
 import InfoReconhecimento from '../componentes/InfoReconhecimento';
 import { resultadoDaHorda } from '../lib/hordas';
 import { useRelatorios, type Relatorio } from '../lib/useRelatorios';
+import Icone from '../componentes/Icone';
 
 const quando = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
@@ -45,7 +46,7 @@ export default function Relatorios({ sessao }: { sessao: Session }) {
                 <li key={`rebeliao-${rb.id}`} className={`rounded-xl border bg-carvao/90 p-4 ${rb.lido ? 'border-couro' : 'border-ouro/60'}`}>
                   <div className="flex items-start gap-3">
                     <span className="text-2xl leading-none" aria-hidden>
-                      🏴
+                      <Icone de="🏴" />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block font-semibold">
@@ -70,7 +71,7 @@ export default function Relatorios({ sessao }: { sessao: Session }) {
                 <li key={`devolvida-${d.id}`} className={`rounded-xl border bg-carvao/90 p-4 ${d.lido ? 'border-couro' : 'border-ouro/60'}`}>
                   <div className="flex items-start gap-3">
                     <span className="text-2xl leading-none" aria-hidden>
-                      ↩️
+                      <Icone de="↩️" />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block font-semibold">
@@ -96,7 +97,7 @@ export default function Relatorios({ sessao }: { sessao: Session }) {
                 <li key={`horda-${h.id}`} className="rounded-xl border border-[#9b1b30]/70 bg-carvao/90 p-4">
                   <div className="flex items-start gap-3">
                     <span className="text-2xl leading-none" aria-hidden>
-                      ☠️
+                      <Icone de="☠️" />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block font-semibold">Horda bárbara em {nomeTerritorio(h.territorioId)}</span>
@@ -107,7 +108,7 @@ export default function Relatorios({ sessao }: { sessao: Session }) {
                         {quando.format(new Date(h.chegadaEm))} · {h.tropas.lanceiro + h.tropas.arqueiro + h.tropas.cavalaria} bárbaros
                         {h.resultado?.saque &&
                           h.resultado.saque.comida + h.resultado.saque.madeira + h.resultado.saque.ouro > 0 &&
-                          ` · levaram ${h.resultado.saque.comida} 🌾 ${h.resultado.saque.madeira} 🪵 ${h.resultado.saque.ouro} 🪙`}
+                          <>{' · levaram '}{h.resultado.saque.comida}{' '}<Icone de="🌾" />{' '}{h.resultado.saque.madeira}{' '}<Icone de="🪵" />{' '}{h.resultado.saque.ouro}{' '}<Icone de="🪙" /></>}
                       </span>
                     </span>
                   </div>
@@ -122,7 +123,7 @@ export default function Relatorios({ sessao }: { sessao: Session }) {
                 <li key={chave} className={`rounded-xl border bg-carvao/90 ${rec.lido ? 'border-couro' : 'border-[#c39bd3]/70'}`}>
                   <button onClick={() => setAberto(aberto === chave ? null : chave)} className="flex w-full items-start gap-3 p-4 text-left">
                     <span className="text-2xl leading-none" aria-hidden>
-                      🔭
+                      <Icone de="🔭" />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block font-semibold">
@@ -174,7 +175,7 @@ export default function Relatorios({ sessao }: { sessao: Session }) {
               <li key={r.id} className={`rounded-xl border bg-carvao/90 ${naoLido ? 'border-ouro/60' : 'border-couro'}`}>
                 <button onClick={() => setAberto(aberto === r.id ? null : r.id)} className="flex w-full items-start gap-3 p-4 text-left">
                   <span className="text-2xl leading-none" aria-hidden>
-                    {souAtacante ? '⚔️' : '🛡️'}
+                    {souAtacante ? <Icone de="⚔️" /> : <Icone de="🛡️" />}
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block font-semibold">

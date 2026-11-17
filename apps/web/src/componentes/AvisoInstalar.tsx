@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useInstalacao } from '../lib/instalacao';
+import Icone from './Icone';
 
 const CHAVE = 'terra:instalar-dispensado-ate';
 const DIAS_DISPENSADO = 30;
@@ -41,7 +42,7 @@ export default function AvisoInstalar() {
             </>
           ) : (
             <>
-              <b>Instale o jogo no iPhone:</b> toque em <b>Compartilhar</b> (o quadrado com a seta ⬆️) e depois em{' '}
+              <b>Instale o jogo no iPhone:</b> toque em <b>Compartilhar</b> (o quadrado com a seta <Icone de="⬆️" />) e depois em{' '}
               <b>Adicionar à Tela de Início</b>.
             </>
           )}
@@ -52,7 +53,7 @@ export default function AvisoInstalar() {
               onClick={() => void instalar()}
               className="rounded-lg bg-ouro px-3 py-1.5 font-semibold text-noite hover:bg-ouro-claro"
             >
-              📲 Instalar
+              <Icone de="📲" /> Instalar
             </button>
           )}
           <button onClick={dispensar} className="rounded-lg border border-couro px-3 py-1.5 text-pergaminho-escuro hover:text-pergaminho">

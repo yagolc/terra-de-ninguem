@@ -2,6 +2,7 @@ import { TIPOS_AVISO, type TipoAviso } from '@terra/regras';
 import { useCallback, useEffect, useState } from 'react';
 import { ativarAvisos, desativarAvisos, lerEstadoAvisos, testarAvisos, type EstadoAvisos } from '../lib/avisos';
 import { AVISOS_INFO } from '../lib/textos';
+import Icone from './Icone';
 
 /**
  * "Avisos no celular" do próprio perfil: liga ou desliga as notificações neste aparelho, escolhe os tipos e manda
@@ -44,7 +45,7 @@ export default function PainelAvisos() {
   return (
     <section className="space-y-3 rounded-2xl border border-couro bg-carvao/90 p-4">
       <div>
-        <h3 className="font-titulo text-lg text-ouro">🔔 Avisos no celular</h3>
+        <h3 className="font-titulo text-lg text-ouro"><Icone de="🔔" /> Avisos no celular</h3>
         <p className="text-sm text-pergaminho-escuro">
           O jogo te chama mesmo fechado, quando algo importante acontece. Vale só para este aparelho: ative em cada um que usar.
         </p>
@@ -52,7 +53,7 @@ export default function PainelAvisos() {
 
       {estado.suporte === 'instalar_iphone' && (
         <p className="rounded-lg bg-noite/60 px-3 py-2 text-sm">
-          No iPhone, os avisos só funcionam com o jogo instalado: toque em <b>Compartilhar</b> (⬆️), depois em{' '}
+          No iPhone, os avisos só funcionam com o jogo instalado: toque em <b>Compartilhar</b> (<Icone de="⬆️" />), depois em{' '}
           <b>Adicionar à Tela de Início</b>, e abra o jogo pelo ícone.
         </p>
       )}
@@ -79,7 +80,7 @@ export default function PainelAvisos() {
                   className="mt-1 accent-[#d4a64a]"
                 />
                 <span>
-                  {AVISOS_INFO[tipo].icone} {AVISOS_INFO[tipo].nome}
+                  <Icone de={AVISOS_INFO[tipo].icone} /> {AVISOS_INFO[tipo].nome}
                   <span className="block text-xs text-pergaminho-escuro">{AVISOS_INFO[tipo].descricao}</span>
                 </span>
               </label>
@@ -93,7 +94,7 @@ export default function PainelAvisos() {
                 disabled={ocupado || tipos.length === 0}
                 className="rounded-lg bg-ouro px-4 py-2 font-semibold text-noite hover:bg-ouro-claro disabled:cursor-not-allowed disabled:opacity-50"
               >
-                🔔 Ativar avisos neste aparelho
+                <Icone de="🔔" /> Ativar avisos neste aparelho
               </button>
             ) : (
               <>

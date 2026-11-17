@@ -3,6 +3,7 @@ import CartaObjetivo from '../componentes/CartaObjetivo';
 import HistoricoTemporadas from '../componentes/HistoricoTemporadas';
 import TabelaPlacar from '../componentes/TabelaPlacar';
 import { useTemporada } from '../lib/useTemporada';
+import Icone from '../componentes/Icone';
 
 /** Mostrada quando nenhuma temporada está ativa: vencedor, objetivos revelados e placar final. */
 export default function FimDeTemporada({ sessao }: { sessao: Session }) {
@@ -22,7 +23,7 @@ export default function FimDeTemporada({ sessao }: { sessao: Session }) {
     <div className="mx-auto max-w-2xl space-y-6 px-4 py-8">
       <header className="text-center">
         <p className="text-sm uppercase tracking-widest text-pergaminho-escuro">Temporada {temporada.numero} encerrada</p>
-        <h2 className="mt-2 font-titulo text-3xl text-ouro">{vencedor ? `👑 ${vencedor}` : 'Sem vencedor'}</h2>
+        <h2 className="mt-2 font-titulo text-3xl text-ouro">{vencedor ? <><Icone de="👑" />{' '}{vencedor}</> : 'Sem vencedor'}</h2>
         <p className="mt-2 text-pergaminho">
           {venci ? 'Você venceu! ' : ''}
           {temporada.motivoFim === 'objetivo'

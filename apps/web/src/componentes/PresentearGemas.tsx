@@ -2,6 +2,7 @@ import { BALANCEAMENTO } from '@terra/regras';
 import { useState } from 'react';
 import { useGemas } from '../lib/useGemas';
 import JanelaConfirmacao from './JanelaConfirmacao';
+import Icone from './Icone';
 
 /** Botão do perfil de outro jogador: dá gemas do seu saldo a ele, sem taxa. */
 export default function PresentearGemas({ jogadorId, nome }: { jogadorId: string; nome: string }) {
@@ -33,7 +34,7 @@ export default function PresentearGemas({ jogadorId, nome }: { jogadorId: string
         }}
         className="mt-2 ml-2 inline-block rounded-lg border border-ouro/60 px-4 py-2 text-sm font-semibold text-ouro hover:bg-ouro/10"
       >
-        🎁 Presentear gemas
+        <Icone de="🎁" /> Presentear gemas
       </button>
       {mensagem && <p className={`mt-1 text-sm ${mensagem.erro ? 'text-red-300' : 'text-musgo'}`}>{mensagem.texto}</p>}
       {aberto && (
@@ -46,7 +47,7 @@ export default function PresentearGemas({ jogadorId, nome }: { jogadorId: string
           onFechar={() => setAberto(false)}
         >
           {maximo === 0 ? (
-            <p>Você não tem gemas para dar. Compre na loja (💎).</p>
+            <p>Você não tem gemas para dar. Compre na loja (<Icone de="💎" />).</p>
           ) : (
             <>
               <label className="flex items-center gap-2">

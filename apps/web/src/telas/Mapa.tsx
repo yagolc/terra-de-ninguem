@@ -8,6 +8,7 @@ import CanvasMapa from '../mapa/CanvasMapa';
 import { resultadoDaHorda } from '../lib/hordas';
 import { COR_NEUTRA, corDoJogador, useMapa } from '../lib/useMapa';
 import { UNIDADES_INFO, formatarDuracao } from '../lib/textos';
+import Icone from '../componentes/Icone';
 
 type Etiqueta = 'legenda' | 'marchas' | 'ameacas';
 
@@ -78,7 +79,7 @@ export default function Mapa({ sessao }: { sessao: Session }) {
                 className="break-words rounded-lg border-2 bg-noite/90 px-3 py-1.5 text-xs backdrop-blur"
                 style={{ borderColor: jogador ? corDoJogador(jogador) : undefined }}
               >
-                📯 <b className="text-ouro-claro">{a.jogadorId === meuId ? 'Seu arauto' : `Arauto de ${jogador?.nome ?? 'alguém'}`}:</b> {a.texto}
+                <Icone de="📯" /> <b className="text-ouro-claro">{a.jogadorId === meuId ? 'Seu arauto' : `Arauto de ${jogador?.nome ?? 'alguém'}`}:</b> {a.texto}
               </p>
             );
           })}
@@ -87,7 +88,7 @@ export default function Mapa({ sessao }: { sessao: Session }) {
             role="status"
             className={`rounded-lg border px-3 py-1.5 text-xs font-semibold backdrop-blur ${monopolio.donoId === meuId ? 'border-ouro bg-noite/90 text-ouro' : 'border-sangue bg-sangue/85 text-pergaminho'}`}
           >
-            ⚖️ {monopolio.donoId === meuId ? 'Você tem' : `${dados.jogadores.get(monopolio.donoId)?.nome ?? 'Alguém'} tem`} todas as cidades
+            <Icone de="⚖️" /> {monopolio.donoId === meuId ? 'Você tem' : `${dados.jogadores.get(monopolio.donoId)?.nome ?? 'Alguém'} tem`} todas as cidades
             livres: vence em{' '}
             <span className="tabular-nums">{monopolio.venceEm > agora ? formatarDuracao(monopolio.venceEm - agora) : 'instantes'}</span>
           </p>
@@ -98,7 +99,7 @@ export default function Mapa({ sessao }: { sessao: Session }) {
             role="status"
             className={`rounded-lg border px-3 py-1.5 text-xs font-semibold backdrop-blur ${c.jogadorId === meuId ? 'border-ouro bg-noite/90 text-ouro' : 'border-sangue bg-sangue/85 text-pergaminho'}`}
           >
-            🏆 {c.jogadorId === meuId ? 'Você cumpriu' : `${dados.jogadores.get(c.jogadorId)?.nome ?? 'Alguém'} cumpriu`} o objetivo secreto: vence
+            <Icone de="🏆" /> {c.jogadorId === meuId ? 'Você cumpriu' : `${dados.jogadores.get(c.jogadorId)?.nome ?? 'Alguém'} cumpriu`} o objetivo secreto: vence
             em <span className="tabular-nums">{c.venceEm > agora ? formatarDuracao(c.venceEm - agora) : 'instantes'}</span> se mantiver
             {c.jogadorId === meuId ? ' (você está sem escudo)' : ' (está sem escudo)'}
           </p>
@@ -108,7 +109,7 @@ export default function Mapa({ sessao }: { sessao: Session }) {
             role="status"
             className={`rounded-lg border px-3 py-1.5 text-xs font-semibold backdrop-blur ${recente.aCaminho ? 'border-[#9b1b30] bg-[#9b1b30]/85 text-pergaminho' : 'border-couro bg-noite/85 text-pergaminho'}`}
           >
-            ☠️{' '}
+            <Icone de="☠️" />{' '}
             {recente.aCaminho ? (
               <>
                 Horda bárbara ({totalUnidades(recente.tropas)} soldados) a caminho de {nomeDe(recente.territorioId)}
@@ -131,7 +132,7 @@ export default function Mapa({ sessao }: { sessao: Session }) {
               aria-expanded={aberto === 'ameacas'}
               className={`rounded-full border bg-sangue/85 px-3 py-1.5 text-xs font-semibold text-pergaminho backdrop-blur ${aberto === 'ameacas' ? 'border-ouro' : 'border-sangue'}`}
             >
-              ⚠️ {ameacas.length} vindo ·{' '}
+              <Icone de="⚠️" /> {ameacas.length} vindo ·{' '}
               <span className="tabular-nums">{ameacas[0]!.chegadaEm > agora ? formatarDuracao(ameacas[0]!.chegadaEm - agora) : 'chegando…'}</span>
             </button>
           )}
@@ -153,7 +154,7 @@ export default function Mapa({ sessao }: { sessao: Session }) {
               aria-expanded={aberto === 'marchas'}
               className={`rounded-full border bg-noite/85 px-3 py-1.5 text-xs backdrop-blur ${aberto === 'marchas' ? 'border-ouro text-ouro' : 'border-couro'}`}
             >
-              🚩 {dados.marchas.length} {dados.marchas.length === 1 ? 'marcha' : 'marchas'} ·{' '}
+              <Icone de="🚩" /> {dados.marchas.length} {dados.marchas.length === 1 ? 'marcha' : 'marchas'} ·{' '}
               <span className="tabular-nums">{proximaChegada > agora ? formatarDuracao(proximaChegada - agora) : 'chegando…'}</span>
             </button>
           )}
@@ -163,12 +164,12 @@ export default function Mapa({ sessao }: { sessao: Session }) {
           <div
             className={`rounded-lg border border-sangue bg-noite/90 px-3 py-2 text-xs backdrop-blur md:block ${aberto === 'ameacas' ? 'block' : 'hidden'}`}
           >
-            <p className="mb-1 font-semibold text-red-300">⚠️ Suas torres avistam</p>
+            <p className="mb-1 font-semibold text-red-300"><Icone de="⚠️" /> Suas torres avistam</p>
             <ul className="space-y-1">
               {ameacas.map((m) => (
                 <li key={m.id}>
                   {dados.jogadores.get(m.jogadorId)?.nome ?? 'Alguém'}:{' '}
-                  {m.tipo === 'reconhecimento' ? '🔭 batedor' : `${m.tipo === 'saque' ? '💰' : '🚩'} ${m.soldados} soldados`} → {nomeDe(m.destinoId)}
+                  {m.tipo === 'reconhecimento' ? <><Icone de="🔭" />{' batedor'}</> : <><Icone de={m.tipo === 'saque' ? '💰' : '🚩'} /> {m.soldados} soldados</>} → {nomeDe(m.destinoId)}
                   {' · '}
                   <span className="tabular-nums">{m.chegadaEm > agora ? formatarDuracao(m.chegadaEm - agora) : 'chegando…'}</span>
                 </li>
@@ -187,7 +188,7 @@ export default function Mapa({ sessao }: { sessao: Session }) {
                 {j.nome}
                 {j.id === meuId && ' (você)'}
                 {dados.ausentes.has(j.id) && (
-                  <span title="Ausente: dias sem abrir o jogo. Os territórios dele se rebelam aos poucos">💤</span>
+                  <span title="Ausente: dias sem abrir o jogo. Os territórios dele se rebelam aos poucos"><Icone de="💤" /></span>
                 )}
               </li>
             ))}
@@ -229,14 +230,14 @@ export default function Mapa({ sessao }: { sessao: Session }) {
                 return (
                   <li key={m.id}>
                     {m.tipo === 'reconhecimento' || (m.tipo === 'retorno' && totalUnidades(m.tropas) === 0)
-                      ? '🔭'
+                      ? <Icone de="🔭" />
                       : m.tipo === 'retorno'
-                        ? '↩️'
+                        ? <Icone de="↩️" />
                         : m.tipo === 'movimento'
-                          ? '🚶'
+                          ? <Icone de="🚶" />
                           : m.tipo === 'saque'
-                            ? '💰'
-                            : '🚩'}{' '}
+                            ? <Icone de="💰" />
+                            : <Icone de="🚩" />}{' '}
                     {m.tipo === 'reconhecimento'
                       ? `Batedor indo a ${nomeDe(m.destinoId)}`
                       : m.tipo === 'retorno' && totalUnidades(m.tropas) === 0

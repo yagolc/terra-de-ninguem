@@ -1,4 +1,5 @@
 import { useRegisterSW } from 'virtual:pwa-register/react';
+import Icone from './Icone';
 
 const HORA_MS = 3600_000;
 
@@ -22,7 +23,7 @@ export default function AvisoAtualizacao() {
       role="status"
       className="fixed inset-x-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-50 mx-auto flex max-w-md items-center gap-3 rounded-xl border border-ouro/60 bg-carvao px-4 py-3 text-sm shadow-xl md:bottom-4"
     >
-      <p className="flex-1">🔄 Há uma versão nova do jogo.</p>
+      <p className="flex-1"><Icone de="🔄" /> Há uma versão nova do jogo.</p>
       <button
         onClick={() => void updateServiceWorker(true)}
         className="rounded-lg bg-ouro px-3 py-1.5 font-semibold text-noite hover:bg-ouro-claro"

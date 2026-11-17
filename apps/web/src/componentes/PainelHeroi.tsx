@@ -18,6 +18,7 @@ import { useState } from 'react';
 import { imagemDoHeroi } from '../lib/arte';
 import { ESPECIALIDADES_INFO, RECURSOS_INFO, formatarDuracao, formatarNumero } from '../lib/textos';
 import Ilustracao from './Ilustracao';
+import Icone from './Icone';
 
 type Props = {
   heroi: Heroi | null;
@@ -40,7 +41,7 @@ const pct = (fracao: number) => `+${Math.round(fracao * 100)}%`;
 export default function PainelHeroi(props: Props) {
   return (
     <section className="rounded-xl border border-couro bg-carvao/90 p-4">
-      <h2 className="mb-3 font-titulo text-lg text-ouro">🎖️ Herói</h2>
+      <h2 className="mb-3 font-titulo text-lg text-ouro"><Icone de="🎖️" /> Herói</h2>
       {props.heroi ? <Status {...props} heroi={props.heroi} /> : <Recrutar {...props} />}
     </section>
   );
@@ -79,7 +80,7 @@ function Recrutar({ cidade, habitantesLivres, ocupado, onRecrutar }: Props) {
             {imagemDoHeroi(e) && <Ilustracao src={imagemDoHeroi(e)!} className="size-14 shrink-0" />}
             <span>
               <span className="font-semibold">
-                {ESPECIALIDADES_INFO[e].icone} {ESPECIALIDADES_INFO[e].nome}
+                <Icone de={ESPECIALIDADES_INFO[e].icone} /> {ESPECIALIDADES_INFO[e].nome}
               </span>
               <span className="block text-xs text-pergaminho-escuro">
                 {ESPECIALIDADES_INFO[e].descricao} +{pct(bonusHeroi(1, e))} por nível (até {pct(bonusHeroi(H.nivelMaximo, e))}).
@@ -88,14 +89,14 @@ function Recrutar({ cidade, habitantesLivres, ocupado, onRecrutar }: Props) {
           </button>
         ))}
       </div>
-      {falta > 0 && <p className="text-xs text-red-300">Faltam {formatarNumero(falta)} {RECURSOS_INFO.ouro.icone}.</p>}
+      {falta > 0 && <p className="text-xs text-red-300">Faltam {formatarNumero(falta)} <Icone de={RECURSOS_INFO.ouro.icone} />.</p>}
       {habitantesLivres < 1 && <p className="text-xs text-red-300">Falta um habitante livre para virar herói.</p>}
       <button
         onClick={() => especialidade && onRecrutar(nome.trim(), especialidade)}
         disabled={!pronto || ocupado}
         className="w-full rounded-lg bg-ouro px-3 py-2 font-semibold text-noite hover:bg-ouro-claro disabled:cursor-not-allowed disabled:bg-couro disabled:text-pergaminho-escuro"
       >
-        Recrutar · {formatarNumero(H.custoRecrutar.ouro)} {RECURSOS_INFO.ouro.icone}
+        Recrutar · {formatarNumero(H.custoRecrutar.ouro)} <Icone de={RECURSOS_INFO.ouro.icone} />
       </button>
     </div>
   );
@@ -123,7 +124,7 @@ function Status({ heroi, cidade, cidadeTerritorioId, nomeDoTerritorio, agora, oc
         {retrato && <Ilustracao src={retrato} className={`size-24 shrink-0 ${ferido ? 'grayscale' : ''}`} />}
         <div className="space-y-1">
           <p>
-            <span className="font-semibold">{heroi.nome}</span> · {info.icone} {info.nome} · nível {heroi.nivel}/{H.nivelMaximo}
+            <span className="font-semibold">{heroi.nome}</span> · <Icone de={info.icone} /> {info.nome} · nível {heroi.nivel}/{H.nivelMaximo}
           </p>
           <p className="text-pergaminho-escuro">
             {pct(bonusHeroi(heroi.nivel, heroi.especialidade))}: {info.descricao}
@@ -131,7 +132,7 @@ function Status({ heroi, cidade, cidadeTerritorioId, nomeDoTerritorio, agora, oc
         </div>
       </div>
       <p>
-        📍 {onde}
+        <Icone de="📍" /> {onde}
         {emTreino && <span className="text-ouro-claro"> · treinando, pronto em {formatarDuracao(heroi.treinoProntoEm! - agora)}</span>}
         {ferido && <span className="text-red-300"> · ferido, recupera em {formatarDuracao(heroi.feridoAte! - agora)}</span>}
       </p>
@@ -142,7 +143,7 @@ function Status({ heroi, cidade, cidadeTerritorioId, nomeDoTerritorio, agora, oc
             disabled={!v.ok || ocupado}
             className="w-full rounded-lg border border-ouro/60 px-3 py-1.5 font-semibold text-ouro hover:bg-ouro/10 disabled:cursor-not-allowed disabled:border-couro disabled:text-pergaminho-escuro"
           >
-            Treinar para nível {heroi.nivel + 1} · {formatarNumero(custo.ouro)} {RECURSOS_INFO.ouro.icone} · ⏱{' '}
+            Treinar para nível {heroi.nivel + 1} · {formatarNumero(custo.ouro)} <Icone de={RECURSOS_INFO.ouro.icone} /> · <Icone de="⏱" />{' '}
             {formatarDuracao(tempoTreinoHeroiMs(heroi.nivel + 1))}
           </button>
           {!v.ok && !emTreino && (

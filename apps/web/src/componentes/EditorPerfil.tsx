@@ -15,6 +15,7 @@ import { useGemas } from '../lib/useGemas';
 import type { DadosPerfil } from '../lib/usePerfil';
 import Bandeira from './Bandeira';
 import EditorEmblema from './EditorEmblema';
+import Icone from './Icone';
 
 type Props = { perfil: DadosPerfil; onSalvo: () => void; onCancelar: () => void };
 
@@ -140,7 +141,7 @@ export default function EditorPerfil({ perfil, onSalvo, onCancelar }: Props) {
                 className={`flex flex-col items-center gap-1 rounded-lg border-2 p-1.5 text-[11px] ${bandeira.padrao === padrao ? 'border-ouro bg-ouro/10 text-ouro' : 'border-couro text-pergaminho-escuro hover:border-ouro/50'} ${trancado ? 'opacity-50' : ''}`}
               >
                 <Bandeira bandeira={{ ...bandeira, padrao }} largura={42} semEmblema />
-                {trancado ? '🔒 ' : ''}
+                {trancado ? <><Icone de="🔒" />{' '}</> : ''}
                 {PADROES_INFO[padrao]}
               </button>
             );

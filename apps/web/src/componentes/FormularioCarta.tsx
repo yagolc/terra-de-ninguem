@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { chamarFuncao } from '../lib/funcoes';
 import { PROPOSTAS_INFO, formatarDuracao } from '../lib/textos';
 import type { Correspondente } from '../lib/useCartas';
+import Icone from './Icone';
 
 const P = BALANCEAMENTO.pombos;
 
@@ -63,7 +64,7 @@ export default function FormularioCarta({ meuId, correspondentes, minhaCidade, n
   return (
     <section className="space-y-3 rounded-xl border border-ouro/50 bg-carvao/90 p-4">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="font-titulo text-lg text-ouro">🕊️ Nova carta</h3>
+        <h3 className="font-titulo text-lg text-ouro"><Icone de="🕊️" /> Nova carta</h3>
         <button onClick={onFechar} className="text-sm text-pergaminho-escuro hover:text-pergaminho">
           Fechar
         </button>
@@ -117,7 +118,7 @@ export default function FormularioCarta({ meuId, correspondentes, minhaCidade, n
             ) : (
               <span>
                 <b>
-                  {PROPOSTAS_INFO[tipo].icone} Propor {PROPOSTAS_INFO[tipo].nome.toLowerCase()}
+                  <Icone de={PROPOSTAS_INFO[tipo].icone} /> Propor {PROPOSTAS_INFO[tipo].nome.toLowerCase()}
                 </b>
                 <span className="block text-xs text-pergaminho-escuro">Se aceitar: {PROPOSTAS_INFO[tipo].efeito}</span>
               </span>
@@ -149,7 +150,7 @@ export default function FormularioCarta({ meuId, correspondentes, minhaCidade, n
       </div>
 
       <p className="text-xs text-pergaminho-escuro">
-        🕊️ Pombos livres: {Math.max(0, pombosDoPombal(nivelPombal) - emVoo)} de {pombosDoPombal(nivelPombal)}
+        <Icone de="🕊️" /> Pombos livres: {Math.max(0, pombosDoPombal(nivelPombal) - emVoo)} de {pombosDoPombal(nivelPombal)}
         {voo !== null && ` · chega em ${formatarDuracao(voo)}`}
       </p>
       {(erro ?? aviso) && (

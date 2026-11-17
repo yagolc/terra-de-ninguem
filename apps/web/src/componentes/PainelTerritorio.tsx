@@ -12,6 +12,7 @@ import PainelEstrada from './PainelEstrada';
 import PainelPovoado from './PainelPovoado';
 import { origensPossiveis } from './PainelAtaque';
 import Ilustracao from './Ilustracao';
+import Icone from './Icone';
 
 type Props = {
   dados: DadosMapa;
@@ -107,10 +108,10 @@ export default function PainelTerritorio({
             {dono && racaDono && (
               <span className="text-pergaminho-escuro">
                 {' '}
-                · {RACAS_INFO[racaDono].icone} {RACAS_INFO[racaDono].nome}
+                · <Icone de={RACAS_INFO[racaDono].icone} /> {RACAS_INFO[racaDono].nome}
               </span>
             )}
-            {dono && dono.id === dados.herdeiroId && <span className="block text-xs text-ouro-claro">👑 {TITULO_HERDEIRO}</span>}
+            {dono && dono.id === dados.herdeiroId && <span className="block text-xs text-ouro-claro"><Icone de="👑" /> {TITULO_HERDEIRO}</span>}
           </span>
         </dd>
         {(t.cidade_principal || reservadoPara) && (
@@ -118,14 +119,14 @@ export default function PainelTerritorio({
             <dt className="text-pergaminho-escuro">Cidade</dt>
             <dd>
               {t.cidade_principal
-                ? '🏰 Cidade principal: pode ser saqueada, nunca conquistada'
+                ? <><Icone de="🏰" />{' Cidade principal: pode ser saqueada, nunca conquistada'}</>
                 : `Reservado para ${reservadoPara!.nome}, que ainda não entrou`}
             </dd>
           </>
         )}
         <dt className="text-pergaminho-escuro">Terreno</dt>
         <dd>
-          {terreno.icone} {terreno.nome}: {terreno.efeito}
+          <Icone de={terreno.icone} /> {terreno.nome}: {terreno.efeito}
         </dd>
         <dt className="text-pergaminho-escuro">Bônus</dt>
         <dd>
@@ -144,7 +145,7 @@ export default function PainelTerritorio({
                   />
                 )}
                 <span>
-                  {ESTRUTURAS_INFO[estrutura.tipo].icone} {ESTRUTURAS_INFO[estrutura.tipo].nome}
+                  <Icone de={ESTRUTURAS_INFO[estrutura.tipo].icone} /> {ESTRUTURAS_INFO[estrutura.tipo].nome}
                   {estrutura.prontoEm > agora && (
                     <span className="text-pergaminho-escuro"> · em construção, pronta em {formatarDuracao(estrutura.prontoEm - agora)}</span>
                   )}
@@ -153,7 +154,7 @@ export default function PainelTerritorio({
               </dd>
             ) : (
               <dd>
-                ❓ Desconhecida
+                <Icone de="❓" /> Desconhecida
                 <span className="block text-xs text-pergaminho-escuro">
                   Pode ser torre, paliçada, entreposto ou acampamento militar. Mande um batedor para descobrir.
                 </span>
@@ -165,7 +166,7 @@ export default function PainelTerritorio({
 
       {dados.heroi?.territorioId === t.id && (
         <p className="rounded-lg border border-ouro/40 bg-ouro/5 px-3 py-2 text-sm">
-          🎖️ {dados.heroi.nome}, seu herói, está aqui. Para levá-lo, marque a opção ao mandar tropas daqui.
+          <Icone de="🎖️" /> {dados.heroi.nome}, seu herói, está aqui. Para levá-lo, marque a opção ao mandar tropas daqui.
         </p>
       )}
 
@@ -173,14 +174,17 @@ export default function PainelTerritorio({
 
       {torre && (
         <div className={`rounded-lg border px-3 py-2 text-sm ${vindo.length > 0 ? 'border-sangue/70 bg-sangue/15' : 'border-couro bg-noite/60'}`}>
-          <p className="font-semibold">{vindo.length > 0 ? '⚠️ A torre avista marchas vindo' : '🗼 A torre não avista ninguém vindo'}</p>
+          <p className="font-semibold">{vindo.length > 0 ? <><Icone de="⚠️" />{' A torre avista marchas vindo'}</> : <><Icone de="🗼" />{' A torre não avista ninguém vindo'}</>}</p>
           <ul className="mt-1 space-y-1">
             {vindo.map((m) => (
               <li key={m.id} className="text-xs">
                 {dados.jogadores.get(m.jogadorId)?.nome ?? 'Alguém'}:{' '}
                 {m.tipo === 'reconhecimento'
-                  ? '🔭 batedor'
-                  : `${m.tipo === 'saque' ? '💰 saque' : '🚩 conquista'} com ${m.soldados} ${m.soldados === 1 ? 'soldado' : 'soldados'}`}{' '}
+                  ? <><Icone de="🔭" />{' batedor'}</>
+                  : <>
+                      <Icone de={m.tipo === 'saque' ? '💰' : '🚩'} /> {m.tipo === 'saque' ? 'saque' : 'conquista'} com {m.soldados}{' '}
+                      {m.soldados === 1 ? 'soldado' : 'soldados'}
+                    </>}{' '}
                 vindo de {dados.territorios.find((x) => x.id === m.origemId)?.nome ?? '?'} · chega em{' '}
                 <span className="tabular-nums">{m.chegadaEm > agora ? formatarDuracao(m.chegadaEm - agora) : 'instantes'}</span>
               </li>
@@ -199,7 +203,7 @@ export default function PainelTerritorio({
             onClick={onMover}
             className="mt-2 w-full rounded-lg border border-ouro/60 px-3 py-1.5 text-sm font-semibold text-ouro hover:bg-ouro/10"
           >
-            🚶 Mover tropas daqui
+            <Icone de="🚶" /> Mover tropas daqui
           </button>
         </div>
       )}
@@ -274,8 +278,8 @@ export default function PainelTerritorio({
             className="w-full rounded-lg border border-[#c39bd3]/70 px-3 py-2 text-sm font-semibold text-[#d9b8e6] hover:bg-[#c39bd3]/10 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {batedorACaminho
-              ? '🔭 Batedor a caminho…'
-              : `🔭 ${reconhecimento ? 'Mandar outro batedor' : 'Enviar batedor'} (${BALANCEAMENTO.reconhecimento.custoOuro} 🪙)`}
+              ? <><Icone de="🔭" />{' Batedor a caminho…'}</>
+              : <><Icone de="🔭" />{' '}{reconhecimento ? 'Mandar outro batedor' : 'Enviar batedor'}{' ('}{BALANCEAMENTO.reconhecimento.custoOuro}{' '}<Icone de="🪙" />{')'}</>}
           </button>
           {erroBatedor && <p className="mt-1.5 text-xs text-red-300">{erroBatedor}</p>}
         </div>
@@ -288,7 +292,7 @@ export default function PainelTerritorio({
             disabled={!podeAtacar}
             className="w-full rounded-lg bg-sangue px-3 py-2 text-sm font-semibold text-pergaminho hover:brightness-110 disabled:cursor-not-allowed disabled:bg-couro disabled:text-pergaminho-escuro"
           >
-            ⚔️ Atacar
+            <Icone de="⚔️" /> Atacar
           </button>
           <p className="mt-1.5 text-xs text-pergaminho-escuro">
             {!alcancavel
@@ -301,7 +305,7 @@ export default function PainelTerritorio({
                   ? `${dono?.nome} está com escudo por mais ${formatarDuracao(escudo - agora)}.`
                   : vizinhoDoMeu
                     ? 'Faz fronteira com você.'
-                    : '🚪 Dá para chegar pelo acesso militar.'}
+                    : <><Icone de="🚪" />{' Dá para chegar pelo acesso militar.'}</>}
           </p>
         </div>
       )}

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { RECURSOS_INFO, formatarDuracao, formatarNumero } from '../lib/textos';
 import { useCidade } from '../lib/useCidade';
 import type { EstradaMapa } from '../lib/useMapa';
+import Icone from './Icone';
 
 type Props = {
   territorioId: string;
@@ -27,7 +28,7 @@ export default function PainelEstrada({ territorioId, estrada, meu, meuId, agora
   if (estrada) {
     return (
       <p className="text-sm">
-        🛤️ Estrada
+        <Icone de="🛤️" /> Estrada
         {estrada.prontoEm > agora ? (
           <span className="text-pergaminho-escuro"> · em obra, pronta em {formatarDuracao(estrada.prontoEm - agora)}</span>
         ) : (
@@ -57,7 +58,7 @@ export default function PainelEstrada({ territorioId, estrada, meu, meuId, agora
 
   return (
     <section className="rounded-lg border border-couro bg-noite/50 p-3 text-sm">
-      <p className="font-semibold">🛤️ Estrada</p>
+      <p className="font-semibold"><Icone de="🛤️" /> Estrada</p>
       <p className="mt-0.5 text-xs text-pergaminho-escuro">
         Tropas que você move entre dois territórios seus com estrada andam {E.multiplicadorVelocidade}× mais rápido, para reforçar antes
         do ataque chegar. Ataques não usam estrada. Fica à parte da estrutura, todos a veem no mapa e ela é destruída se o território
@@ -67,7 +68,7 @@ export default function PainelEstrada({ territorioId, estrada, meu, meuId, agora
         {RECURSOS.filter((r) => custo[r] > 0)
           .map((r) => `${formatarNumero(custo[r])} ${RECURSOS_INFO[r].icone}`)
           .join(' · ')}
-        {' · ⏱ '}
+        {<>{' · '}<Icone de="⏱" />{' '}</>}
         {formatarDuracao(tempoEstradaMs())}
       </p>
       {cidade && falta.length > 0 && (

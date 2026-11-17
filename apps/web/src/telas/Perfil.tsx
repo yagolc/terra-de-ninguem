@@ -6,6 +6,7 @@ import PresentearGemas from '../componentes/PresentearGemas';
 import { temporadaEmAndamento } from '../lib/salas';
 import { RACAS_INFO } from '../lib/textos';
 import { usePerfil, type TemporadaDoPerfil } from '../lib/usePerfil';
+import Icone from '../componentes/Icone';
 
 type Props = {
   jogadorId: string;
@@ -86,7 +87,7 @@ export default function Perfil({ jogadorId, meuId, onNomeMudou }: Props) {
           {dados.titulo && <p className="font-titulo text-sm italic text-ouro-claro">{dados.titulo}</p>}
           <p className="text-sm text-pergaminho-escuro">
             {atual?.raca && `${RACAS_INFO[atual.raca].icone} ${RACAS_INFO[atual.raca].nome} · `}
-            {titulos > 0 ? `👑 ${titulos} ${titulos === 1 ? 'título' : 'títulos'}` : `${dados.temporadas.length} ${dados.temporadas.length === 1 ? 'temporada' : 'temporadas'}`}
+            {titulos > 0 ? <><Icone de="👑" />{' '}{titulos}{' '}{titulos === 1 ? 'título' : 'títulos'}</> : `${dados.temporadas.length} ${dados.temporadas.length === 1 ? 'temporada' : 'temporadas'}`}
           </p>
           {dados.descricao ? (
             <p className="whitespace-pre-line break-words text-sm text-pergaminho">{dados.descricao}</p>
@@ -98,7 +99,7 @@ export default function Perfil({ jogadorId, meuId, onNomeMudou }: Props) {
               onClick={() => setEditando(true)}
               className="mt-2 rounded-lg border border-ouro/60 px-4 py-2 text-sm font-semibold text-ouro hover:bg-ouro/10"
             >
-              ✏️ Editar perfil
+              <Icone de="✏️" /> Editar perfil
             </button>
           )}
           {!meu && atual && (
@@ -106,7 +107,7 @@ export default function Perfil({ jogadorId, meuId, onNomeMudou }: Props) {
               href={`#cartas=${encodeURIComponent(jogadorId)}`}
               className="mt-2 inline-block rounded-lg border border-ouro/60 px-4 py-2 text-sm font-semibold text-ouro hover:bg-ouro/10"
             >
-              🕊️ Enviar carta
+              <Icone de="🕊️" /> Enviar carta
             </a>
           )}
           {!meu && <PresentearGemas jogadorId={jogadorId} nome={dados.nome} />}
@@ -144,10 +145,10 @@ export default function Perfil({ jogadorId, meuId, onNomeMudou }: Props) {
                 <li key={t.temporadaId ?? t.numero} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 py-2">
                   <span>
                     {t.sala ? `${t.sala}: temporada` : 'Temporada'} {t.numero}
-                    {t.raca && <span className="text-pergaminho-escuro"> · {RACAS_INFO[t.raca].icone} {RACAS_INFO[t.raca].nome}</span>}
+                    {t.raca && <span className="text-pergaminho-escuro"> · <Icone de={RACAS_INFO[t.raca].icone} /> {RACAS_INFO[t.raca].nome}</span>}
                   </span>
                   <span className={`tabular-nums ${t.venceu ? 'font-semibold text-ouro' : 'text-pergaminho-escuro'}`}>
-                    {t.venceu && '👑 '}
+                    {t.venceu && <><Icone de="👑" />{' '}</>}
                     {colocacao(t)}
                     {t.pontos !== null && ` · ${t.pontos} pts`}
                     {t.venceu && t.motivoFim && <span className="block text-right text-[11px] font-normal">{MOTIVO_FIM[t.motivoFim]}</span>}

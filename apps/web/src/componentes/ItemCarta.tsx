@@ -1,6 +1,7 @@
 import { validadeDaProposta } from '@terra/regras';
 import { PROPOSTAS_INFO, formatarDuracao } from '../lib/textos';
 import type { Carta } from '../lib/useCartas';
+import Icone from './Icone';
 
 const quando = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
@@ -28,7 +29,7 @@ export default function ItemCarta({ carta, meuId, nomes, agora, ocupado, onRespo
     <li className={`rounded-xl border bg-carvao/90 p-4 ${nova ? 'border-ouro/60' : 'border-couro'}`}>
       <div className="flex items-start gap-3">
         <span className="text-2xl leading-none" aria-hidden>
-          {recebida ? '📨' : voando ? '🕊️' : '📤'}
+          {recebida ? <Icone de="📨" /> : voando ? <Icone de="🕊️" /> : <Icone de="📤" />}
         </span>
         <div className="min-w-0 flex-1 space-y-2">
           <div>
@@ -48,7 +49,7 @@ export default function ItemCarta({ carta, meuId, nomes, agora, ocupado, onRespo
           {carta.proposta && (
             <div className="space-y-2 rounded-lg border border-couro bg-noite/60 px-3 py-2 text-sm">
               <p>
-                {PROPOSTAS_INFO[carta.proposta].icone} <b>{PROPOSTAS_INFO[carta.proposta].nome}</b> por {carta.horasPacto}{' '}
+                <Icone de={PROPOSTAS_INFO[carta.proposta].icone} /> <b>{PROPOSTAS_INFO[carta.proposta].nome}</b> por {carta.horasPacto}{' '}
                 {carta.horasPacto === 1 ? 'hora' : 'horas'}
               </p>
               {carta.resposta === null && <p className="text-xs text-pergaminho-escuro">{PROPOSTAS_INFO[carta.proposta].efeito}</p>}
@@ -98,7 +99,7 @@ export default function ItemCarta({ carta, meuId, nomes, agora, ocupado, onRespo
 
           {recebida && (
             <button onClick={() => onEscrever(outro)} className="text-sm text-ouro underline-offset-4 hover:underline">
-              ↩️ Responder
+              <Icone de="↩️" /> Responder
             </button>
           )}
         </div>

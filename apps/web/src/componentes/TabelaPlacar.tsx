@@ -2,6 +2,7 @@ import { BALANCEAMENTO } from '@terra/regras';
 import { RACAS_INFO, TITULO_HERDEIRO } from '../lib/textos';
 import Bandeira from './Bandeira';
 import type { LinhaPlacar } from '../lib/useTemporada';
+import Icone from './Icone';
 
 /** Ranking da temporada: pontos = territórios, habitantes e batalhas vencidas. */
 export default function TabelaPlacar({ placar, meuId, vencedorId }: { placar: LinhaPlacar[]; meuId: string; vencedorId?: string | null }) {
@@ -15,9 +16,9 @@ export default function TabelaPlacar({ placar, meuId, vencedorId }: { placar: Li
           <tr className="text-xs text-pergaminho-escuro">
             <th className="py-1 text-left font-normal">#</th>
             <th className="py-1 text-left font-normal">Jogador</th>
-            <th className="px-1 py-1 font-normal" title="Territórios">🏴</th>
-            <th className="px-1 py-1 font-normal" title="Habitantes">👥</th>
-            <th className="px-1 py-1 font-normal" title="Batalhas vencidas">⚔️</th>
+            <th className="px-1 py-1 font-normal" title="Territórios"><Icone de="🏴" /></th>
+            <th className="px-1 py-1 font-normal" title="Habitantes"><Icone de="👥" /></th>
+            <th className="px-1 py-1 font-normal" title="Batalhas vencidas"><Icone de="⚔️" /></th>
             <th className="py-1 text-right font-normal">Pontos</th>
           </tr>
         </thead>
@@ -28,24 +29,24 @@ export default function TabelaPlacar({ placar, meuId, vencedorId }: { placar: Li
               <td className="py-2">
                 <a href={`#perfil=${linha.jogadorId}`} title={`Perfil de ${linha.nome}`} className="hover:text-ouro-claro hover:underline">
                   <Bandeira bandeira={linha.bandeira} largura={21} semEmblema className="mr-1.5 inline-block align-[-2px]" />
-                  {linha.raca && <span title={RACAS_INFO[linha.raca].nome}>{RACAS_INFO[linha.raca].icone} </span>}
+                  {linha.raca && <span title={RACAS_INFO[linha.raca].nome}><Icone de={RACAS_INFO[linha.raca].icone} /> </span>}
                   {linha.nome}
                 </a>
-                {linha.jogadorId === vencedorId && ' 👑'}
+                {linha.jogadorId === vencedorId && <>{' '}<Icone de="👑" /></>}
                 {linha.ausente && (
                   <span className="ml-1 text-xs" title="Ausente: dias sem abrir o jogo. Os territórios dele se rebelam aos poucos">
-                    💤
+                    <Icone de="💤" />
                   </span>
                 )}
                 {linha.usosGemas > 0 && (
                   <span className="ml-1 text-xs text-ouro-claro" title={`Terminou ${linha.usosGemas} ${linha.usosGemas === 1 ? 'obra' : 'obras'} com gemas nesta temporada`}>
-                    ⚡{linha.usosGemas}
+                    <Icone de="⚡" />{linha.usosGemas}
                   </span>
                 )}
                 {linha.titulo && <span className="block text-[11px] italic text-ouro-claro">{linha.titulo}</span>}
                 {linha.herdeiro && (
                   <span className="block text-[11px] text-ouro-claro" title="Cada batalha vencida contra ele vale pontos a mais">
-                    {TITULO_HERDEIRO} · 🎯 cabeça a prêmio
+                    {TITULO_HERDEIRO} · <Icone de="🎯" /> cabeça a prêmio
                   </span>
                 )}
               </td>

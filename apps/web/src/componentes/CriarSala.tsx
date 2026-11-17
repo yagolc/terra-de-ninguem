@@ -3,6 +3,7 @@ import type { MapaGerado } from '@terra/regras/mapa';
 import { useState } from 'react';
 import { criarSala } from '../lib/salas';
 import Botao from './Botao';
+import Icone from './Icone';
 
 type Props = {
   meuId: string;
@@ -56,7 +57,7 @@ function PreviaMapa({ mapa }: { mapa: MapaGerado }) {
         const t = mapa.territorios[p.indice]!;
         return (
           <text key={p.indice} x={t.x} y={t.y + 0.6} fontSize={1.6} textAnchor="middle">
-            {p.tipo === 'vila' ? '🏘' : '⚖'}
+            {p.tipo === 'vila' ? <Icone de="🏘" /> : <Icone de="⚖" />}
           </text>
         );
       })}
@@ -204,7 +205,7 @@ export default function CriarSala({ meuId, jogadores, onCriada }: Props) {
           <PreviaMapa mapa={previa} />
           <p className="text-xs text-pergaminho-escuro">
             Semente {semente}: {previa.territorios.length} territórios, {previa.regioes.length} regiões. Círculos dourados: cidades iniciais;
-            🏘 vila; ⚖ cidade livre; azul: rio; preto: cordilheira.
+            <Icone de="🏘" /> vila; <Icone de="⚖" /> cidade livre; azul: rio; preto: cordilheira.
           </p>
         </div>
       )}

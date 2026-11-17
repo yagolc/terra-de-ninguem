@@ -5,6 +5,7 @@ import { RECURSOS_INFO, formatarDuracao, formatarNumero } from '../lib/textos';
 import { useCidade } from '../lib/useCidade';
 import type { PovoadoMapa } from '../lib/useMapa';
 import Ilustracao from './Ilustracao';
+import Icone from './Icone';
 
 type Props = {
   povoado: PovoadoMapa;
@@ -52,7 +53,7 @@ export default function PainelPovoado({ povoado, donoId, meuId, onMelhorado, ago
 
   const lealdade = donoId && !leal && povoado.lealDesde !== null && (
     <p className="text-xs text-ouro-claro">
-      ⏳ Ainda leal ao antigo dono: o bônus começa em {formatarDuracao(povoado.lealDesde - agora)}.
+      <Icone de="⏳" /> Ainda leal ao antigo dono: o bônus começa em {formatarDuracao(povoado.lealDesde - agora)}.
     </p>
   );
 
@@ -61,7 +62,7 @@ export default function PainelPovoado({ povoado, donoId, meuId, onMelhorado, ago
       <section className="space-y-1.5 rounded-lg border border-ouro/50 bg-ouro/5 p-3 text-sm">
         {titulo('⚖️', 'Cidade livre')}
         <p>
-          +{P.cidadeLivre.ouroHora} {RECURSOS_INFO.ouro.icone} por hora para quem a controla. Muralha própria: +
+          +{P.cidadeLivre.ouroHora} <Icone de={RECURSOS_INFO.ouro.icone} /> por hora para quem a controla. Muralha própria: +
           {Math.round(P.cidadeLivre.bonusDefesa * 100)}% de defesa.
         </p>
         {!povoado.miliciaEntregue && (
@@ -72,12 +73,12 @@ export default function PainelPovoado({ povoado, donoId, meuId, onMelhorado, ago
         )}
         {donoId && povoado.milicia > 0 && (
           <p className="text-xs">
-            🛡️ {povoado.milicia} {povoado.milicia === 1 ? 'lanceiro' : 'lanceiros'} de milícia defendem a cidade (não ocupam população,
+            <Icone de="🛡️" /> {povoado.milicia} {povoado.milicia === 1 ? 'lanceiro' : 'lanceiros'} de milícia defendem a cidade (não ocupam população,
             não comem e não marcham; se dispersam se ela for tomada).
           </p>
         )}
         <p className="text-xs text-pergaminho-escuro">
-          ⚖️ Monopólio comercial: quem tiver todas as cidades livres por {BALANCEAMENTO.objetivos.monopolioHoras} h seguidas vence a
+          <Icone de="⚖️" /> Monopólio comercial: quem tiver todas as cidades livres por {BALANCEAMENTO.objetivos.monopolioHoras} h seguidas vence a
           temporada.
         </p>
         {lealdade}

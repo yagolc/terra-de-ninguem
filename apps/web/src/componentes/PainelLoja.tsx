@@ -5,6 +5,7 @@ import { useGemas } from '../lib/useGemas';
 import ItensLoja from './ItensLoja';
 import PainelArauto from './PainelArauto';
 import PixDoPedido from './PixDoPedido';
+import Icone from './Icone';
 
 const STATUS: Record<string, string> = { pendente: '⏳ esperando o Pix ser conferido', pago: '✅ creditado' };
 
@@ -40,23 +41,23 @@ export default function PainelLoja() {
   return (
     <section className="space-y-3 rounded-2xl border border-couro bg-carvao/90 p-4">
       <div>
-        <h3 className="font-titulo text-lg text-ouro">💎 Loja de gemas</h3>
+        <h3 className="font-titulo text-lg text-ouro"><Icone de="💎" /> Loja de gemas</h3>
         <p className="text-sm text-pergaminho-escuro">
           Com gemas você termina na hora a obra que está sendo feita na cidade (até o nível {nivelMaximo}, nunca a Muralha). O primeiro uso
           da temporada custa {precoBase} gemas e o preço dobra a cada uso ({[0, 1, 2, 3].map(precoTerminarObra).join(', ')}…); na
-          temporada nova volta para {precoBase}. Todos veem no placar quantas vezes cada um usou (⚡).
+          temporada nova volta para {precoBase}. Todos veem no placar quantas vezes cada um usou (<Icone de="⚡" />).
         </p>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-lg bg-noite/60 px-3 py-2">
-          <p className="font-titulo text-xl text-ouro-claro tabular-nums">💎 {gemas.saldo}</p>
+          <p className="font-titulo text-xl text-ouro-claro tabular-nums"><Icone de="💎" /> {gemas.saldo}</p>
           <p className="text-xs text-pergaminho-escuro">suas gemas</p>
         </div>
         <div className="rounded-lg bg-noite/60 px-3 py-2">
-          <p className="font-titulo text-xl text-ouro-claro tabular-nums">⚡ {gemas.usos}</p>
+          <p className="font-titulo text-xl text-ouro-claro tabular-nums"><Icone de="⚡" /> {gemas.usos}</p>
           <p className="text-xs text-pergaminho-escuro">
-            usos nesta temporada · próximo: {precoTerminarObra(gemas.usos)} 💎 (já gastou {gastoTerminarObra(gemas.usos)})
+            usos nesta temporada · próximo: {precoTerminarObra(gemas.usos)} <Icone de="💎" /> (já gastou {gastoTerminarObra(gemas.usos)})
           </p>
         </div>
       </div>
@@ -96,7 +97,7 @@ export default function PainelLoja() {
                 }
                 className="rounded-lg border border-ouro/60 px-3 py-2 text-sm font-semibold text-ouro hover:bg-ouro/10 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {quantidade} 💎 · {formatarReais(precoPacoteReais(quantidade) * 100)}
+                {quantidade} <Icone de="💎" /> · {formatarReais(precoPacoteReais(quantidade) * 100)}
               </button>
             ))}
           </div>
@@ -115,7 +116,7 @@ export default function PainelLoja() {
             <li key={p.codigo} className="space-y-2 border-t border-couro/60 pt-2 text-sm">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <span className="flex-1">
-                  {p.gemas} 💎 · {formatarReais(p.valorCentavos)} · <span className="font-mono text-xs">{p.codigo}</span>
+                  {p.gemas} <Icone de="💎" /> · {formatarReais(p.valorCentavos)} · <span className="font-mono text-xs">{p.codigo}</span>
                   <span className="block text-xs text-pergaminho-escuro">
                     {STATUS[p.status]} · {new Date(p.pagoEm ?? p.criadoEm).toLocaleDateString('pt-BR')}
                   </span>
@@ -145,11 +146,11 @@ export default function PainelLoja() {
       )}
       {gemas.presentes.length > 0 && (
         <div className="space-y-1 border-t border-couro/60 pt-2">
-          <h4 className="font-titulo text-ouro">🎁 Presentes</h4>
+          <h4 className="font-titulo text-ouro"><Icone de="🎁" /> Presentes</h4>
           <ul className="space-y-0.5 text-sm">
             {gemas.presentes.map((p) => (
               <li key={p.id} className="text-pergaminho-escuro">
-                {p.enviado ? `Você deu ${p.gemas} 💎 a ` : `Você ganhou ${p.gemas} 💎 de `}
+                {p.enviado ? <>{'Você deu '}{p.gemas}{' '}<Icone de="💎" />{' a '}</> : <>{'Você ganhou '}{p.gemas}{' '}<Icone de="💎" />{' de '}</>}
                 <a href={`#perfil=${p.outroId}`} className="text-pergaminho hover:underline">
                   {p.outroNome}
                 </a>{' '}

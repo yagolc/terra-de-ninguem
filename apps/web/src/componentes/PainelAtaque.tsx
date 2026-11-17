@@ -20,6 +20,7 @@ import OpcaoHeroi from './OpcaoHeroi';
 import InfoReconhecimento from './InfoReconhecimento';
 import type { DadosMapa } from '../lib/useMapa';
 import { UNIDADES_INFO, formatarDuracao } from '../lib/textos';
+import Icone from './Icone';
 
 type Props = {
   dados: DadosMapa;
@@ -55,7 +56,7 @@ function BotaoAtaque(props: {
       className={`flex flex-col items-center gap-1 rounded-lg px-2 py-2.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:brightness-100 ${props.className}`}
     >
       <span aria-hidden className="text-xl leading-none">
-        {props.icone}
+        <Icone de={props.icone} />
       </span>
       <span className="font-semibold">{props.enviando ? 'Enviando…' : props.rotulo}</span>
       <span className="text-[11px] leading-tight opacity-80">{props.explicacao}</span>
@@ -164,7 +165,7 @@ export default function PainelAtaque({ dados, alvoId, meuId, agora, onVoltar, on
       )}
       {estruturaDesconhecida && (
         <p className="rounded-lg bg-noite/60 px-3 py-2 text-sm">
-          ❓ Este território tem uma estrutura que você não conhece. Se for uma paliçada, a defesa ganha +
+          <Icone de="❓" /> Este território tem uma estrutura que você não conhece. Se for uma paliçada, a defesa ganha +
           {Math.round(BALANCEAMENTO.bonusPalicada * 100)}%. Mande um batedor para descobrir.
         </p>
       )}
@@ -196,7 +197,7 @@ export default function PainelAtaque({ dados, alvoId, meuId, agora, onVoltar, on
           </label>
           {pelaPassagem && (
             <p className="rounded-lg bg-noite/60 px-3 py-2 text-sm">
-              🚪 Pelo acesso militar: as tropas atravessam as terras de {nomesDaPassagem.join(' e ')} até o alvo. A marcha leva o
+              <Icone de="🚪" /> Pelo acesso militar: as tropas atravessam as terras de {nomesDaPassagem.join(' e ')} até o alvo. A marcha leva o
               tempo da distância toda.
             </p>
           )}
@@ -205,7 +206,7 @@ export default function PainelAtaque({ dados, alvoId, meuId, agora, onVoltar, on
             {TIPOS_UNIDADE.map((t) => (
               <li key={t} className="flex items-center gap-2">
                 <span className="w-28 text-sm">
-                  {UNIDADES_INFO[t].icone} {UNIDADES_INFO[t].plural}
+                  <Icone de={UNIDADES_INFO[t].icone} /> {UNIDADES_INFO[t].plural}
                 </span>
                 <input
                   type="number"
@@ -244,13 +245,13 @@ export default function PainelAtaque({ dados, alvoId, meuId, agora, onVoltar, on
 
           {duracao !== null && (
             <p className="rounded-lg bg-noite/60 px-3 py-2 text-sm">
-              ⏱ Marcha de {formatarDuracao(duracao)} · chega {horario.format(new Date(agora + duracao))}
+              <Icone de="⏱" /> Marcha de {formatarDuracao(duracao)} · chega {horario.format(new Date(agora + duracao))}
             </p>
           )}
 
           {meuEscudo !== null && (
             <p className="rounded-lg border border-ouro/40 bg-ouro/10 px-3 py-2 text-sm text-ouro-claro">
-              🛡️ Você está com escudo por mais {formatarDuracao(meuEscudo - agora)}. Atacar quebra o seu escudo.
+              <Icone de="🛡️" /> Você está com escudo por mais {formatarDuracao(meuEscudo - agora)}. Atacar quebra o seu escudo.
             </p>
           )}
 

@@ -5,6 +5,7 @@ import { BALANCEAMENTO } from '@terra/regras';
 import TabelaPlacar from '../componentes/TabelaPlacar';
 import { formatarDuracao } from '../lib/textos';
 import { useTemporada } from '../lib/useTemporada';
+import Icone from '../componentes/Icone';
 
 const quando = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
@@ -53,7 +54,7 @@ export default function Objetivo({ sessao }: { sessao: Session }) {
 
       {dados.placar.some((p) => p.objetivoVenceEm !== null) && (
         <section className="rounded-xl border border-sangue/60 bg-sangue/15 p-4 text-sm">
-          <h2 className="font-titulo text-lg text-ouro">🏆 Objetivo cumprido</h2>
+          <h2 className="font-titulo text-lg text-ouro"><Icone de="🏆" /> Objetivo cumprido</h2>
           <p className="mt-1 text-xs text-pergaminho-escuro">
             Quem cumpre o objetivo secreto vence se mantiver por {BALANCEAMENTO.objetivos.segurarHoras} h seguidas, sem escudo enquanto isso.
             O objetivo continua secreto, mas todos veem o relógio. Se ele deixar de cumprir, o relógio zera.
@@ -73,7 +74,7 @@ export default function Objetivo({ sessao }: { sessao: Session }) {
 
       {dados.monopolio.donos.length > 0 && (
         <section className="rounded-xl border border-ouro/50 bg-carvao/90 p-4 text-sm">
-          <h2 className="font-titulo text-lg text-ouro">⚖️ Monopólio comercial</h2>
+          <h2 className="font-titulo text-lg text-ouro"><Icone de="⚖️" /> Monopólio comercial</h2>
           <p className="mt-1 text-xs text-pergaminho-escuro">
             Vale para todos: quem tiver as {dados.monopolio.donos.length} cidades livres ao mesmo tempo por{' '}
             {BALANCEAMENTO.objetivos.monopolioHoras} h seguidas vence a temporada. Perder uma zera o relógio.

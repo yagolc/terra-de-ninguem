@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { chamarFuncao } from '../lib/funcoes';
 import { ESTRUTURAS_INFO } from '../lib/textos';
 import JanelaConfirmacao from './JanelaConfirmacao';
+import Icone from './Icone';
 
 type Props = {
   territorioId: string;
@@ -38,7 +39,7 @@ export default function DestruirEstrutura({ territorioId, tipo, onDestruida }: P
         disabled={enviando}
         className="w-full rounded-lg border border-sangue/70 px-3 py-1.5 text-sm text-red-200 hover:bg-sangue/20 disabled:opacity-50"
       >
-        {enviando ? 'Destruindo…' : `🔨 Destruir ${info.nome.toLowerCase()} para construir outra`}
+        {enviando ? 'Destruindo…' : <><Icone de="🔨" />{' Destruir '}{info.nome.toLowerCase()}{' para construir outra'}</>}
       </button>
       {erro && (
         <p role="alert" className="mt-1.5 text-xs text-red-300">
@@ -57,7 +58,7 @@ export default function DestruirEstrutura({ territorioId, tipo, onDestruida }: P
           onFechar={() => setConfirmando(false)}
         >
           <p>
-            {info.icone} <b>{info.nome}</b>: some na hora e <b>nada do que custou volta</b>. Depois dá para construir outra estrutura
+            <Icone de={info.icone} /> <b>{info.nome}</b>: some na hora e <b>nada do que custou volta</b>. Depois dá para construir outra estrutura
             neste território.
           </p>
           {tipo === 'acampamento' && <p className="mt-2">Os lotes do Quartel que ficariam prontos aqui passam a ficar prontos na cidade.</p>}

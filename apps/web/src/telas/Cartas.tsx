@@ -6,6 +6,7 @@ import ItemCarta from '../componentes/ItemCarta';
 import { chamarFuncao } from '../lib/funcoes';
 import { PREDIOS, PROPOSTAS_INFO, formatarDuracao } from '../lib/textos';
 import { useCartas } from '../lib/useCartas';
+import Icone from '../componentes/Icone';
 
 type Props = {
   sessao: Session;
@@ -81,7 +82,7 @@ export default function Cartas({ sessao, para }: Props) {
             disabled={nivelPombal === 0}
             className="rounded-lg bg-ouro px-4 py-2 text-sm font-semibold text-noite hover:bg-ouro-claro disabled:cursor-not-allowed disabled:bg-couro disabled:text-pergaminho-escuro"
           >
-            🕊️ Nova carta
+            <Icone de="🕊️" /> Nova carta
           </button>
         )}
       </header>
@@ -90,7 +91,7 @@ export default function Cartas({ sessao, para }: Props) {
         <ul className="space-y-1 rounded-xl border border-[#9fd39a]/50 bg-[#9fd39a]/10 p-3 text-sm">
           {pactosAtivos.map((p) => (
             <li key={`${p.tipo}-${p.nome}`}>
-              {PROPOSTAS_INFO[p.tipo].icone} {PROPOSTAS_INFO[p.tipo].nome} com <b>{p.nome}</b>: falta {formatarDuracao(p.ate - agora)}
+              <Icone de={PROPOSTAS_INFO[p.tipo].icone} /> {PROPOSTAS_INFO[p.tipo].nome} com <b>{p.nome}</b>: falta {formatarDuracao(p.ate - agora)}
             </li>
           ))}
         </ul>

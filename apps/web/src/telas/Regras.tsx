@@ -63,8 +63,8 @@ export default function Regras() {
 
       <Secao icone="🏰" titulo="Cidade e recursos">
         <p>
-          São três recursos: {RECURSOS_INFO.comida.icone} comida (Fazenda), {RECURSOS_INFO.madeira.icone} madeira (Serraria) e{' '}
-          {RECURSOS_INFO.ouro.icone} ouro (Mercado). Eles só são produzidos por <b>trabalhadores</b>: cada nível do prédio abre{' '}
+          São três recursos: <Icone de={RECURSOS_INFO.comida.icone} /> comida (Fazenda), <Icone de={RECURSOS_INFO.madeira.icone} /> madeira (Serraria) e{' '}
+          <Icone de={RECURSOS_INFO.ouro.icone} /> ouro (Mercado). Eles só são produzidos por <b>trabalhadores</b>: cada nível do prédio abre{' '}
           {B.producao.trabalhadoresPorNivel} vagas e dá +{pct(B.producao.bonusPorNivel)} de produção.
         </p>
         <p>
@@ -78,7 +78,7 @@ export default function Regras() {
         <ul className="space-y-1">
           {(Object.keys(PREDIOS) as (keyof typeof PREDIOS)[]).map((p) => (
             <li key={p}>
-              {PREDIOS[p].icone} <b>{PREDIOS[p].nome}:</b> {PREDIOS[p].descricao}
+              <Icone de={PREDIOS[p].icone} /> <b>{PREDIOS[p].nome}:</b> {PREDIOS[p].descricao}
             </li>
           ))}
         </ul>
@@ -111,7 +111,7 @@ export default function Regras() {
               {TIPOS_UNIDADE.map((t) => (
                 <tr key={t} className="border-t border-couro/60">
                   <td className="whitespace-nowrap py-1 pr-2">
-                    {UNIDADES_INFO[t].icone} {UNIDADES_INFO[t].nome}
+                    <Icone de={UNIDADES_INFO[t].icone} /> {UNIDADES_INFO[t].nome}
                   </td>
                   <td className="px-1 tabular-nums">{B.unidades[t].ataque}</td>
                   <td className="px-1 tabular-nums">{B.unidades[t].defesa}</td>
@@ -123,11 +123,11 @@ export default function Regras() {
           </table>
         </div>
         <p>
-          <b>Triângulo de vantagens:</b> 🔱 lanceiro vence 🐎 cavalaria, 🐎 cavalaria vence 🏹 arqueiro, 🏹 arqueiro vence 🔱 lanceiro.
+          <b>Triângulo de vantagens:</b> <Icone de="🔱" /> lanceiro vence <Icone de="🐎" /> cavalaria, <Icone de="🐎" /> cavalaria vence <Icone de="🏹" /> arqueiro, <Icone de="🏹" /> arqueiro vence <Icone de="🔱" /> lanceiro.
           Contra o tipo que vence, a unidade luta {B.batalha.multiplicadorVantagem}× melhor. Misture as tropas.
         </p>
         <p>
-          Cada soldado come {B.unidades.lanceiro.consumoComidaHora} 🌾 por hora (a cavalaria, {B.unidades.cavalaria.consumoComidaHora}).
+          Cada soldado come {B.unidades.lanceiro.consumoComidaHora} <Icone de="🌾" /> por hora (a cavalaria, {B.unidades.cavalaria.consumoComidaHora}).
           Se a comida não sustentar o exército, {pct(B.desercaoHora)} do excedente deserta por hora.
         </p>
       </Secao>
@@ -140,7 +140,7 @@ export default function Regras() {
         <ul className="space-y-1">
           {(Object.keys(TERRENOS_INFO) as (keyof typeof TERRENOS_INFO)[]).map((t) => (
             <li key={t}>
-              {TERRENOS_INFO[t].icone} <b>{TERRENOS_INFO[t].nome}:</b> +{pct(B.mapa.bonusTerritorio)} de{' '}
+              <Icone de={TERRENOS_INFO[t].icone} /> <b>{TERRENOS_INFO[t].nome}:</b> +{pct(B.mapa.bonusTerritorio)} de{' '}
               {RECURSOS_INFO[BONUS_DO_TERRENO[t]].nome.toLowerCase()} para o dono; {TERRENOS_INFO[t].efeito}
               {t === 'montanha' && ` (+${pct(B.batalha.bonusMontanha)})`}
               {t === 'floresta' && ` (+${pct(B.batalha.bonusFlorestaArqueiro)})`}.
@@ -161,8 +161,8 @@ export default function Regras() {
 
       <Secao icone="🚩" titulo="Ataques e batalhas">
         <p>
-          <b>💰 Saque:</b> se vencer, leva até {pct(B.saque.maximoDoDesprotegido)} do estoque desprotegido de uma cidade, limitado à
-          carga das tropas, e elas voltam para casa. <b>🚩 Conquista:</b> toma o território se a força de ataque for pelo menos{' '}
+          <b><Icone de="💰" /> Saque:</b> se vencer, leva até {pct(B.saque.maximoDoDesprotegido)} do estoque desprotegido de uma cidade, limitado à
+          carga das tropas, e elas voltam para casa. <b><Icone de="🚩" /> Conquista:</b> toma o território se a força de ataque for pelo menos{' '}
           <b>{num(B.batalha.margemConquista)}×</b> a da defesa. Vencendo sem essa folga, você só mata defensores e volta.
         </p>
         <p>
@@ -178,7 +178,7 @@ export default function Regras() {
 
       <Secao icone="🔭" titulo="Reconhecimento">
         <p>
-          No painel de um território vizinho, mande um <b>batedor</b> por {B.reconhecimento.custoOuro} 🪙. Quando ele volta, você vê as
+          No painel de um território vizinho, mande um <b>batedor</b> por {B.reconhecimento.custoOuro} <Icone de="🪙" />. Quando ele volta, você vê as
           tropas que estavam lá, o terreno, a muralha e quantas unidades de cada tipo conquistam mesmo com o azar máximo. A informação é
           daquele momento: a defesa pode mudar depois.
         </p>
@@ -193,24 +193,24 @@ export default function Regras() {
         <ul className="space-y-1">
           {TIPOS_ESTRUTURA.map((t) => (
             <li key={t}>
-              {ESTRUTURAS_INFO[t].icone} <b>{ESTRUTURAS_INFO[t].nome}</b> ({custo(B.estruturas[t].custo)}, {B.estruturas[t].tempoMin} min):{' '}
+              <Icone de={ESTRUTURAS_INFO[t].icone} /> <b>{ESTRUTURAS_INFO[t].nome}</b> ({custo(B.estruturas[t].custo)}, {B.estruturas[t].tempoMin} min):{' '}
               {ESTRUTURAS_INFO[t].descricao}
             </li>
           ))}
         </ul>
         <p>
-          ⛺ O <b>acampamento militar</b> só vai em território conquistado (nunca na cidade) e cada jogador tem no máximo{' '}
+          <Icone de="⛺" /> O <b>acampamento militar</b> só vai em território conquistado (nunca na cidade) e cada jogador tem no máximo{' '}
           {B.acampamento.maximoPorJogador}. Com ele pronto, o Quartel da cidade escolhe onde o lote fica pronto: na cidade ou no
           acampamento, já na frente de batalha. Custo, fila e população são os de sempre (os soldados saem da cidade). Se o acampamento
           cair ou for destruído, os lotes que ficariam prontos nele ficam prontos na cidade.
         </p>
         <p>
-          <b>As estruturas dos outros são secretas:</b> no mapa aparece só um ❓. Para saber qual é (e se já está pronta),
+          <b>As estruturas dos outros são secretas:</b> no mapa aparece só um <Icone de="❓" />. Para saber qual é (e se já está pronta),
           mande um batedor. A torre não mostra de que tipo são os soldados: para isso, também é preciso um batedor. Quando ela avista alguém, a aba Mapa
-          ganha um aviso ⚠️ vermelho.
+          ganha um aviso <Icone de="⚠️" /> vermelho.
         </p>
         <p>
-          🛤️ <b>Estrada</b> ({custo(B.estrada.custo)}, {B.estrada.tempoMin} min): fica à parte, então um território pode ter uma estrada e
+          <Icone de="🛤️" /> <b>Estrada</b> ({custo(B.estrada.custo)}, {B.estrada.tempoMin} min): fica à parte, então um território pode ter uma estrada e
           uma estrutura. Tropas que você <b>move entre dois territórios seus com estrada pronta</b> andam{' '}
           <b>{B.estrada.multiplicadorVelocidade}× mais rápido</b>, para reforçar antes de um ataque chegar. Ataques não usam estrada.
           Estradas não são secretas: todos as veem no mapa. Também são destruídas na conquista.
@@ -225,12 +225,12 @@ export default function Regras() {
         <ul className="space-y-1">
           {TIPOS_RACA.map((r) => (
             <li key={r}>
-              {RACAS_INFO[r].icone} <b>{RACAS_INFO[r].nome}:</b> {RACAS_INFO[r].vantagem} <span className="text-pergaminho-escuro">{RACAS_INFO[r].desvantagem}</span>
+              <Icone de={RACAS_INFO[r].icone} /> <b>{RACAS_INFO[r].nome}:</b> {RACAS_INFO[r].vantagem} <span className="text-pergaminho-escuro">{RACAS_INFO[r].desvantagem}</span>
             </li>
           ))}
         </ul>
         <p>
-          O objetivo secreto <b>⚔️ Velha rixa</b> pede {B.objetivos.rixaTerritorios} territórios diferentes conquistados de jogadores de
+          O objetivo secreto <b><Icone de="⚔️" /> Velha rixa</b> pede {B.objetivos.rixaTerritorios} territórios diferentes conquistados de jogadores de
           uma raça (cada território conta uma vez só), ou deixar todos eles só com a cidade principal. A raça é sempre a de um vizinho,
           com a cidade a até {B.objetivos.rixaDistanciaMaxima} fronteiras da sua. Já o objetivo de <b>duas regiões</b> sempre inclui a
           região da sua cidade e uma vizinha dela que comece a pelo menos {B.objetivos.vizinhaDistanciaMinima} fronteiras da cidade
@@ -258,15 +258,15 @@ export default function Regras() {
         <ul className="space-y-1">
           {TIPOS_ESPECIALIDADE.map((e) => (
             <li key={e}>
-              {ESPECIALIDADES_INFO[e].icone} <b>{ESPECIALIDADES_INFO[e].nome}:</b> {ESPECIALIDADES_INFO[e].descricao} +
+              <Icone de={ESPECIALIDADES_INFO[e].icone} /> <b>{ESPECIALIDADES_INFO[e].nome}:</b> {ESPECIALIDADES_INFO[e].descricao} +
               {pct(B.herois.bonusPorNivel[e])} por nível, até {pct(B.herois.bonusPorNivel[e] * B.herois.nivelMaximo)}.
             </li>
           ))}
         </ul>
         <p>
           O intendente rende sempre, mesmo parado na cidade; os outros só ajudam na marcha ou no território e arriscam ferimento, por
-          isso dão mais por nível. Para subir até o nível {B.herois.nivelMaximo}, ele treina pagando ouro (do nível 2 por {num(custoTreinoHeroi(2).ouro)} 🪙 ao nível{' '}
-          {B.herois.nivelMaximo} por {num(custoTreinoHeroi(B.herois.nivelMaximo).ouro)} 🪙), em qualquer território onde estiver parado, menos
+          isso dão mais por nível. Para subir até o nível {B.herois.nivelMaximo}, ele treina pagando ouro (do nível 2 por {num(custoTreinoHeroi(2).ouro)} <Icone de="🪙" /> ao nível{' '}
+          {B.herois.nivelMaximo} por {num(custoTreinoHeroi(B.herois.nivelMaximo).ouro)} <Icone de="🪙" />), em qualquer território onde estiver parado, menos
           em marcha; enquanto treina, fica ocupado.
         </p>
         <p>
@@ -282,14 +282,14 @@ export default function Regras() {
           bônus depois de <b>{B.povoados.lealdadeHoras} h de lealdade</b> (neutro, dá na hora).
         </p>
         <p>
-          🏘️ <b>Vila.</b> Neutra, tem um estoque ({custo(B.povoados.vila.estoque)}) que um <b>saque</b> leva inteiro, até a carga das tropas.
+          <Icone de="🏘️" /> <b>Vila.</b> Neutra, tem um estoque ({custo(B.povoados.vila.estoque)}) que um <b>saque</b> leva inteiro, até a carga das tropas.
           Depois ela volta a encher em {B.povoados.vila.horasParaEncher} h. Conquistada, vira sua no nível 1 e dá{' '}
           <b>+{B.povoados.vila.populacaoPorNivel} de população máxima por nível</b> (até o nível {B.povoados.vila.nivelMaximo}; melhorar custa{' '}
           {custo(B.povoados.vila.custoPorNivel)} vezes o nível). Se outro jogador saquear a sua vila, ela <b>volta ao nível 0</b> e ele leva
           parte do que foi investido.
         </p>
         <p>
-          ⚖️ <b>Cidade livre.</b> Há {quantasCidadesLivres(6)} no meio do mapa ({quantasCidadesLivres(8)} com 7 ou 8 jogadores), com guarda forte e muralha própria (+
+          <Icone de="⚖️" /> <b>Cidade livre.</b> Há {quantasCidadesLivres(6)} no meio do mapa ({quantasCidadesLivres(8)} com 7 ou 8 jogadores), com guarda forte e muralha própria (+
           {pct(B.povoados.cidadeLivre.bonusDefesa)} de defesa, que depois protege o dono também). Dá{' '}
           <b>+{B.povoados.cidadeLivre.ouroHora} de ouro por hora</b>. Na primeira conquista, {B.povoados.cidadeLivre.milicia}{' '}
           lanceiros de milícia passam a defendê-la para quem conquistou: não ocupam população, não comem e não marcham, e se dispersam
@@ -384,7 +384,7 @@ function Cronicas() {
           onClick={() => setLendo(true)}
           className="rounded-lg border border-ouro/60 px-3 py-1.5 text-sm font-semibold text-ouro hover:bg-ouro/10"
         >
-          📖 Ler como livro, do começo ao fim
+          <Icone de="📖" /> Ler como livro, do começo ao fim
         </button>
       )}
       {lendo && ultima !== undefined && (

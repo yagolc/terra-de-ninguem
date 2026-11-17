@@ -190,8 +190,8 @@ export default function CartaoPredio({ tipo, cidade, bonus, obras, agora, ocupad
               Custa <b>{precoAgora} gemas</b> (você tem {gemas.saldo}). O próximo uso nesta temporada vai custar{' '}
               {precoTerminarObra(gemas.usos + 1)}.
             </p>
-            {!temGemas && <p className="text-red-300">Gemas insuficientes. Compre mais na loja (💎 no alto da tela).</p>}
-            <p className="text-xs text-pergaminho-escuro">Todos veem no placar quantas vezes você usou (⚡).</p>
+            {!temGemas && <p className="text-red-300">Gemas insuficientes. Compre mais na loja (<Icone de="💎" /> no alto da tela).</p>}
+            <p className="text-xs text-pergaminho-escuro">Todos veem no placar quantas vezes você usou (<Icone de="⚡" />).</p>
           </JanelaConfirmacao>
         )}
         {previa?.ok && (

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { PETS_INFO, usePets } from '../lib/pets';
 import { useGemas } from '../lib/useGemas';
 import JanelaConfirmacao from './JanelaConfirmacao';
+import Icone from './Icone';
 
 type Props = { jogadorId: string; ouro: number };
 
@@ -42,7 +43,7 @@ export default function PainelPet({ jogadorId, ouro }: Props) {
 
   return (
     <section className="space-y-3 rounded-xl border border-couro bg-carvao/90 p-4">
-      <h3 className="font-titulo text-ouro">🐾 Pet da cidade</h3>
+      <h3 className="font-titulo text-ouro"><Icone de="🐾" /> Pet da cidade</h3>
 
       {refem ? (
         <div className="space-y-2 rounded-lg border border-sangue/70 bg-sangue/15 p-3 text-sm">
@@ -109,7 +110,7 @@ export default function PainelPet({ jogadorId, ouro }: Props) {
 
       {refens.length > 0 && (
         <div className="space-y-2 border-t border-couro/60 pt-2">
-          <p className="text-sm font-semibold text-pergaminho">🔒 Seus reféns</p>
+          <p className="text-sm font-semibold text-pergaminho"><Icone de="🔒" /> Seus reféns</p>
           {refens.map((p) => (
             <div key={p.donoId} className="space-y-1.5 rounded-lg bg-noite/50 p-2 text-sm">
               <p>

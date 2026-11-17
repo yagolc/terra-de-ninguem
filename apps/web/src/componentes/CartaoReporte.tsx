@@ -1,6 +1,7 @@
 import { STATUS_REPORTE, type StatusReporte } from '@terra/regras';
 import { useState } from 'react';
 import { AREAS_INFO, GRAVIDADES_INFO, STATUS_INFO, TIPOS_REPORTE_INFO, type ItemReporte } from '../lib/reportes';
+import Icone from './Icone';
 
 type Props = {
   item: ItemReporte;
@@ -53,13 +54,13 @@ export default function CartaoReporte({ item, aberto, organizador, onAbrir, onVo
           title={item.tipo === 'bug' ? 'Também aconteceu comigo' : 'Também quero'}
           className={`flex w-12 shrink-0 flex-col items-center justify-center rounded-lg border text-sm ${item.meuVoto ? 'border-ouro bg-ouro/15 text-ouro' : 'border-couro text-pergaminho-escuro hover:border-ouro/60'}`}
         >
-          <span aria-hidden>👍</span>
+          <span aria-hidden><Icone de="👍" /></span>
           <span className="tabular-nums">{item.votos}</span>
         </button>
         <button onClick={onAbrir} aria-expanded={aberto} className="min-w-0 flex-1 text-left">
           <p className="flex flex-wrap items-center gap-1.5 text-xs">
             <span className="text-pergaminho-escuro">#{item.numero}</span>
-            <span title={tipo.nome}>{tipo.icone}</span>
+            <span title={tipo.nome}><Icone de={tipo.icone} /></span>
             <span className={`rounded-full border px-2 py-0.5 ${STATUS_INFO[item.status].classe}`}>{STATUS_INFO[item.status].nome}</span>
             {item.gravidade && (
               <span className={`rounded-full border px-2 py-0.5 ${GRAVIDADES_INFO[item.gravidade].classe}`}>{GRAVIDADES_INFO[item.gravidade].nome}</span>
@@ -69,7 +70,7 @@ export default function CartaoReporte({ item, aberto, organizador, onAbrir, onVo
           <p className="mt-1 break-words font-semibold text-pergaminho">{item.titulo}</p>
           <p className="text-xs text-pergaminho-escuro">
             {item.autor} · {data(item.criadoEm)}
-            {item.resposta && ' · 💬 respondido'}
+            {item.resposta && <>{' · '}<Icone de="💬" />{' respondido'}</>}
           </p>
         </button>
       </div>
@@ -82,14 +83,14 @@ export default function CartaoReporte({ item, aberto, organizador, onAbrir, onVo
           <Bloco titulo={item.tipo === 'bug' ? 'Detalhes' : 'A ideia'} texto={item.descricao} />
           {item.tipo === 'bug' && Object.keys(item.contexto).length > 0 && (
             <p className="text-xs text-pergaminho-escuro">
-              🖥️ {[item.contexto.navegador, item.contexto.sistema, item.contexto.tela, item.contexto.versao && `versão ${item.contexto.versao}`, item.contexto.aba && `aba ${item.contexto.aba}`]
+              <Icone de="🖥️" /> {[item.contexto.navegador, item.contexto.sistema, item.contexto.tela, item.contexto.versao && `versão ${item.contexto.versao}`, item.contexto.aba && `aba ${item.contexto.aba}`]
                 .filter(Boolean)
                 .join(' · ')}
             </p>
           )}
           {item.resposta && (
             <div className="rounded-lg border border-ouro/40 bg-ouro/5 p-3">
-              <p className="text-xs font-semibold text-ouro-claro">💬 Resposta do organizador · {data(item.atualizadoEm)}</p>
+              <p className="text-xs font-semibold text-ouro-claro"><Icone de="💬" /> Resposta do organizador · {data(item.atualizadoEm)}</p>
               <p className="whitespace-pre-line break-words text-sm">{item.resposta}</p>
             </div>
           )}

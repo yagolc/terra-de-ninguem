@@ -10,6 +10,7 @@ import {
 } from '@terra/regras';
 import type { Reconhecimento } from '../lib/useMapa';
 import { ESPECIALIDADES_INFO, ESTRUTURAS_INFO, RACAS_INFO, TERRENOS_INFO, UNIDADES_INFO, formatarDuracao } from '../lib/textos';
+import Icone from './Icone';
 
 type Props = {
   reconhecimento: Reconhecimento;
@@ -29,7 +30,7 @@ function Opcoes({ quantidades, ordem, melhor }: { quantidades: Record<TipoUnidad
         <span key={t}>
           {i > 0 && <span className="text-pergaminho-escuro"> · ou </span>}
           <span className={t === melhor ? 'font-semibold text-ouro' : ''}>
-            {quantidades[t]} {UNIDADES_INFO[t].icone}
+            {quantidades[t]} <Icone de={UNIDADES_INFO[t].icone} />
           </span>
         </span>
       ))}
@@ -63,7 +64,7 @@ export default function InfoReconhecimento({ reconhecimento, agora, nomeDono, ci
   return (
     <div className="space-y-2 rounded-lg border border-[#c39bd3]/50 bg-noite/60 px-3 py-2.5 text-sm">
       <p className="text-xs text-pergaminho-escuro">
-        🔭 Batedor viu há {formatarDuracao(idade)}
+        <Icone de="🔭" /> Batedor viu há {formatarDuracao(idade)}
         {idade > 3 * 3_600_000 && ' (pode ter mudado)'}
       </p>
       <p>
@@ -75,17 +76,17 @@ export default function InfoReconhecimento({ reconhecimento, agora, nomeDono, ci
               .join(' · ')}
       </p>
       <p className="text-xs text-pergaminho-escuro">
-        {TERRENOS_INFO[terreno].icone} {TERRENOS_INFO[terreno].nome}
+        <Icone de={TERRENOS_INFO[terreno].icone} /> {TERRENOS_INFO[terreno].nome}
         {efeitos.length > 0 ? ` · ${efeitos.join(' · ')}` : ': sem bônus de defesa'}
       </p>
       <p className="text-xs text-pergaminho-escuro">
         {estrutura
           ? `${ESTRUTURAS_INFO[estrutura].icone} Estrutura: ${ESTRUTURAS_INFO[estrutura].nome}${estruturaPronta ? '' : ' (em construção quando o batedor passou)'}`
-          : '🏗️ Nenhuma estrutura'}
+          : <><Icone de="🏗️" />{' Nenhuma estrutura'}</>}
       </p>
       {heroi && (
         <p className="text-xs">
-          🎖️ Herói: {heroi.nome} ({ESPECIALIDADES_INFO[heroi.especialidade].icone} {ESPECIALIDADES_INFO[heroi.especialidade].nome} nível{' '}
+          <Icone de="🎖️" /> Herói: {heroi.nome} (<Icone de={ESPECIALIDADES_INFO[heroi.especialidade].icone} /> {ESPECIALIDADES_INFO[heroi.especialidade].nome} nível{' '}
           {heroi.nivel})
         </p>
       )}
@@ -93,11 +94,11 @@ export default function InfoReconhecimento({ reconhecimento, agora, nomeDono, ci
         <div className="space-y-0.5 text-xs">
           <p className="text-pergaminho-escuro">Mande uma destas opções (só de um tipo), contando o azar máximo:</p>
           <p>
-            <span className="text-pergaminho-escuro">🚩 Conquistar: </span>
+            <span className="text-pergaminho-escuro"><Icone de="🚩" /> Conquistar: </span>
             <Opcoes quantidades={analise.necessariosParaConquistar} ordem={ordem} melhor={analise.melhorTipo} />
           </p>
           <p>
-            <span className="text-pergaminho-escuro">💰 Só vencer e saquear: </span>
+            <span className="text-pergaminho-escuro"><Icone de="💰" /> Só vencer e saquear: </span>
             <Opcoes quantidades={analise.necessariosParaVencer} ordem={ordem} melhor={analise.melhorTipo} />
           </p>
           {analise.melhorTipo && (

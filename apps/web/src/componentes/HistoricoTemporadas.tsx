@@ -1,4 +1,5 @@
 import type { DadosTemporada } from '../lib/useTemporada';
+import Icone from './Icone';
 
 const data = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
@@ -11,7 +12,7 @@ export default function HistoricoTemporadas({ historico }: { historico: DadosTem
       {comVencedor.map((h) => (
         <li key={h.numero} className="flex justify-between gap-3">
           <span>
-            Temporada {h.numero}: <span className="text-ouro">👑 {h.vencedor}</span>
+            Temporada {h.numero}: <span className="text-ouro"><Icone de="👑" /> {h.vencedor}</span>
           </span>
           <span className="text-xs text-pergaminho-escuro">
             {h.motivoFim === 'objetivo' ? 'cumpriu o objetivo' : h.motivoFim === 'monopolio' ? 'monopólio comercial' : 'por pontos'}

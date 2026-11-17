@@ -1,5 +1,6 @@
 import { RECURSOS, TIPOS_MISSAO, missaoCumprida, recompensaMissao, type SituacaoMissoes, type TipoMissao } from '@terra/regras';
 import { MISSOES_INFO, RECURSOS_INFO, formatarNumero } from '../lib/textos';
+import Icone from './Icone';
 
 type Props = {
   resgatadas: readonly string[];
@@ -29,7 +30,7 @@ export default function PainelMissoes({ resgatadas, situacao, ocupado, onResgata
           const recompensa = recompensaMissao(m);
           return (
             <li key={m} className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm ${feita ? 'bg-ouro/10' : 'bg-noite/50'}`}>
-              <span aria-hidden>{feita ? '✅' : '⬜'}</span>
+              <span aria-hidden><Icone de={feita ? '✅' : '⬜'} /></span>
               <span className="min-w-0 flex-1">
                 <span className="font-medium">{MISSOES_INFO[m].titulo}</span>
                 <span className="block text-xs text-pergaminho-escuro">

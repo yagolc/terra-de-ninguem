@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import CartaoReporte from '../componentes/CartaoReporte';
 import FormularioReporte from '../componentes/FormularioReporte';
 import { useReportes } from '../lib/reportes';
+import Icone from '../componentes/Icone';
 
 type Props = {
   meuId: string;
@@ -60,9 +61,9 @@ export default function Feedback({ meuId, numeroAberto, abaDeOrigem }: Props) {
   return (
     <div className="mx-auto max-w-3xl space-y-4 px-4 py-4">
       <header className="space-y-1">
-        <h2 className="font-titulo text-xl text-ouro">💬 Feedback</h2>
+        <h2 className="font-titulo text-xl text-ouro"><Icone de="💬" /> Feedback</h2>
         <p className="text-sm text-pergaminho-escuro">
-          Achou um bug ou tem uma ideia? Conte aqui. Antes, veja se alguém já contou e vote 👍: os mais votados vêm primeiro.
+          Achou um bug ou tem uma ideia? Conte aqui. Antes, veja se alguém já contou e vote <Icone de="👍" />: os mais votados vêm primeiro.
         </p>
       </header>
 
@@ -78,10 +79,10 @@ export default function Feedback({ meuId, numeroAberto, abaDeOrigem }: Props) {
       ) : (
         <div className="flex flex-wrap gap-2">
           <button onClick={() => setNovo('bug')} className="rounded-lg bg-ouro px-4 py-2 text-sm font-semibold text-noite hover:bg-ouro-claro">
-            🐞 Relatar bug
+            <Icone de="🐞" /> Relatar bug
           </button>
           <button onClick={() => setNovo('sugestao')} className="rounded-lg border border-ouro/60 px-4 py-2 text-sm font-semibold text-ouro hover:bg-ouro/10">
-            💡 Sugerir ideia
+            <Icone de="💡" /> Sugerir ideia
           </button>
         </div>
       )}

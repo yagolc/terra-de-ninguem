@@ -19,6 +19,7 @@ import { chamarFuncao } from '../lib/funcoes';
 import OpcaoHeroi from './OpcaoHeroi';
 import type { DadosMapa } from '../lib/useMapa';
 import { UNIDADES_INFO, formatarDuracao } from '../lib/textos';
+import Icone from './Icone';
 
 type Props = {
   dados: DadosMapa;
@@ -112,7 +113,7 @@ export default function PainelMovimento({ dados, origemId, meuId, agora, onVolta
             >
               {destinos.map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.cidade_principal ? `🏰 ${d.nome} (sua cidade)` : d.nome}
+                  {d.cidade_principal ? <><Icone de="🏰" />{' '}{d.nome}{' (sua cidade)'}</> : d.nome}
                 </option>
               ))}
             </select>
@@ -122,7 +123,7 @@ export default function PainelMovimento({ dados, origemId, meuId, agora, onVolta
             {TIPOS_UNIDADE.map((t) => (
               <li key={t} className="flex items-center gap-2">
                 <span className="w-28 text-sm">
-                  {UNIDADES_INFO[t].icone} {UNIDADES_INFO[t].plural}
+                  <Icone de={UNIDADES_INFO[t].icone} /> {UNIDADES_INFO[t].plural}
                 </span>
                 <input
                   type="number"
@@ -161,7 +162,7 @@ export default function PainelMovimento({ dados, origemId, meuId, agora, onVolta
 
           {duracao !== null && (
             <p className="rounded-lg bg-noite/60 px-3 py-2 text-sm">
-              ⏱ {formatarDuracao(duracao)} de caminhada{pelaEstrada > 1 && ` pela estrada (${pelaEstrada}× mais rápido)`} · chegam{' '}
+              <Icone de="⏱" /> {formatarDuracao(duracao)} de caminhada{pelaEstrada > 1 && ` pela estrada (${pelaEstrada}× mais rápido)`} · chegam{' '}
               {horario.format(new Date(agora + duracao))}
             </p>
           )}
@@ -179,7 +180,7 @@ export default function PainelMovimento({ dados, origemId, meuId, agora, onVolta
             disabled={!verificacao.ok || enviando}
             className="w-full rounded-lg bg-ouro px-3 py-2.5 font-semibold text-noite hover:bg-ouro-claro disabled:cursor-not-allowed disabled:bg-couro disabled:text-pergaminho-escuro"
           >
-            {enviando ? 'Enviando…' : `🚶 Mover ${totalUnidades(enviar)} ${totalUnidades(enviar) === 1 ? 'soldado' : 'soldados'}`}
+            {enviando ? 'Enviando…' : <><Icone de="🚶" />{' Mover '}{totalUnidades(enviar)}{' '}{totalUnidades(enviar) === 1 ? 'soldado' : 'soldados'}</>}
           </button>
           <p className="text-xs text-pergaminho-escuro">
             Se o destino for tomado enquanto as tropas andam, elas seguem para a sua cidade.

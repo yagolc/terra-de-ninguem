@@ -1,6 +1,7 @@
 import { AREAS_REPORTE, BALANCEAMENTO, GRAVIDADES, reportesParecidos, type AreaReporte, type Gravidade, type TipoReporte } from '@terra/regras';
 import { useMemo, useState, type ReactNode } from 'react';
 import { AREAS_INFO, GRAVIDADES_INFO, STATUS_INFO, TIPOS_REPORTE_INFO, contextoDoAparelho, type ItemReporte } from '../lib/reportes';
+import Icone from './Icone';
 
 type Props = {
   tipo: TipoReporte;
@@ -63,7 +64,7 @@ export default function FormularioReporte({ tipo, existentes, abaDeOrigem, onEnv
   return (
     <section className="space-y-4 rounded-2xl border border-ouro/50 bg-carvao/95 p-4">
       <h3 className="font-titulo text-lg text-ouro">
-        {TIPOS_REPORTE_INFO[tipo].icone} {bug ? 'Relatar um bug' : 'Sugerir uma ideia'}
+        <Icone de={TIPOS_REPORTE_INFO[tipo].icone} /> {bug ? 'Relatar um bug' : 'Sugerir uma ideia'}
       </h3>
 
       <Rotulo texto="Título" dica={bug ? 'Resumo do problema. Ex.: "Mapa fica preto ao abrir no celular"' : 'Ex.: "Poder renomear territórios"'}>
@@ -72,10 +73,10 @@ export default function FormularioReporte({ tipo, existentes, abaDeOrigem, onEnv
 
       {parecidos.length > 0 && (
         <div className="space-y-1 rounded-lg border border-ouro/40 bg-ouro/5 p-3 text-sm">
-          <p className="text-ouro-claro">Já existe algo parecido? Se for o mesmo, abra e vote 👍 em vez de repetir:</p>
+          <p className="text-ouro-claro">Já existe algo parecido? Se for o mesmo, abra e vote <Icone de="👍" /> em vez de repetir:</p>
           {parecidos.map((r) => (
             <button key={r.id} type="button" onClick={() => onVer(r.numero)} className="block text-left hover:underline">
-              #{r.numero} {r.titulo} <span className="text-xs text-pergaminho-escuro">· {STATUS_INFO[r.status].nome} · 👍 {r.votos}</span>
+              #{r.numero} {r.titulo} <span className="text-xs text-pergaminho-escuro">· {STATUS_INFO[r.status].nome} · <Icone de="👍" /> {r.votos}</span>
             </button>
           ))}
         </div>
