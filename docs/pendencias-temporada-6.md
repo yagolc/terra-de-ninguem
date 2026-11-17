@@ -130,6 +130,44 @@ Pombal um papel militar. Hoje uma marcha enviada não volta nem muda de rumo.
   `marchas` para a partida no meio do caminho (`partida_x`, `partida_y`) e para a ordem a caminho; o
   `resolver-marchas` aplica a ordem quando o pombo chega. O mapa desenha o pombo voando até o exército.
 
+## 7. Exército: teto pelo Quartel e qualidade das tropas
+
+**Ideia do usuário (17/11/2026):** o tamanho do exército passa a ser limitado pelo Quartel, e as tropas têm qualidade:
+recrutas baratíssimos e fracos, elites caras e muito mais fortes. Junto com o soldo (item 1), o jogador escolhe entre
+muitos e baratos ou poucos e fortes.
+
+**Teto pelo Quartel: 24 + 6 vagas de soldado por nível** (Q1 30, Q2 36, Q3 42, Q5 54, Q7 66, Q10 84), em
+`BALANCEAMENTO.quartel.vagasBase`/`vagasPorNivel`. O limite é o **menor** entre o Quartel e a população: os soldados
+continuam sendo habitantes (pilar "cada habitante é trabalhador ou soldado"). Com a Casa 10 (110) sobram pelo menos 26
+trabalhando, o que resolve os "95% no exército". Milícia local, milícia de cidade livre e Guarda Real não ocupam
+vaga. Contam as tropas paradas, em marcha e em treino.
+
+Por que não só 8 por nível: no Q1 seriam 8 vagas, e conquistar o vizinho bárbaro típico (8 na planície) pede, mesmo
+com azar máximo, 17 lanceiros, 10 arqueiros ou 11 cavalarias (`analisarDefesa`); a 2 fronteiras (14) pede 29/18/18,
+na montanha 36/22/22. Guarnições da temporada 5: a maioria de 5 a 10, depois 13 a 23, algumas de 45 a 78. Com a base
+de 24, o Q1 conquista o vizinho até só com recrutas (cerca de 28 recrutas lanceiros). A outra opção (20 + 8 por nível)
+daria 100 vagas no Q10, perto da população inteira.
+
+**Qualidades** (multiplicam ataque e defesa de cada unidade; números em `BALANCEAMENTO.qualidades`):
+
+| | Força | Soldo (ouro/h, lanceiro) | Treino (lanceiro) | Exige |
+| --- | --- | --- | --- | --- |
+| Recruta | ×0,6 | 0,03 (quase nada) | 12 comida, 8 madeira, 20 s | Quartel 1 |
+| Soldado (o de hoje) | ×1 | 0,3 | 30 comida, 20 madeira, 60 s | Quartel 1 |
+| Elite | ×2,5 | 1,2 | 120 comida, 80 madeira, 60 ouro, 4 min | Quartel 7 |
+
+Eficiência: força por vaga 0,6 / 1 / 2,5; força por ouro de soldo 20 / 3,3 / 2,1. Melhor mistura (força máxima com as
+vagas e o ouro do soldo): Q3 com 5 de ouro/h → 15 soldados + 9 recrutas (20); Q5 com 10/h → 32 soldados + 8 recrutas
+(37); Q7 com 20/h → 14 elites + 7 soldados + 35 recrutas (63); Q10 com 20/h → 15 elites + 65 recrutas (77); com 40/h →
+32 elites + 48 recrutas (109); com 80/h → 66 elites + 13 recrutas (174). No fim de jogo a força depende do ouro: dá
+peso à economia e aos acordos comerciais (item 5a).
+
+**Cuidados:** jogador rico pode disparar (freios: soldo alto da elite, perder 70% de elite na derrota custa muito ouro,
+rota comercial que pode ser cortada, cerco); simular antes de fixar o ×2,5. O soldado normal some no fim (elite +
+recruta é sempre melhor); dá para dar a ele uma vantagem depois (treino mais rápido). É a mudança mais trabalhosa da
+lista: tropas, marchas, fila de treino, relatórios, batedor, `analisarDefesa` e telas passam a guardar a qualidade
+além do tipo. Alternativa mais leve, se pesar demais: veterania (tropas que vencem batalhas ficam mais fortes).
+
 ### Reserva
 
 Se o teste da 6 mostrar o ouro apertado mesmo com câmbio e acordos, subir a produção de ouro de 4 para 5 por
