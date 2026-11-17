@@ -191,6 +191,37 @@ territórios) e se cruzam no tempo **se encontram e lutam no meio do caminho**, 
   (interseção de segmentos no tempo). Começar pelo caso simples (mesmo caminho, sentidos opostos) e generalizar junto
   com o item 6.
 
+## 9. Herói por pontos, com experiência de batalha
+
+**Ideia do usuário (17/11/2026):** em vez de escolher uma especialidade e ficar só com aquele bônus, o herói começa sem
+bônus e o jogador sobe as características que quiser (ex.: ataque + velocidade). Usar outros recursos além do ouro, e
+o herói ganhar experiência em batalha: o treino vira a opção "segura" (paga), a guerra o caminho de graça e arriscado.
+
+**Hoje:** 1 especialidade (comandante +3% de ataque por nível; castelão, desbravador e saqueador +4% de defesa,
+velocidade e carga; intendente +2% de produção). Recrutar custa 300 de ouro; treinar do 2 ao 10 custa 14.978 de ouro
+(só ouro) e 32 h, disputando o ouro com o Centro 10 (11.233).
+
+**Proposta:**
+- **Começa sem bônus.** Cada nível ganho dá **1 ponto** (9 no nível 10), gasto no atributo que o jogador quiser.
+- **Atributos por ponto:** Ataque +4% (nas marchas em que ele vai), Defesa +5% (no território onde está), Velocidade +5%
+  (marchas), Carga +5% (saque), Administração +3% de produção e crescimento (parado na cidade, ou o dobro no recurso do
+  território onde está, como o intendente). **No máximo 5 pontos por atributo** (ex.: 5 em Ataque = +20% e 4 em
+  Velocidade = +20%). Números em `BALANCEAMENTO.herois.atributos`.
+- **Trocar os pontos** (opcional): custa recursos e deixa o herói 2 h treinando.
+- **Recrutar:** 150 de comida, 100 de madeira e 100 de ouro (hoje 300 de ouro).
+- **Treino (caminho seguro):** cada nível custa comida, madeira e ouro, crescendo 40% por nível — N2 150/150/80,
+  N5 412/412/220, N10 2.214/2.214/1.181. Do 2 ao 10: 7.373 de comida, 7.373 de madeira e 3.932 de ouro (26% do ouro de
+  hoje); o tempo continua 32 h. A comida, que sobra, ganha uso; o ouro fica livre para Centro, soldo e elites.
+- **Experiência (caminho da guerra):** o herói ganha XP nas batalhas em que luta: **1 por inimigo abatido + 5 por
+  vitória contra jogador** (+2 contra bárbaros e hordas, para não virar farm). Com XP suficiente, **sobe um nível de
+  graça** e ganha o ponto, como no treino; XP e treino avançam o mesmo nível. Curva: **10 × nível atual** para subir
+  (1→2: 10, 5→6: 50, 9→10: 90; 450 do 1 ao 10). Na temporada 5 cada batalha abateu em média 4 inimigos (196 batalhas):
+  uma vitória vale uns 9 XP, então só lutando o herói chega por volta do nível 5 ou 6, e o 10 pede treino. Perder
+  também dá XP pelos inimigos abatidos, mas o herói fica ferido (6 h), como hoje.
+- **Implementação:** `herois` ganha `pontos` (jsonb por atributo) e `experiencia`; `especialidade` sai (ou fica só nas
+  temporadas antigas); `bonusHeroi` passa a ler os pontos; o `resolver-marchas` soma o XP e sobe o nível; a arte
+  `heroi-<especialidade>` vira um retrato pelo atributo mais alto.
+
 ### Reserva
 
 Se o teste da 6 mostrar o ouro apertado mesmo com câmbio e acordos, subir a produção de ouro de 4 para 5 por
