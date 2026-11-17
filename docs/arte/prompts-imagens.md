@@ -1,6 +1,6 @@
 # Imagens do jogo: guia e prompts
 
-Lote 1 (pronto): **24 imagens de prédios** (8 prédios × 3 fases) e **3 cenas de treino** no Quartel. Lote 2: estruturas, povoados, heróis e raças (no fim deste guia).
+Lote 1 (pronto): **24 imagens de prédios** (8 prédios × 3 fases) e **3 cenas de treino** no Quartel. Lote 2: estruturas, povoados, heróis e raças (no fim deste guia). Lote 3 (Pombal, acampamento, pets, loja e horda): [prompts-lote-3.md](prompts-lote-3.md).
 
 ## Como gerar
 
