@@ -107,6 +107,29 @@ O bônus de recurso de um território é só 10% (`mapa.bonusTerritorio`): pouco
 Subir para 20–25% e/ou ter algumas terras especiais por região (mina de ouro, celeiro), para disputar lugares
 específicos do mapa.
 
+## 6. Ordens por pombo (mudar a marcha no caminho)
+
+**Ideia do usuário (17/11/2026):** usar o pombo para mandar ordens a um exército que já está marchando, dando ao
+Pombal um papel militar. Hoje uma marcha enviada não volta nem muda de rumo.
+
+**Como funcionaria:**
+- **Ordens:** *recuar* (o exército volta para onde saiu) e *redirecionar* (novo alvo: um território vizinho do destino
+  original, ou outro que ele alcance pelas regras de ataque). Proposta para valorizar o Pombal: recuar a partir do
+  Pombal 1, redirecionar a partir do Pombal 3.
+- **O pombo precisa alcançar o exército:** sai da cidade do jogador e persegue a marcha. Velocidades atuais: pombo 60
+  léguas/h no Pombal 1 até 120 no 5; exército a pé 20, cavalaria 40. Perseguindo cavalaria, o pombo do Pombal 1 leva
+  4 vezes mais que o do 5 para alcançar. Se a marcha chegar antes do pombo, **a ordem se perde** e a batalha acontece
+  (o jogador recebe "o pombo chegou tarde").
+- **Usa um pombo** do Pombal (`pombosDoPombal`) até entregar a ordem, como uma carta.
+- **Depois da ordem:** o ponto onde o exército estava vira a nova partida; a chegada nova é a distância até o alvo
+  novo dividida pela velocidade do exército. Vale também para marchas de movimento.
+- **Estratégia e blefe:** a torre do alvo original deixa de ver a marcha desviada, e a do alvo novo passa a ver.
+  Dá para fingir um ataque num lugar e virar para outro, com o risco de o pombo não chegar a tempo.
+- **Implementação:** regra pura de encontro (`encontroDoPombo`: instante em que a distância da cidade até a posição da
+  marcha é igual à que o pombo voou) e posição da marcha no tempo (linha reta entre os centros); colunas novas em
+  `marchas` para a partida no meio do caminho (`partida_x`, `partida_y`) e para a ordem a caminho; o
+  `resolver-marchas` aplica a ordem quando o pombo chega. O mapa desenha o pombo voando até o exército.
+
 ### Reserva
 
 Se o teste da 6 mostrar o ouro apertado mesmo com câmbio e acordos, subir a produção de ouro de 4 para 5 por
