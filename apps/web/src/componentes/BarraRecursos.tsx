@@ -10,7 +10,9 @@ import {
   type Exercito,
   type Recursos,
 } from '@terra/regras';
+import { COR_RECURSO } from '../lib/icones';
 import { RECURSOS_INFO, formatarDuracao, formatarNumero, formatarRelogio, formatarTaxa } from '../lib/textos';
+import Icone from './Icone';
 
 type Props = {
   cidade: EstadoCidade;
@@ -41,7 +43,7 @@ export default function BarraRecursos({ cidade, bonus, extras, tropas, soldados 
         return (
           <div key={r} className="rounded-xl border border-couro bg-carvao/90 px-2.5 py-2 text-center sm:px-3">
             <div className="text-xs text-pergaminho-escuro">
-              <span aria-hidden>{RECURSOS_INFO[r].icone}</span> {RECURSOS_INFO[r].nome}
+              <Icone de={RECURSOS_INFO[r].icone} className={COR_RECURSO[r]} /> {RECURSOS_INFO[r].nome}
             </div>
             <div className={`font-semibold tabular-nums ${cheio ? 'text-ouro' : negativo && r === 'comida' && fome ? 'text-red-300' : 'text-pergaminho'}`}>
               {formatarNumero(cidade.recursos[r])}
@@ -54,7 +56,7 @@ export default function BarraRecursos({ cidade, bonus, extras, tropas, soldados 
       })}
       <div className="rounded-xl border border-couro bg-carvao/90 px-2.5 py-2 text-center sm:px-3">
         <div className="text-xs text-pergaminho-escuro">
-          <span aria-hidden>👥</span> Povo
+          <Icone de="👥" /> Povo
         </div>
         <div className="font-semibold tabular-nums">
           {formatarNumero(cidade.populacao)}
@@ -69,14 +71,21 @@ export default function BarraRecursos({ cidade, bonus, extras, tropas, soldados 
               : `Próximo habitante nasce em ${formatarDuracao(proximoHabitante)}.`
           }
         >
-          {proximoHabitante === null ? 'cheia' : <>👶 {formatarRelogio(proximoHabitante)}</>}
+          {proximoHabitante === null ? (
+            'cheia'
+          ) : (
+            <>
+              <Icone de="👶" /> {formatarRelogio(proximoHabitante)}
+            </>
+          )}
         </div>
       </div>
       <p className={`col-span-4 text-center text-[11px] ${fome ? 'text-red-300' : 'text-pergaminho-escuro/70'}`}>
+        {(fome || saldo.comida < 0) && <Icone de="⚠️" className="mr-1" />}
         {fome
-          ? '⚠️ A comida acabou: suas tropas estão desertando. Ponha mais gente na fazenda ou treine menos.'
+          ? 'A comida acabou: suas tropas estão desertando. Ponha mais gente na fazenda ou treine menos.'
           : saldo.comida < 0
-            ? `⚠️ As tropas comem mais do que a fazenda produz: a comida acaba em ${formatarTaxa(cidade.recursos.comida / -saldo.comida)} h.`
+            ? `As tropas comem mais do que a fazenda produz: a comida acaba em ${formatarTaxa(cidade.recursos.comida / -saldo.comida)} h.`
             : `Armazém guarda até ${formatarNumero(teto)} de cada recurso${RECURSOS.every((r) => producao[r] === 0) ? ' · coloque trabalhadores para produzir' : ''}`}
       </p>
     </div>

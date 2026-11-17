@@ -13,6 +13,7 @@ import {
 import type { Session } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 import BarraRecursos from '../componentes/BarraRecursos';
+import Icone from '../componentes/Icone';
 import CartaoPredio from '../componentes/CartaoPredio';
 import PainelHeroi from '../componentes/PainelHeroi';
 import PainelMissoes from '../componentes/PainelMissoes';
@@ -136,12 +137,12 @@ export default function Cidade({ sessao }: { sessao: Session }) {
           <p className="mb-3 text-sm text-pergaminho-escuro">
             {raca && (
               <span className="text-pergaminho">
-                {RACAS_INFO[raca].icone} {RACAS_INFO[raca].nome}
+                <Icone de={RACAS_INFO[raca].icone} /> {RACAS_INFO[raca].nome}
                 {' · '}
               </span>
             )}
-            {guardaReal > 0 && <span className="text-ouro-claro">👑 Guarda Real: {guardaReal} lanceiros · </span>}
-            📍 <span className="text-pergaminho">{territorio.nome}</span> ({TERRENOS_INFO[territorio.terreno].nome.toLowerCase()})
+            {guardaReal > 0 && <span className="text-ouro-claro"><Icone de="👑" /> Guarda Real: {guardaReal} lanceiros · </span>}
+            <Icone de="📍" /> <span className="text-pergaminho">{territorio.nome}</span> ({TERRENOS_INFO[territorio.terreno].nome.toLowerCase()})
             {' · '}
             {territorios} {territorios === 1 ? 'território' : 'territórios'}
             {bonusAtivos && ` · ${bonusAtivos}`}
@@ -165,7 +166,7 @@ export default function Cidade({ sessao }: { sessao: Session }) {
                 ` · ${obras.map((o) => PREDIOS[o.tipo].nome).join(' → ')} · tudo pronto em ${formatarDuracao(obras.at(-1)!.prontoEm - agora)}`}
               {gemas && (
                 <a href="#loja" title="Suas gemas (loja)" className="ml-2 text-ouro-claro hover:underline">
-                  💎 {gemas.saldo}
+                  <Icone de="💎" /> {gemas.saldo}
                 </a>
               )}
             </p>

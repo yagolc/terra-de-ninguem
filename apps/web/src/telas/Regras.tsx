@@ -12,6 +12,7 @@ import {
   quantasCidadesLivres,
 } from '@terra/regras';
 import { useState, type ReactNode } from 'react';
+import Icone from '../componentes/Icone';
 import Cronica from '../componentes/Cronica';
 import { CRONICAS } from '../lib/cronicas';
 import { ESPECIALIDADES_INFO, ESTRUTURAS_INFO, PREDIOS, RACAS_INFO, RECURSOS_INFO, TERRENOS_INFO, TITULO_HERDEIRO, UNIDADES_INFO } from '../lib/textos';
@@ -354,6 +355,18 @@ export default function Regras() {
           pelas regras, e os objetivos são secretos até o fim: confie com cuidado.
         </p>
       </Secao>
+
+      <p className="px-1 text-xs text-pergaminho-escuro/80">
+        Ícones de{' '}
+        <a href="https://game-icons.net" target="_blank" rel="noreferrer" className="underline hover:text-pergaminho">
+          game-icons.net
+        </a>{' '}
+        (Lorc, Delapouite e outros autores), sob a licença{' '}
+        <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer" className="underline hover:text-pergaminho">
+          CC BY 3.0
+        </a>
+        .
+      </p>
     </div>
   );
 }
@@ -399,9 +412,7 @@ function Secao({ icone, titulo, aberta, children }: { icone: string; titulo: str
   return (
     <details open={aberta} className="group rounded-xl border border-couro bg-carvao/90">
       <summary className="flex cursor-pointer list-none items-center gap-2 p-4 font-semibold [&::-webkit-details-marker]:hidden">
-        <span className="text-xl" aria-hidden>
-          {icone}
-        </span>
+        <Icone de={icone} tamanho={22} className="text-ouro-claro" />
         <span className="flex-1">{titulo}</span>
         <span className="text-pergaminho-escuro transition-transform group-open:rotate-180">▼</span>
       </summary>

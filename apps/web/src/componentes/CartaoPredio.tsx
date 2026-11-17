@@ -25,8 +25,10 @@ import {
 } from '@terra/regras';
 import { useState } from 'react';
 import { imagemDoPredio } from '../lib/arte';
+import { COR_RECURSO } from '../lib/icones';
 import { PREDIOS, RECURSOS_INFO, formatarDuracao, formatarNumero, formatarTaxa, listarRecursos } from '../lib/textos';
 import JanelaConfirmacao from './JanelaConfirmacao';
+import Icone from './Icone';
 
 /** Uma linha curta com o efeito atual do prédio. */
 function efeito(tipo: TipoPredio, cidade: EstadoCidade, bonus: Recursos): string | null {
@@ -123,9 +125,7 @@ export default function CartaoPredio({ tipo, cidade, bonus, obras, agora, ocupad
       )}
       <header className="flex items-start gap-3">
         {!imagem && (
-          <span className="text-3xl leading-none" aria-hidden>
-            {info.icone}
-          </span>
+          <Icone de={info.icone} tamanho={32} className="text-ouro-claro" />
         )}
         <div className="min-w-0 flex-1">
           <h3 className="font-titulo text-base text-ouro">{info.nome}</h3>
@@ -144,7 +144,7 @@ export default function CartaoPredio({ tipo, cidade, bonus, obras, agora, ocupad
           >
             <div className="flex items-center gap-2">
               <span className="flex-1">
-                {posicao === 0 ? '🔨' : '⏳'} {nivel + i === 0 ? 'Construção' : `Nível ${nivel + i + 1}`}
+                <Icone de={posicao === 0 ? '🔨' : '⏳'} /> {nivel + i === 0 ? 'Construção' : `Nível ${nivel + i + 1}`}
                 {posicao === 0 ? ' · faltam ' : ' · na fila, pronto em '}
                 <span className="tabular-nums">{formatarDuracao(obra.prontoEm - agora)}</span>
               </span>
@@ -156,7 +156,8 @@ export default function CartaoPredio({ tipo, cidade, bonus, obras, agora, ocupad
                   title={`Terminar agora: ${precoAgora} gemas`}
                   className="-my-1 shrink-0 rounded-md border border-ouro/50 px-1.5 py-0.5 text-xs text-ouro-claro hover:bg-ouro/20 disabled:opacity-40"
                 >
-                  ⚡ {precoAgora}💎
+                  <Icone de="⚡" /> {precoAgora}
+                  <Icone de="💎" />
                 </button>
               )}
               <button
@@ -223,17 +224,23 @@ export default function CartaoPredio({ tipo, cidade, bonus, obras, agora, ocupad
             <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs tabular-nums">
               {RECURSOS.filter((r) => custo[r] > 0).map((r) => (
                 <span key={r} className={cidade.recursos[r] >= custo[r] ? 'text-pergaminho' : 'text-red-300'}>
-                  {RECURSOS_INFO[r].icone} {formatarNumero(custo[r])}
+                  <Icone de={RECURSOS_INFO[r].icone} className={COR_RECURSO[r]} /> {formatarNumero(custo[r])}
                 </span>
               ))}
-              <span className="text-pergaminho-escuro">⏱ {formatarDuracao(tempoEvolucaoMs(tipo, nivelProjetado + 1))}</span>
+              <span className="text-pergaminho-escuro">
+                <Icone de="⏱" /> {formatarDuracao(tempoEvolucaoMs(tipo, nivelProjetado + 1))}
+              </span>
             </div>
             <button
               onClick={() => onEvoluir(tipo)}
               disabled={!verificacao.ok || ocupado}
               className="w-full rounded-lg bg-ouro px-3 py-2 text-sm font-semibold text-noite transition hover:bg-ouro-claro disabled:cursor-not-allowed disabled:bg-couro disabled:text-pergaminho-escuro"
             >
-              {naFila ? '⏳ Pôr na fila: ' : ''}
+              {naFila && (
+                <>
+                  <Icone de="⏳" /> Pôr na fila:{' '}
+                </>
+              )}
               {nivelProjetado === 0 ? 'Construir' : `${naFila ? 'nível' : 'Evoluir para nível'} ${nivelProjetado + 1}`}
             </button>
             {!verificacao.ok && (
@@ -245,7 +252,7 @@ export default function CartaoPredio({ tipo, cidade, bonus, obras, agora, ocupad
             )}
             {armazemNecessario !== null && (
               <p className="text-xs text-ouro-claro">
-                📦 Não cabe no armazém: precisa do {PREDIOS.armazem.nome} nível {armazemNecessario}.
+                <Icone de="📦" /> Não cabe no armazém: precisa do {PREDIOS.armazem.nome} nível {armazemNecessario}.
               </p>
             )}
           </>

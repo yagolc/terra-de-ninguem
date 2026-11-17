@@ -18,6 +18,8 @@ import { useState } from 'react';
 import { imagemDoTreino } from '../lib/arte';
 import Ilustracao from './Ilustracao';
 import { RECURSOS_INFO, UNIDADES_INFO, formatarDuracao, formatarNumero, formatarTaxa, listarRecursos } from '../lib/textos';
+import { COR_RECURSO } from '../lib/icones';
+import Icone from './Icone';
 import JanelaConfirmacao from './JanelaConfirmacao';
 import type { Acampamento, LoteNaFila } from '../lib/useCidade';
 
@@ -74,9 +76,7 @@ export default function PainelQuartel({ cidade, tropas, emMarcha, fila, acampame
       <ul className="mt-2 grid grid-cols-3 gap-2 text-center">
         {TIPOS_UNIDADE.map((t) => (
           <li key={t} className="rounded-lg bg-noite/60 px-2 py-1.5">
-            <div className="text-lg" aria-hidden>
-              {UNIDADES_INFO[t].icone}
-            </div>
+            <Icone de={UNIDADES_INFO[t].icone} tamanho={22} className="text-ouro-claro" />
             <div className="font-semibold tabular-nums">{tropas[t]}</div>
             <div className="text-[11px] text-pergaminho-escuro">{UNIDADES_INFO[t].plural}</div>
           </li>
@@ -102,7 +102,7 @@ export default function PainelQuartel({ cidade, tropas, emMarcha, fila, acampame
             }}
             className={`rounded-md px-1 py-1.5 text-xs font-medium ${t === tipo ? 'bg-couro text-ouro' : 'text-pergaminho-escuro hover:text-pergaminho'}`}
           >
-            {UNIDADES_INFO[t].icone} {UNIDADES_INFO[t].nome}
+            <Icone de={UNIDADES_INFO[t].icone} /> {UNIDADES_INFO[t].nome}
           </button>
         ))}
       </div>
@@ -112,7 +112,7 @@ export default function PainelQuartel({ cidade, tropas, emMarcha, fila, acampame
         <div>
           <p className="text-xs text-pergaminho-escuro">{UNIDADES_INFO[tipo].descricao}</p>
           <p className="mt-1 text-xs tabular-nums text-pergaminho-escuro">
-            ⚔ {atributos.ataque} · 🛡 {atributos.defesa} · velocidade {atributos.velocidade} léguas/h · carrega {atributos.carga} ·
+            <Icone de="⚔" /> {atributos.ataque} · <Icone de="🛡" /> {atributos.defesa} · velocidade {atributos.velocidade} léguas/h · carrega {atributos.carga} ·
             come {atributos.consumoComidaHora}/h
           </p>
         </div>
@@ -154,10 +154,10 @@ export default function PainelQuartel({ cidade, tropas, emMarcha, fila, acampame
       <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs tabular-nums">
         {RECURSOS.filter((r) => custo[r] > 0).map((r) => (
           <span key={r} className={cidade.recursos[r] >= custo[r] ? '' : 'text-red-300'}>
-            {RECURSOS_INFO[r].icone} {formatarNumero(custo[r])}
+            <Icone de={RECURSOS_INFO[r].icone} className={COR_RECURSO[r]} /> {formatarNumero(custo[r])}
           </span>
         ))}
-        {verificacao.ok && <span className="text-pergaminho-escuro">⏱ pronto em {formatarDuracao(verificacao.prontoEm - agora)}</span>}
+        {verificacao.ok && <span className="text-pergaminho-escuro"><Icone de="⏱" /> pronto em {formatarDuracao(verificacao.prontoEm - agora)}</span>}
       </div>
 
       {acampamento && (
@@ -166,7 +166,7 @@ export default function PainelQuartel({ cidade, tropas, emMarcha, fila, acampame
           <div className="flex flex-wrap gap-x-4">
             <label className="flex items-center gap-2">
               <input type="radio" name="destino-treino" checked={!destinoAcampamento} onChange={() => setNoAcampamento(false)} className="accent-[#d4a64a]" />
-              🏰 Cidade
+              <Icone de="🏰" /> Cidade
             </label>
             <label className={`flex items-center gap-2 ${acampamentoPronto ? '' : 'opacity-50'}`}>
               <input
@@ -177,7 +177,7 @@ export default function PainelQuartel({ cidade, tropas, emMarcha, fila, acampame
                 onChange={() => setNoAcampamento(true)}
                 className="accent-[#d4a64a]"
               />
-              ⛺ {acampamento.nome}
+              <Icone de="⛺" /> {acampamento.nome}
               {!acampamentoPronto && <span className="text-xs text-pergaminho-escuro">(pronto em {formatarDuracao(acampamento.prontoEm - agora)})</span>}
             </label>
           </div>
@@ -207,10 +207,10 @@ export default function PainelQuartel({ cidade, tropas, emMarcha, fila, acampame
             {fila.map((lote, i) => (
               <li key={`${lote.prontoEm}-${i}`} className="flex items-center gap-2 rounded-md bg-noite/60 px-2.5 py-1.5">
                 <span className="flex-1">
-                  {UNIDADES_INFO[lote.tipo].icone} {lote.quantidade} {UNIDADES_INFO[lote.tipo].plural.toLowerCase()}
+                  <Icone de={UNIDADES_INFO[lote.tipo].icone} /> {lote.quantidade} {UNIDADES_INFO[lote.tipo].plural.toLowerCase()}
                   {lote.territorioId && (
                     <span className="block text-xs text-pergaminho-escuro">
-                      ⛺ no acampamento{acampamento?.territorioId === lote.territorioId ? ` em ${acampamento.nome}` : ''}
+                      <Icone de="⛺" /> no acampamento{acampamento?.territorioId === lote.territorioId ? ` em ${acampamento.nome}` : ''}
                     </span>
                   )}
                 </span>

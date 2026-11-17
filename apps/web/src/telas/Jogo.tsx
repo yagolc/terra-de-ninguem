@@ -1,6 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import AvisoInstalar from '../componentes/AvisoInstalar';
+import Icone from '../componentes/Icone';
 import IndicadorEscudo from '../componentes/IndicadorEscudo';
 import NavegacaoInferior, { ABAS, type Aba } from '../componentes/NavegacaoInferior';
 import { buscarSalas, definirSalaEscolhida, salaPedida, type Sala } from '../lib/salas';
@@ -230,7 +231,7 @@ export default function Jogo({ sessao }: { sessao: Session }) {
                 onClick={() => irPara(item.id)}
                 className={`rounded-lg px-3 py-1.5 text-sm ${item.id === aba ? 'bg-couro text-ouro' : 'text-pergaminho-escuro hover:text-pergaminho'}`}
               >
-                {item.icone} {item.rotulo}
+                <Icone de={item.icone} /> {item.rotulo}
                 {item.id === 'relatorios' && naoLidos > 0 && (
                   <span className="ml-1.5 rounded-full bg-sangue px-1.5 text-[11px] font-bold text-pergaminho">{naoLidos}</span>
                 )}
@@ -238,7 +239,7 @@ export default function Jogo({ sessao }: { sessao: Session }) {
                   <span className="ml-1.5 rounded-full bg-sangue px-1.5 text-[11px] font-bold text-pergaminho">{cartasNaoLidas}</span>
                 )}
                 {item.id === 'mapa' && ameacas > 0 && (
-                  <span className="ml-1.5 rounded-full bg-sangue px-1.5 text-[11px] font-bold text-pergaminho">⚠️ {ameacas}</span>
+                  <span className="ml-1.5 rounded-full bg-sangue px-1.5 text-[11px] font-bold text-pergaminho"><Icone de="⚠️" /> {ameacas}</span>
                 )}
               </button>
             ))}
@@ -251,7 +252,8 @@ export default function Jogo({ sessao }: { sessao: Session }) {
                 title="Salas: partidas em paralelo"
                 className={`rounded-lg border px-3 py-1.5 text-sm ${aba === 'salas' ? 'border-ouro text-ouro' : 'border-couro text-pergaminho-escuro hover:text-pergaminho'}`}
               >
-                🏰<span className="hidden sm:inline"> Salas</span>
+                <Icone de="🏰" titulo="Salas" />
+                <span className="hidden sm:inline"> Salas</span>
               </button>
             )}
             <button
@@ -260,7 +262,8 @@ export default function Jogo({ sessao }: { sessao: Session }) {
               title="Relatar bug ou sugerir ideia"
               className={`rounded-lg border px-3 py-1.5 text-sm ${aba === 'feedback' ? 'border-ouro text-ouro' : 'border-couro text-pergaminho-escuro hover:text-pergaminho'}`}
             >
-              💬<span className="hidden sm:inline"> Feedback</span>
+              <Icone de="💬" titulo="Feedback" />
+              <span className="hidden sm:inline"> Feedback</span>
             </button>
             <button
               onClick={() => irPara('loja')}
@@ -268,14 +271,16 @@ export default function Jogo({ sessao }: { sessao: Session }) {
               title="Loja de gemas"
               className={`rounded-lg border px-3 py-1.5 text-sm ${aba === 'loja' ? 'border-ouro text-ouro' : 'border-couro text-pergaminho-escuro hover:text-pergaminho'}`}
             >
-              💎<span className="hidden sm:inline"> Loja</span>
+              <Icone de="💎" titulo="Loja" />
+              <span className="hidden sm:inline"> Loja</span>
             </button>
             <button
               onClick={() => irPara('regras')}
               aria-current={aba === 'regras' ? 'page' : undefined}
               className={`rounded-lg border px-3 py-1.5 text-sm ${aba === 'regras' ? 'border-ouro text-ouro' : 'border-couro text-pergaminho-escuro hover:text-pergaminho'}`}
             >
-              📖<span className="hidden sm:inline"> Regras</span>
+              <Icone de="📖" titulo="Regras" />
+              <span className="hidden sm:inline"> Regras</span>
             </button>
             <button
               onClick={() => supabase?.auth.signOut()}
