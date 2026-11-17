@@ -69,8 +69,9 @@ Nova proposta por carta, como o pacto de não agressão e o acesso militar (`car
 `pacto_ate`): enquanto vale, **os dois ganham ouro a mais** — por exemplo +15% da produção de ouro de cada um, ou uma
 renda fixa que cresce com a distância entre as cidades (rota longa rende mais, como rota comercial). Limite de acordos
 ao mesmo tempo (ex.: 2) para não virar todo mundo com todo mundo. **Acaba na hora se um atacar o outro**: quem rompe
-perde a renda e o outro fica sabendo (dá peso a manter a paz). Público ou secreto: decidir (público deixa os outros
-verem as alianças; secreto mantém o mistério dos pactos). Números em `BALANCEAMENTO.comercio`.
+perde a renda e o outro fica sabendo (dá peso a manter a paz). **Público** (decidido em 17/11/2026): todos veem quem tem acordo com quem (no mapa e no perfil); a rota já deixaria
+isso dedutível, e saber quem negocia com quem vira informação para a diplomacia. Diferente dos pactos de não agressão
+e do acesso militar, que continuam secretos. Números em `BALANCEAMENTO.comercio`.
 
 **Rota sem interrupção (pedido do usuário, 17/11/2026):** só dá para propor e aceitar o acordo se houver uma **rota
 entre as duas cidades** passando só por territórios dos dois parceiros (de um ou de outro), sem atravessar terra de
@@ -79,8 +80,8 @@ terceiros, neutros ou bárbaros, nem rio ou cordilheira (as barreiras já ficam 
 `terrasParaMarchar`. Se durante o acordo alguém conquistar um pedaço do caminho e cortar a rota, **a renda para**
 enquanto a rota estiver cortada e volta quando for reconectada (o acordo não acaba; acaba só com ataque entre os
 dois ou no fim do prazo). Isso dá um motivo para os inimigos mirarem as terras do meio, e para os parceiros as
-defenderem. O mapa pode desenhar a rota ativa. A decidir: se território neutro no caminho também interrompe
-(proposta: interrompe; assim os parceiros precisam se expandir um em direção ao outro).
+defenderem. O mapa desenha a rota ativa (o acordo é público). **Território neutro ou bárbaro no caminho também interrompe**
+(decidido em 17/11/2026): os parceiros precisam se expandir um em direção ao outro.
 
 ### 5b. Câmbio no Mercado
 
