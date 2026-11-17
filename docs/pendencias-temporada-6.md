@@ -72,6 +72,16 @@ ao mesmo tempo (ex.: 2) para não virar todo mundo com todo mundo. **Acaba na ho
 perde a renda e o outro fica sabendo (dá peso a manter a paz). Público ou secreto: decidir (público deixa os outros
 verem as alianças; secreto mantém o mistério dos pactos). Números em `BALANCEAMENTO.comercio`.
 
+**Rota sem interrupção (pedido do usuário, 17/11/2026):** só dá para propor e aceitar o acordo se houver uma **rota
+entre as duas cidades** passando só por territórios dos dois parceiros (de um ou de outro), sem atravessar terra de
+terceiros, neutros ou bárbaros, nem rio ou cordilheira (as barreiras já ficam fora de `fronteiras`). Dá para reusar
+`ligadosPorTerritoriosProprios` com os territórios do parceiro como corredor, como o acesso militar faz em
+`terrasParaMarchar`. Se durante o acordo alguém conquistar um pedaço do caminho e cortar a rota, **a renda para**
+enquanto a rota estiver cortada e volta quando for reconectada (o acordo não acaba; acaba só com ataque entre os
+dois ou no fim do prazo). Isso dá um motivo para os inimigos mirarem as terras do meio, e para os parceiros as
+defenderem. O mapa pode desenhar a rota ativa. A decidir: se território neutro no caminho também interrompe
+(proposta: interrompe; assim os parceiros precisam se expandir um em direção ao outro).
+
 ### 5b. Câmbio no Mercado
 
 Trocar um recurso por outro no Mercado com perda: **3 por 1** no nível 1, melhorando com o nível (ex.: 2 por 1 no 10).
