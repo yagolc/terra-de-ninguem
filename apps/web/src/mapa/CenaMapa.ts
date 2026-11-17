@@ -2,6 +2,7 @@ import { estoqueVila, totalRecursos } from '@terra/regras';
 import Phaser from 'phaser';
 import { bandeiraDoJogador, formasDoPadrao } from '../lib/bandeira';
 import { PETS_INFO } from '../lib/pets';
+import { CAMINHOS_ICONES_MAPA } from './iconesMapa';
 import { chaveDaBandeira, svgDaBandeira } from '../lib/svgBandeira';
 import { COR_NEUTRA, corDoJogador, type DadosMapa, type JogadorMapa, type TerritorioMapa } from '../lib/useMapa';
 
@@ -10,6 +11,21 @@ const ESCALA = 20;
 const CORES_TERRENO = { planicie: 0x7d8a45, floresta: 0x3d5e36, montanha: 0x6e6257 } as const;
 const ICONE_TERRENO = { planicie: '', floresta: '🌲', montanha: '⛰️' } as const;
 const ICONE_ESTRUTURA = { torre: '🗼', palicada: '🪵', entreposto: '🏪', acampamento: '⛺' } as const;
+
+/** Cores dos ícones do mapa (preenchimento; o contorno é sempre escuro, para ler sobre qualquer território). */
+const COR_ICONE = { pergaminho: '#f1e6cf', ouro: '#ffd54a', floresta: '#8fc46a', montanha: '#d6cfc4', caveira: '#e8e2d6' } as const;
+/** Lado, em pixels, da textura de cada ícone (desenhada maior que o tamanho na tela, para ficar nítida no zoom). */
+const LADO_TEXTURA_ICONE = 96;
+
+/** SVG de um ícone do mapa (caminhos de iconesMapa.ts) com preenchimento `cor` e contorno escuro, ou null. */
+function svgDoIcone(emoji: string, corPreenchimento: string): string | null {
+  const caminhos = CAMINHOS_ICONES_MAPA[emoji.replace(/\uFE0F/g, '')];
+  if (!caminhos) return null;
+  const partes = caminhos
+    .map((d) => `<path d="${d}" fill="${corPreenchimento}" stroke="#1c1410" stroke-width="44" stroke-linejoin="round" paint-order="stroke"/>`)
+    .join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-32 -32 576 576" width="${LADO_TEXTURA_ICONE}" height="${LADO_TEXTURA_ICONE}">${partes}</svg>`;
+}
 const COR_AMEACA = 0xff4d3d;
 const COR_HORDA = 0x9b1b30;
 const ARRASTO_MINIMO = 6;
@@ -115,8 +131,7 @@ export class CenaMapa extends Phaser.Scene {
     for (const t of dados.territorios) this.rotular(t);
     // Caveira na borda do mapa, de onde vem cada horda bárbara a caminho.
     for (const h of dados.hordas.filter((h) => h.aCaminho)) {
-      const caveira = this.add.text(h.origem.x * ESCALA, h.origem.y * ESCALA, '☠️', { fontSize: '24px' });
-      this.rotulos.push(caveira.setOrigin(0.5));
+      this.desenharIcone(h.origem.x * ESCALA, h.origem.y * ESCALA, '☠️', 30, COR_ICONE.caveira);
     }
     this.desenharDestaques();
     this.desenharMarchas();
@@ -330,33 +345,33 @@ export class CenaMapa extends Phaser.Scene {
         g.lineStyle(2, 0xffd54a, 0.85);
         g.strokeCircle(x - 4, y - 18, 40);
       }
-      this.rotulos.push(this.add.text(x + 9, y - 16, '🏰', { ...estilo, fontSize: destaque ? '28px' : '20px' }).setOrigin(0.5));
+      this.desenharIcone(x + 9, y - 16, '🏰', destaque ? 34 : 26);
       if (dono) this.desenharBandeira(destaque ? x - 40 : x - 28, y - 14, dono, destaque ? 1.5 : 1);
       // Pets na cidade, acima e à direita do castelo (longe do nome e do selo da estrutura): o do dono e, com cadeado, os reféns.
       if (dono) {
         const naCidade = this.opcoes.dados.pets.filter((p) => p.mantidoPor === dono.id);
         const proprio = naCidade.find((p) => p.donoId === dono.id);
         const refens = naCidade.filter((p) => p.donoId !== dono.id);
-        const textoPets = [proprio ? PETS_INFO[proprio.tipo].icone : '', ...refens.map((p) => `🔒${PETS_INFO[p.tipo].icone}`)].filter(Boolean).join(' ');
-        if (textoPets) {
-          this.rotulos.push(this.add.text(x + 18, y - 38, textoPets, { ...estilo, fontSize: '13px', strokeThickness: 0 }).setOrigin(0, 0.5));
-        }
+        // Em fila: o pet do dono e, para cada refém, cadeado dourado + o pet.
+        const fila: [string, string][] = [
+          ...(proprio ? [[PETS_INFO[proprio.tipo].icone, COR_ICONE.pergaminho] as [string, string]] : []),
+          ...refens.flatMap((p): [string, string][] => [['🔒', COR_ICONE.ouro], [PETS_INFO[p.tipo].icone, COR_ICONE.pergaminho]]),
+        ];
+        fila.forEach(([emoji, corIcone], i) => this.desenharIcone(x + 25 + i * 15, y - 38, emoji, 16, corIcone));
       }
       // 💤 à esquerda do castelo de quem está ausente: os territórios dele estão se rebelando.
       if (dono && this.opcoes.dados.ausentes.has(dono.id)) {
-        this.rotulos.push(this.add.text(x + 30, y - 30, '💤', { ...estilo, fontSize: '16px', strokeThickness: 0 }).setOrigin(0.5));
+        this.desenharIcone(x + 30, y - 30, '💤', 18);
       }
       // Coroa sobre a bandeira do herdeiro do trono caído (vencedor da temporada anterior).
       if (dono && dono.id === this.opcoes.dados.herdeiroId) {
-        this.rotulos.push(
-          this.add.text(destaque ? x - 20 : x - 15, destaque ? y - 52 : y - 42, '👑', { ...estilo, fontSize: '16px', strokeThickness: 0 }).setOrigin(0.5),
-        );
+        this.desenharIcone(destaque ? x - 20 : x - 15, destaque ? y - 52 : y - 42, '👑', 20, COR_ICONE.ouro);
       }
     } else if (dono) {
       // Território conquistado: a bandeira do dono no lugar do ícone de terreno.
       this.desenharBandeira(x - 12, y - 14, dono);
     } else if (ICONE_TERRENO[t.terreno]) {
-      this.rotulos.push(this.add.text(x, y - 16, ICONE_TERRENO[t.terreno], { ...estilo, fontSize: '20px' }).setOrigin(0.5));
+      this.desenharIcone(x, y - 16, ICONE_TERRENO[t.terreno], 24, t.terreno === 'floresta' ? COR_ICONE.floresta : COR_ICONE.montanha);
     }
     this.rotulos.push(this.add.text(x, y + 6, t.nome, { ...estilo, fontSize: '13px', wordWrap: { width: 110 } }).setOrigin(0.5));
     // Estrutura do território num canto do ícone; meio apagada enquanto está em construção. As dos outros
@@ -371,8 +386,7 @@ export class CenaMapa extends Phaser.Scene {
       g.fillCircle(ix, iy, 12);
       g.lineStyle(2, emObra ? 0x8a7a66 : 0xffe08a, 1);
       g.strokeCircle(ix, iy, 12);
-      const icone = this.add.text(ix, iy, estrutura.tipo ? ICONE_ESTRUTURA[estrutura.tipo] : '❓', { ...estilo, fontSize: '14px', strokeThickness: 0 });
-      this.rotulos.push(icone.setOrigin(0.5).setAlpha(emObra ? 0.5 : 1));
+      this.desenharIcone(ix, iy, estrutura.tipo ? ICONE_ESTRUTURA[estrutura.tipo] : '❓', 17, COR_ICONE.pergaminho, emObra ? 0.5 : 1);
     }
     // Povoado no canto esquerdo: vila (borda clara) ou cidade livre (borda dourada, maior). Vila neutra
     // recém-saqueada aparece apagada até o estoque voltar a encher.
@@ -385,7 +399,7 @@ export class CenaMapa extends Phaser.Scene {
       g.fillCircle(hx, hy, 11);
       g.lineStyle(2, 0xffd54a, 1);
       g.strokeCircle(hx, hy, 11);
-      this.rotulos.push(this.add.text(hx, hy, '🎖️', { ...estilo, fontSize: '13px', strokeThickness: 0 }).setOrigin(0.5));
+      this.desenharIcone(hx, hy, '🎖️', 16, COR_ICONE.ouro);
     }
     const povoado = this.opcoes.dados.povoados.get(t.id);
     if (povoado) {
@@ -397,9 +411,24 @@ export class CenaMapa extends Phaser.Scene {
       g.fillCircle(px, py, raio);
       g.lineStyle(livre ? 3 : 2, livre ? 0xffd54a : 0xd9c3a0, 1);
       g.strokeCircle(px, py, raio);
-      const icone = this.add.text(px, py, livre ? '⚖️' : '🏘️', { ...estilo, fontSize: livre ? '16px' : '14px', strokeThickness: 0 });
-      this.rotulos.push(icone.setOrigin(0.5).setAlpha(vazia ? 0.5 : 1));
+      this.desenharIcone(px, py, livre ? '⚖️' : '🏘️', livre ? 19 : 17, livre ? COR_ICONE.ouro : COR_ICONE.pergaminho, vazia ? 0.5 : 1);
     }
+  }
+
+  /**
+   * Ícone desenhado (game-icons.net) centrado em (x, y), com `tamanho` px na tela. Na primeira vez a textura é
+   * gerada do SVG e, enquanto isso, aparece o emoji (o mapa se redesenha quando ela fica pronta).
+   */
+  private desenharIcone(x: number, y: number, emoji: string, tamanho: number, corPreenchimento: string = COR_ICONE.pergaminho, alpha = 1) {
+    const chave = `icone:${emoji}:${corPreenchimento}`;
+    if (this.textures.exists(chave)) {
+      this.rotulos.push(this.add.image(x, y, chave).setDisplaySize(tamanho, tamanho).setAlpha(alpha));
+      return;
+    }
+    const svg = svgDoIcone(emoji, corPreenchimento);
+    if (svg) this.carregarBandeira(chave, svg);
+    const texto = this.add.text(x, y, emoji, { fontSize: `${Math.round(tamanho * 0.85)}px`, stroke: '#1c1410', strokeThickness: 0 });
+    this.rotulos.push(texto.setOrigin(0.5).setAlpha(alpha));
   }
 
   /**
