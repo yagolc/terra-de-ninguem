@@ -21,7 +21,8 @@ import {
   feridoAte,
   fimProtecaoIniciante,
   geradorComSemente,
-  lealDesdeNaConquista,
+  conquistaDePovoado,
+  lerLealdades,
   mapearExercito,
   receberSaque,
   recursos,
@@ -203,10 +204,9 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number, retomada 
       milicia: number;
       milicia_entregue: boolean;
       leal_desde: Date | null;
-      dono_anterior_id: string | null;
-      leal_anterior: Date | null;
+      lealdades: unknown;
     }[]
-  >`select id, tipo, nivel, saqueada_em, milicia, milicia_entregue, leal_desde, dono_anterior_id, leal_anterior
+  >`select id, tipo, nivel, saqueada_em, milicia, milicia_entregue, leal_desde, lealdades
       from povoados where territorio_id = ${destino.id} for update`;
   const cidadeLivre = povoado?.tipo === 'cidade_livre';
   // Lanceiros extras do dono, fora da população: a milícia da cidade livre ou a Guarda Real na cidade do herdeiro.
@@ -287,19 +287,23 @@ async function resolverAtaque(tx: Transacao, m: Marcha, agora: number, retomada 
     await tx`delete from estradas where territorio_id = ${destino.id}`;
     grupoEm(atacante, destino.id).tropas = batalha.sobreviventesAtacante;
     // Povoado: muda de dono. Neutro, é leal na hora (a vila já vem no nível 1); tomado de outro jogador,
-    // só dá bônus depois da lealdade, a não ser que quem toma seja o último dono que o perdeu (volta com a
-    // lealdade que tinha). A milícia do antigo dono se dispersa; a cidade livre só entrega uma milícia nova na
-    // primeira conquista.
+    // só dá bônus depois da lealdade, a não ser que quem toma já tenha sido dono (volta com a lealdade que
+    // tinha; o povoado lembra a de cada ex-dono). A milícia do antigo dono se dispersa; a cidade livre só entrega
+    // uma milícia nova na primeira conquista.
     if (povoado) {
       const nivel = povoado.tipo === 'vila' && !defensor ? Math.max(1, povoado.nivel) : povoado.nivel;
       milicia = povoado.tipo === 'cidade_livre' && !povoado.milicia_entregue;
-      const lealAntesDePerder =
-        defensor && povoado.dono_anterior_id === m.jogador_id ? (povoado.leal_anterior?.getTime() ?? null) : null;
+      const lealdade = conquistaDePovoado({
+        agora,
+        atacanteId: m.jogador_id,
+        defensorId: defensor ? destino.dono_id : null,
+        lealDesdeAtual: povoado.leal_desde?.getTime() ?? null,
+        lealdades: lerLealdades(povoado.lealdades),
+      });
       await tx`
         update povoados
            set nivel = ${nivel}, posse_desde = ${new Date(agora)},
-               leal_desde = ${new Date(lealDesdeNaConquista(agora, !!defensor, lealAntesDePerder))},
-               dono_anterior_id = ${destino.dono_id}, leal_anterior = ${defensor ? povoado.leal_desde : null},
+               leal_desde = ${new Date(lealdade.lealDesde)}, lealdades = ${tx.json(lealdade.lealdades)},
                milicia = ${milicia ? BALANCEAMENTO.povoados.cidadeLivre.milicia : 0},
                milicia_entregue = milicia_entregue or ${milicia}
          where id = ${povoado.id}`;

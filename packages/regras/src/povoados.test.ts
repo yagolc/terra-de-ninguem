@@ -6,7 +6,9 @@ import {
   bonusDosPovoados,
   custoNivelVila,
   estoqueVila,
+  conquistaDePovoado,
   lealDesdeNaConquista,
+  lerLealdades,
   povoadoLeal,
   saquearVilaDeJogador,
   saquearVilaNeutra,
@@ -112,6 +114,30 @@ describe('lealdade e bônus', () => {
     expect(lealDesdeNaConquista(AGORA, true, faltava)).toBe(faltava);
     // Neutro continua leal na hora.
     expect(lealDesdeNaConquista(AGORA, false, antes)).toBe(AGORA);
+  });
+
+  it('lembra a lealdade de todos os ex-donos, mesmo depois de passar por outros', () => {
+    const H = HORA_MS;
+    // A conquista dos bárbaros (leal na hora); B toma de A; C toma de B; A retoma de C.
+    let p = conquistaDePovoado({ agora: 0, atacanteId: 'A', defensorId: null, lealDesdeAtual: null, lealdades: {} });
+    expect(p).toEqual({ lealDesde: 0, lealdades: {} });
+    p = conquistaDePovoado({ agora: 10 * H, atacanteId: 'B', defensorId: 'A', lealDesdeAtual: p.lealDesde, lealdades: p.lealdades });
+    expect(p.lealDesde).toBe(10 * H + BALANCEAMENTO.povoados.lealdadeHoras * H);
+    p = conquistaDePovoado({ agora: 12 * H, atacanteId: 'C', defensorId: 'B', lealDesdeAtual: p.lealDesde, lealdades: p.lealdades });
+    expect(p.lealdades).toEqual({ A: 0, B: 10 * H + BALANCEAMENTO.povoados.lealdadeHoras * H });
+    p = conquistaDePovoado({ agora: 15 * H, atacanteId: 'A', defensorId: 'C', lealDesdeAtual: p.lealDesde, lealdades: p.lealdades });
+    expect(p.lealDesde).toBe(0);
+    expect(Object.keys(p.lealdades).sort()).toEqual(['B', 'C']);
+    // Quem nunca foi dono espera as 24 h; tomado dos bárbaros, a memória começa de novo.
+    const d = conquistaDePovoado({ agora: 20 * H, atacanteId: 'D', defensorId: 'A', lealDesdeAtual: 0, lealdades: p.lealdades });
+    expect(d.lealDesde).toBe(20 * H + BALANCEAMENTO.povoados.lealdadeHoras * H);
+    expect(conquistaDePovoado({ agora: 30 * H, atacanteId: 'A', defensorId: null, lealDesdeAtual: null, lealdades: d.lealdades }).lealdades).toEqual({});
+  });
+
+  it('lê a memória do banco ignorando valores estranhos', () => {
+    expect(lerLealdades({ a: 5, b: 'x', c: null })).toEqual({ a: 5 });
+    expect(lerLealdades(null)).toEqual({});
+    expect(lerLealdades([1, 2])).toEqual({});
   });
 
   it('vilas leais dão população; cidades livres leais dão ouro', () => {

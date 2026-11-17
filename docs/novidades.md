@@ -19,7 +19,7 @@ Lista das mudanças para mandar aos jogadores. Cada temporada nova ganha uma se�
 
 ### Vilas e cidades livres
 
-- **O povo volta ao antigo senhor:** quem retoma um povoado que tinha acabado de perder recupera a lealdade que tinha. Se já era leal, volta leal na hora, sem esperar as 24 h. Vale para o último dono que o perdeu. Já vale na temporada 5, inclusive para a vila retomada antes da mudança.
+- **O povo volta ao antigo senhor:** quem retoma um povoado que já foi seu recupera a lealdade que tinha. Se já era leal, volta leal na hora, sem esperar as 24 h, mesmo que o povoado tenha passado por outros donos no meio. Se ele cair para os bárbaros (horda ou rebelião), a memória se apaga. Já vale na temporada 5, inclusive para as vilas retomadas antes da mudança.
 
 ### Salas
 

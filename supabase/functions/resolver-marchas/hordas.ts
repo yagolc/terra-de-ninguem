@@ -173,7 +173,7 @@ export async function resolverHorda(id: string): Promise<boolean> {
       }
       if (povoado) {
         await tx`
-          update povoados set posse_desde = null, leal_desde = null, milicia = 0, dono_anterior_id = null, leal_anterior = null
+          update povoados set posse_desde = null, leal_desde = null, milicia = 0, lealdades = '{}'::jsonb
            where id = ${povoado.id}`;
       }
     } else {

@@ -100,6 +100,39 @@ export function lealDesdeNaConquista(agora: number, tomadoDeJogador: boolean, le
   return tomadoDeJogador ? agora + BALANCEAMENTO.povoados.lealdadeHoras * HORA_MS : agora;
 }
 
+/** Lealdade que cada ex-dono tinha quando perdeu o povoado (id do jogador → `leal_desde` em ms). */
+export type LealdadesAntigas = Record<string, number>;
+
+/**
+ * Conquista de um povoado: de quando passa a ser leal e o que ele lembra dos ex-donos. Tomado de um jogador, guarda
+ * a lealdade dele; se quem toma já foi dono (em qualquer momento desde que o povoado saiu dos bárbaros), volta com a
+ * lealdade que tinha ao perder. Tomado dos bárbaros, a memória começa vazia (horda e rebelião já a apagam).
+ */
+export function conquistaDePovoado(entrada: {
+  agora: number;
+  atacanteId: string;
+  defensorId: string | null;
+  lealDesdeAtual: number | null;
+  lealdades: LealdadesAntigas;
+}): { lealDesde: number; lealdades: LealdadesAntigas } {
+  if (!entrada.defensorId) return { lealDesde: entrada.agora, lealdades: {} };
+  const lembradas: LealdadesAntigas = { ...entrada.lealdades };
+  if (entrada.lealDesdeAtual !== null) lembradas[entrada.defensorId] = entrada.lealDesdeAtual;
+  const minha = lembradas[entrada.atacanteId] ?? null;
+  delete lembradas[entrada.atacanteId];
+  return { lealDesde: lealDesdeNaConquista(entrada.agora, true, minha), lealdades: lembradas };
+}
+
+/** Lê a memória gravada no banco (jsonb), ignorando o que não for número. */
+export function lerLealdades(valor: unknown): LealdadesAntigas {
+  if (!valor || typeof valor !== 'object' || Array.isArray(valor)) return {};
+  return Object.fromEntries(
+    Object.entries(valor as Record<string, unknown>).flatMap(([id, ms]): [string, number][] =>
+      typeof ms === 'number' && Number.isFinite(ms) ? [[id, ms]] : [],
+    ),
+  );
+}
+
 export function povoadoLeal(lealDesde: number | null, agora: number): boolean {
   return lealDesde !== null && lealDesde <= agora;
 }
