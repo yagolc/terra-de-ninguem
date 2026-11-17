@@ -1,6 +1,8 @@
 import { BALANCEAMENTO, type TipoPet } from '@terra/regras';
 import { useState } from 'react';
 import { PETS_INFO, usePets } from '../lib/pets';
+import { imagemDoPet } from '../lib/arte';
+import Ilustracao from './Ilustracao';
 import { useGemas } from '../lib/useGemas';
 import JanelaConfirmacao from './JanelaConfirmacao';
 import Icone from './Icone';
@@ -43,7 +45,12 @@ export default function PainelPet({ jogadorId, ouro }: Props) {
 
   return (
     <section className="space-y-3 rounded-xl border border-couro bg-carvao/90 p-4">
-      <h3 className="font-titulo text-ouro"><Icone de="🐾" /> Pet da cidade</h3>
+      <div className="flex items-center gap-3">
+        {meu && imagemDoPet(meu.tipo) && (
+          <Ilustracao src={imagemDoPet(meu.tipo)!} className={`size-16 shrink-0 ${refem ? 'opacity-50 grayscale' : ''}`} />
+        )}
+        <h3 className="font-titulo text-ouro"><Icone de="🐾" /> Pet da cidade</h3>
+      </div>
 
       {refem ? (
         <div className="space-y-2 rounded-lg border border-sangue/70 bg-sangue/15 p-3 text-sm">

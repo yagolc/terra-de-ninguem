@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { formatarReais, pixConfigurado } from '../lib/pix';
 import { useGemas } from '../lib/useGemas';
 import ItensLoja from './ItensLoja';
+import { imagemDaLoja } from '../lib/arte';
+import Ilustracao from './Ilustracao';
 import PainelArauto from './PainelArauto';
 import PixDoPedido from './PixDoPedido';
 import Icone from './Icone';
@@ -40,13 +42,16 @@ export default function PainelLoja() {
 
   return (
     <section className="space-y-3 rounded-2xl border border-couro bg-carvao/90 p-4">
-      <div>
+      <div className="flex items-start gap-3">
+        {imagemDaLoja('gemas') && <Ilustracao src={imagemDaLoja('gemas')!} className="size-20 shrink-0" />}
+        <div>
         <h3 className="font-titulo text-lg text-ouro"><Icone de="💎" /> Loja de gemas</h3>
         <p className="text-sm text-pergaminho-escuro">
           Com gemas você termina na hora a obra que está sendo feita na cidade (até o nível {nivelMaximo}, nunca a Muralha). O primeiro uso
           da temporada custa {precoBase} gemas e o preço dobra a cada uso ({[0, 1, 2, 3].map(precoTerminarObra).join(', ')}…); na
           temporada nova volta para {precoBase}. Todos veem no placar quantas vezes cada um usou (<Icone de="⚡" />).
         </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2">

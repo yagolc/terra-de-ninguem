@@ -2,6 +2,8 @@ import { BALANCEAMENTO, limparTextoArauto, precoArauto } from '@terra/regras';
 import { useState } from 'react';
 import type { Gemas } from '../lib/useGemas';
 import { formatarDuracao } from '../lib/textos';
+import { imagemDaLoja } from '../lib/arte';
+import Ilustracao from './Ilustracao';
 import JanelaConfirmacao from './JanelaConfirmacao';
 import Icone from './Icone';
 
@@ -20,7 +22,10 @@ export default function PainelArauto({ gemas, agora, ocupado, onPublicar }: Prop
 
   return (
     <div className="space-y-2">
-      <h4 className="font-titulo text-ouro"><Icone de="📯" /> Arauto</h4>
+      <div className="flex items-center gap-3">
+        {imagemDaLoja('arauto') && <Ilustracao src={imagemDaLoja('arauto')!} className="size-14 shrink-0" />}
+        <h4 className="font-titulo text-ouro"><Icone de="📯" /> Arauto</h4>
+      </div>
       <p className="text-xs text-pergaminho-escuro">
         Seu anúncio aparece no alto do mapa para todos por {duracaoHoras} h, e quem tem avisos de carta ligados recebe no celular. Um por vez;
         o preço dobra a cada arauto na temporada ({[0, 1, 2].map(precoArauto).join(', ')}…).

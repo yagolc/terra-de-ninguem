@@ -12,6 +12,8 @@ import {
 } from '@terra/regras';
 import { useState } from 'react';
 import { PETS_INFO } from '../lib/pets';
+import { imagemDaLoja, imagemDoPet } from '../lib/arte';
+import Ilustracao from './Ilustracao';
 import { salaEscolhida } from '../lib/salas';
 import type { Gemas } from '../lib/useGemas';
 import JanelaConfirmacao from './JanelaConfirmacao';
@@ -46,6 +48,13 @@ const INFO: Record<Exclude<ItemLoja, 'titulo' | 'pet'>, { nome: string; icone: s
   },
 };
 
+/** Ilustração de cada item da loja, quando já existe a arte (as outras ficam só com o ícone). */
+const ARTE_ITEM: Partial<Record<ItemLoja, string | null>> = {
+  bandeiras_exclusivas: imagemDaLoja('bandeiras'),
+  destaque_cidade: imagemDaLoja('destaque'),
+  cronica: imagemDaLoja('cronica'),
+};
+
 /** Itens da loja: visuais permanentes, destaque da temporada e títulos (comprar e escolher o que aparece). */
 export default function ItensLoja({ gemas, ocupado, onComprar, onUsarTitulo }: Props) {
   const [compra, setCompra] = useState<Compra | null>(null);
@@ -65,6 +74,7 @@ export default function ItensLoja({ gemas, ocupado, onComprar, onUsarTitulo }: P
           const semTemporada = BALANCEAMENTO.loja.itens[item].escopo === 'temporada' && !gemas.temporadaId;
           return (
             <li key={item} className="flex flex-col gap-2 rounded-lg border border-couro bg-noite/50 p-3 text-sm">
+              {ARTE_ITEM[item] && <Ilustracao src={ARTE_ITEM[item]!} className="mx-auto size-24" />}
               <p className="flex items-center gap-2 font-semibold text-pergaminho">
                 {item === 'cor_ouro' || item === 'cor_prata' ? (
                   <span className="inline-block size-4 rounded-full border border-pergaminho/40" style={{ background: CORES_LOJA[item] }} aria-hidden />
@@ -103,9 +113,13 @@ export default function ItensLoja({ gemas, ocupado, onComprar, onUsarTitulo }: P
             const meu = tem('pet', tipo);
             return (
               <li key={tipo} className="flex flex-col items-center gap-1 rounded-lg border border-couro bg-noite/50 p-2 text-sm">
-                <span className="text-3xl" aria-hidden>
-                  <Icone de={PETS_INFO[tipo].icone} />
-                </span>
+                {imagemDoPet(tipo) ? (
+                  <Ilustracao src={imagemDoPet(tipo)!} className="size-20" />
+                ) : (
+                  <span className="text-3xl" aria-hidden>
+                    <Icone de={PETS_INFO[tipo].icone} />
+                  </span>
+                )}
                 {PETS_INFO[tipo].nome}
                 {meu ? (
                   <span className="text-xs text-musgo"><Icone de="✅" /> Seu</span>

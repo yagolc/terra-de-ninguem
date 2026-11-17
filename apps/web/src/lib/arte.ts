@@ -1,4 +1,4 @@
-import type { Especialidade, Raca, TipoEstrutura, TipoPovoado, TipoPredio, TipoUnidade } from '@terra/regras';
+import type { Especialidade, Raca, TipoEstrutura, TipoPet, TipoPovoado, TipoPredio, TipoUnidade } from '@terra/regras';
 
 // Imagens geradas para o jogo (WebP em src/assets/arte, criadas por `npm run arte` a partir de docs/arte/originais).
 // O Vite só inclui as que existem; o que faltar continua com o emoji.
@@ -41,6 +41,21 @@ export function imagemDoPovoado(tipo: TipoPovoado, nivel: number): string | null
 /** Retrato do herói pela especialidade. */
 export function imagemDoHeroi(especialidade: Especialidade): string | null {
   return ARTE[`heroi-${especialidade}`] ?? null;
+}
+
+/** Pet da cidade (pet-<tipo>). */
+export function imagemDoPet(tipo: TipoPet): string | null {
+  return ARTE[`pet-${tipo}`] ?? null;
+}
+
+/** Ilustrações da loja (loja-<nome>): baú de gemas, bandeiras exclusivas, destaque da cidade, Crônica e arauto. */
+export function imagemDaLoja(nome: 'gemas' | 'bandeiras' | 'destaque' | 'cronica' | 'arauto'): string | null {
+  return ARTE[`loja-${nome}`] ?? null;
+}
+
+/** Horda bárbara (aviso no mapa e Relatórios). */
+export function imagemDaHorda(): string | null {
+  return ARTE['horda'] ?? null;
 }
 
 /** Retrato do povo, na escolha da raça. */
