@@ -1,5 +1,5 @@
 import { BALANCEAMENTO, type AvaliacaoObjetivo, type Objetivo } from '@terra/regras';
-import { descreverObjetivo, formatarNumero } from '../lib/textos';
+import { PREDIOS, descreverObjetivo, formatarNumero } from '../lib/textos';
 
 type Props = {
   objetivo: Objetivo;
@@ -31,6 +31,15 @@ function textoProgresso(objetivo: Objetivo, progresso: AvaliacaoObjetivo): strin
   return `${formatarNumero(progresso.atual)} de ${formatarNumero(progresso.alvo)}`;
 }
 
+/** "Centro da Cidade nível 10 e Quartel nível 10" (prédios que a carta exige junto com a meta). */
+function textoExigencias(objetivo: Objetivo): string | null {
+  const partes = [
+    objetivo.exige?.centro ? `${PREDIOS.centro.nome} nível ${objetivo.exige.centro}` : null,
+    objetivo.exige?.quartel ? `${PREDIOS.quartel.nome} nível ${objetivo.exige.quartel}` : null,
+  ].filter((p): p is string => !!p);
+  return partes.length > 0 ? partes.join(' e ') : null;
+}
+
 /** A carta do objetivo secreto, com a barra de progresso. */
 export default function CartaObjetivo({ objetivo, progresso, nomeRegiao, nomeJogador, dono, cumprido }: Props) {
   const carta = descreverObjetivo(objetivo, { regiao: nomeRegiao, jogador: nomeJogador });
@@ -49,6 +58,9 @@ export default function CartaObjetivo({ objetivo, progresso, nomeRegiao, nomeJog
         <div>
           <h3 className="font-titulo text-lg text-ouro">{carta.titulo}</h3>
           <p className="mt-1 text-sm text-pergaminho">{carta.texto}</p>
+          {textoExigencias(objetivo) && (
+            <p className="mt-1 text-sm text-ouro-claro">🏛️ E também: {textoExigencias(objetivo)}.</p>
+          )}
         </div>
       </div>
       {cumprido && <p className="mt-3 text-sm font-semibold text-ouro">✓ Cumprido</p>}
@@ -66,6 +78,13 @@ export default function CartaObjetivo({ objetivo, progresso, nomeRegiao, nomeJog
                   : `O rival ainda tem ${progresso.atual} ${progresso.atual === 1 ? 'território' : 'territórios'} além da cidade.`
                 : textoProgresso(objetivo, progresso)}
           </p>
+          {progresso.exigencias && (
+            <p className="mt-1 text-xs tabular-nums text-pergaminho-escuro">
+              {progresso.exigencias
+                .map((e) => `${e.atual >= e.alvo ? '✓' : '·'} ${PREDIOS[e.predio].nome} ${e.atual} de ${e.alvo}`)
+                .join('  ')}
+            </p>
+          )}
         </div>
       )}
     </article>

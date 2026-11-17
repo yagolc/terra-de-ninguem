@@ -69,6 +69,7 @@ async function sortearPara(tx: Transacao, temporadaId: string, jogadorId: string
     : [];
   const jaSorteados = await tx<{ objetivo: Objetivo }[]>`
     select objetivo from objetivos where temporada_id = ${temporadaId} and jogador_id <> ${jogadorId}`;
+  const [temporada] = await tx<{ numero: number }[]>`select numero from temporadas where id = ${temporadaId}`;
   const [vilas] = await tx<{ total: number }[]>`
     select count(*)::int as total from povoados where temporada_id = ${temporadaId} and tipo = 'vila'`;
 
@@ -80,6 +81,7 @@ async function sortearPara(tx: Transacao, temporadaId: string, jogadorId: string
     jaSorteados: jaSorteados.map((o) => o.objetivo),
     vilasNoMapa: vilas?.total ?? 0,
     ...(cidade ? { cidade } : {}),
+    ...(temporada ? { numeroTemporada: temporada.numero } : {}),
   });
 }
 
@@ -217,6 +219,8 @@ export async function atualizarPlacar(tx: Transacao, temporadaId: string): Promi
       vitoriasContraJogadores: vitoriasContraJogadores.find((v) => v.jogador_id === jogadorId)?.vitorias ?? 0,
       niveisPredios: Object.values(cidade.estado.predios),
       nivelMuralha: cidade.estado.predios.muralha,
+      nivelCentro: cidade.estado.predios.centro,
+      nivelQuartel: cidade.estado.predios.quartel,
       niveisVilas: vilas.filter((v) => v.dono_id === jogadorId).map((v) => v.nivel),
       cidadesLivres: cidadesLivres.map((c) => ({ minha: c.dono_id === jogadorId, posseDesde: c.posse_desde?.getTime() ?? null })),
       agora,

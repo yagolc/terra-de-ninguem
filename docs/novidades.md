@@ -37,6 +37,11 @@ Lista das mudanças para mandar aos jogadores. Cada temporada nova ganha uma se�
 
 - **Cartas maiores:** uma carta agora leva até 1300 letras (eram 500).
 
+### Objetivos
+
+- **Todo objetivo secreto exige também o Centro da Cidade no nível 10.** Cumprir a meta não basta: a cidade precisa estar no máximo. Ninguém mais vence nos primeiros dias.
+- **Senhor da guerra** pede **35 vitórias** contra jogadores (eram 50) e o **Quartel no nível 10**.
+
 ### Feedback
 
 - **Aba Feedback** (💬 no alto da tela): relate bugs e sugira ideias. Cada relato ganha um número e um status (novo, em análise, planejado, em andamento, resolvido…), e você recebe um aviso quando ele muda. Vote 👍 nos dos outros ("também aconteceu comigo" / "também quero"): os mais votados vêm primeiro.

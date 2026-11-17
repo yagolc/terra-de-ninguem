@@ -47,6 +47,10 @@ export default function Regras() {
           tinha acabam, e não dá para fechar outro): é a chance dos outros de reagir. Se deixar de cumprir, o relógio zera. Quando alguém vence, todas as cartas são reveladas.
         </p>
         <p>
+          Todo objetivo pede também o <b>Centro da Cidade no nível {B.objetivos.centroExigido}</b> (o Senhor da guerra, também o{' '}
+          <b>Quartel no nível {B.objetivos.quartelSenhorDaGuerra}</b>): ninguém vence nos primeiros dias.
+        </p>
+        <p>
           Se o prazo acabar sem ninguém cumprir, vence quem tiver mais pontos: <b>{B.pontos.porTerritorio}</b> por território,{' '}
           <b>{B.pontos.porHabitante}</b> por habitante e <b>{B.pontos.porVitoria}</b> por batalha vencida (atacando ou defendendo).
         </p>

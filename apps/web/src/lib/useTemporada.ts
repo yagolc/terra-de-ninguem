@@ -195,6 +195,8 @@ async function buscar(jogadorId: string): Promise<DadosTemporada | null> {
       ).length,
       niveisPredios: cidade.data?.predios.map((p) => p.nivel) ?? [],
       nivelMuralha: cidade.data?.predios.find((p) => p.tipo === 'muralha')?.nivel ?? 0,
+      nivelCentro: cidade.data?.predios.find((p) => p.tipo === 'centro')?.nivel ?? 0,
+      nivelQuartel: cidade.data?.predios.find((p) => p.tipo === 'quartel')?.nivel ?? 0,
       niveisVilas: povoados.data
         .filter((p) => p.tipo === 'vila' && donoDe(p.territorio_id) === jogadorId)
         .map((p) => p.nivel),

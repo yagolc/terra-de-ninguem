@@ -161,8 +161,17 @@ export const BALANCEAMENTO = {
     /** "Duas regiões": soma dos territórios da dupla entre essas frações do mapa. */
     duplaDeRegioesMin: 0.33,
     duplaDeRegioesMax: 0.5,
-    /** "Senhor da guerra": batalhas vencidas contra jogadores (atacando ou defendendo). */
-    vitoriasContraJogadores: 50,
+    /** "Senhor da guerra": batalhas vencidas contra jogadores (atacando ou defendendo). 35 desde a temporada 6. */
+    vitoriasContraJogadores: 35,
+    /**
+     * Desde a temporada 6, todo objetivo sorteado exige também o Centro da Cidade neste nível (ninguém vence nos
+     * primeiros dias), e o "senhor da guerra" exige o Quartel neste nível. Cartas antigas não exigem.
+     */
+    centroExigido: 10,
+    quartelSenhorDaGuerra: 10,
+    /** A partir desta temporada valem as exigências e as 35 vitórias; antes (quem entra atrasado na 5), as 50 sem prédios. */
+    exigenciasDesdeTemporada: 6,
+    vitoriasAntesDasExigencias: 50,
     /** "Mestre construtor": quantos prédios da cidade no nível pedido (o Centro tem de chegar lá primeiro). */
     mestreConstrutorPredios: 3,
     mestreConstrutorNivel: 10,

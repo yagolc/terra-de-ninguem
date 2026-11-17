@@ -42,6 +42,9 @@ function situacao(mudancas: Partial<SituacaoJogador> = {}): SituacaoJogador {
     vitoriasContraJogadores: 0,
     niveisPredios: [1, 0, 0, 0, 0, 0, 0, 0],
     nivelMuralha: 0,
+    // Exigências de prédios já cumpridas: cada teste olha só a meta, menos os de "exigências".
+    nivelCentro: 10,
+    nivelQuartel: 10,
     niveisVilas: [],
     ouro: 0,
     cidadesLivres: [],
@@ -157,7 +160,9 @@ describe('sortearObjetivo', () => {
         expect(['orc', 'anao']).toContain(o.raca);
         expect(o.territorios).toBe(BALANCEAMENTO.objetivos.rixaTerritorios);
       }
-      if (o.tipo === 'senhor_das_vilas') expect(o).toEqual({ tipo: 'senhor_das_vilas', vilas: 4, nivel: BALANCEAMENTO.povoados.vila.nivelMaximo });
+      if (o.tipo === 'senhor_das_vilas') {
+        expect(o).toEqual({ tipo: 'senhor_das_vilas', vilas: 4, nivel: BALANCEAMENTO.povoados.vila.nivelMaximo, exige: { centro: 10 } });
+      }
       expect(o.tipo).not.toBe('derrubar_rival');
       expect(o.tipo).not.toBe('populacao');
     }
@@ -286,6 +291,60 @@ describe('avaliarObjetivo', () => {
     expect(avaliarObjetivo(obj, situacao({ meusTerritorios, nivelMuralha: maxima })).cumprido).toBe(true);
     // Carta antiga (sem muralha): só os territórios contam.
     expect(avaliarObjetivo({ ...obj, muralha: undefined }, situacao({ meusTerritorios })).cumprido).toBe(true);
+  });
+});
+
+describe('exigências de prédios (desde a temporada 6)', () => {
+  const { centroExigido, quartelSenhorDaGuerra } = BALANCEAMENTO.objetivos;
+
+  it('todo objetivo sorteado exige o Centro; o senhor da guerra exige também o Quartel', () => {
+    const vistos = new Set<string>();
+    for (let semente = 0; semente < 300; semente++) {
+      const o = sortearObjetivo({ semente, regioes: REGIOES, totalTerritorios: TOTAL, racasRivais: ['elfo'], jaSorteados: [], vilasNoMapa: 8 });
+      vistos.add(o.tipo);
+      expect(o.exige?.centro).toBe(centroExigido);
+      expect(o.exige?.quartel).toBe(o.tipo === 'senhor_da_guerra' ? quartelSenhorDaGuerra : undefined);
+    }
+    expect(vistos.size).toBeGreaterThanOrEqual(7);
+  });
+
+  it('meta cumprida sem o Centro (ou o Quartel) ainda não vale, e mostra o que falta', () => {
+    const obj: Objetivo = { tipo: 'senhor_da_guerra', vitorias: 35, exige: { centro: 10, quartel: 10 } };
+    const meta = { vitoriasContraJogadores: 35 };
+    expect(avaliarObjetivo(obj, situacao({ ...meta, nivelCentro: 9, nivelQuartel: 10 }))).toMatchObject({
+      cumprido: false,
+      exigencias: [
+        { predio: 'centro', atual: 9, alvo: 10 },
+        { predio: 'quartel', atual: 10, alvo: 10 },
+      ],
+    });
+    expect(avaliarObjetivo(obj, situacao({ ...meta, nivelQuartel: 4 })).cumprido).toBe(false);
+    expect(avaliarObjetivo(obj, situacao(meta)).cumprido).toBe(true);
+    expect(avaliarObjetivo(obj, situacao({ vitoriasContraJogadores: 34 })).cumprido).toBe(false);
+  });
+
+  it('quem entra atrasado numa temporada anterior à 6 recebe as regras antigas', () => {
+    for (let semente = 0; semente < 100; semente++) {
+      const o = sortearObjetivo({ semente, regioes: REGIOES, totalTerritorios: TOTAL, racasRivais: ['elfo'], jaSorteados: [], vilasNoMapa: 8, numeroTemporada: 5 });
+      expect(o.exige).toBeUndefined();
+      if (o.tipo === 'senhor_da_guerra') expect(o.vitorias).toBe(BALANCEAMENTO.objetivos.vitoriasAntesDasExigencias);
+      const nova = sortearObjetivo({ semente, regioes: REGIOES, totalTerritorios: TOTAL, racasRivais: ['elfo'], jaSorteados: [], vilasNoMapa: 8, numeroTemporada: 6 });
+      expect(nova.exige?.centro).toBe(centroExigido);
+      if (nova.tipo === 'senhor_da_guerra') expect(nova.vitorias).toBe(BALANCEAMENTO.objetivos.vitoriasContraJogadores);
+    }
+  });
+
+  it('cartas antigas, sem exigências, valem como antes', () => {
+    const antiga: Objetivo = { tipo: 'senhor_da_guerra', vitorias: 50 };
+    const r = avaliarObjetivo(antiga, situacao({ vitoriasContraJogadores: 50, nivelCentro: 1, nivelQuartel: 0 }));
+    expect(r.cumprido).toBe(true);
+    expect(r.exigencias).toBeUndefined();
+  });
+
+  it('a carta que vira "metade do mapa" leva as exigências junto', () => {
+    const rixa: Objetivo = { tipo: 'velha_rixa', raca: 'elfo', territorios: 10, exige: { centro: 10 } };
+    const r = avaliarObjetivo(rixa, situacao({ rixa: { territoriosConquistados: 2, jogadoresDaRaca: 0, todosSoNaCidade: false } }));
+    expect(r.viraObjetivo).toEqual({ tipo: 'metade_do_mapa', exige: { centro: 10 } });
   });
 });
 

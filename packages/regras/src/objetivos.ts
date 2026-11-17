@@ -6,7 +6,10 @@ import { distanciasNoGrafo, grafoDeFronteiras } from './territorios.ts';
 import type { Raca } from './tipos.ts';
 import { HORA_MS } from './util.ts';
 
-export type Objetivo =
+/** Prédios da cidade exigidos junto com a meta (desde a temporada 6; as cartas antigas não têm). */
+export type ExigenciaPredios = { centro?: number; quartel?: number };
+
+type ObjetivoBase =
   | { tipo: 'duas_regioes'; regioes: [string, string] }
   /** A meta é calculada na hora, sobre os territórios conquistáveis (ver `metaMetadeDoMapa`). */
   | { tipo: 'metade_do_mapa' }
@@ -29,6 +32,8 @@ export type Objetivo =
    */
   | { tipo: 'monopolio_comercial'; horas: number };
 
+export type Objetivo = ObjetivoBase & { exige?: ExigenciaPredios };
+
 export type TipoObjetivo = Objetivo['tipo'];
 
 /** Quantas vilas "senhor das vilas" pede: `objetivos.fracaoVilas` das vilas do mapa, arredondado para cima. */
@@ -36,8 +41,15 @@ export function metaSenhorDasVilas(vilasNoMapa: number): number {
   return Math.ceil(vilasNoMapa * BALANCEAMENTO.objetivos.fracaoVilas);
 }
 
-export function objetivoMetadeDoMapa(): Objetivo {
-  return { tipo: 'metade_do_mapa' };
+/** "Metade do mapa", também o destino de cartas que perderam o alvo (mantém as exigências da carta original). */
+export function objetivoMetadeDoMapa(exige?: ExigenciaPredios): Objetivo {
+  return exige ? { tipo: 'metade_do_mapa', exige } : { tipo: 'metade_do_mapa' };
+}
+
+/** Prédios exigidos por um objetivo sorteado agora: Centro em todos e, no senhor da guerra, o Quartel. */
+export function exigenciasDoTipo(tipo: TipoObjetivo): ExigenciaPredios {
+  const { centroExigido, quartelSenhorDaGuerra } = BALANCEAMENTO.objetivos;
+  return tipo === 'senhor_da_guerra' ? { centro: centroExigido, quartel: quartelSenhorDaGuerra } : { centro: centroExigido };
 }
 
 /**
@@ -68,11 +80,17 @@ export function sortearObjetivo(entrada: {
    * vizinha (ou, se nenhuma dupla assim tiver o tamanho certo, da dupla mais perto). Sem ela, qualquer dupla.
    */
   cidade?: VizinhancaDaCidade;
+  /**
+   * Número da temporada: a partir de `objetivos.exigenciasDesdeTemporada` a carta exige prédios e o senhor da guerra
+   * pede menos vitórias; antes, as regras antigas (para quem entra atrasado numa temporada já em andamento).
+   */
+  numeroTemporada?: number;
 }): Objetivo {
   const { regioes, totalTerritorios, jaSorteados } = entrada;
   const aleatorio = geradorComSemente(entrada.semente);
   const escolher = <T>(lista: T[]): T => lista[Math.floor(aleatorio() * lista.length)]!;
   const config = BALANCEAMENTO.objetivos;
+  const regrasNovas = (entrada.numeroTemporada ?? config.exigenciasDesdeTemporada) >= config.exigenciasDesdeTemporada;
 
   const duplas: [string, string][] = [];
   for (let a = 0; a < regioes.length; a++) {
@@ -107,7 +125,9 @@ export function sortearObjetivo(entrada: {
   const tiposUsados = new Set(jaSorteados.map((o) => o.tipo));
   const novos = possiveis.filter((t) => !tiposUsados.has(t));
 
-  switch (escolher(novos.length > 0 ? novos : possiveis)) {
+  const tipo = escolher(novos.length > 0 ? novos : possiveis);
+  const base = ((): Objetivo => {
+  switch (tipo) {
     case 'duas_regioes':
       return { tipo: 'duas_regioes', regioes: escolher(duplasLivres) };
     case 'velha_rixa':
@@ -122,7 +142,7 @@ export function sortearObjetivo(entrada: {
     case 'senhor_das_vilas':
       return { tipo: 'senhor_das_vilas', vilas: vilasAlvo, nivel: BALANCEAMENTO.povoados.vila.nivelMaximo };
     case 'senhor_da_guerra':
-      return { tipo: 'senhor_da_guerra', vitorias: config.vitoriasContraJogadores };
+      return { tipo: 'senhor_da_guerra', vitorias: regrasNovas ? config.vitoriasContraJogadores : config.vitoriasAntesDasExigencias };
     case 'mestre_construtor':
       return { tipo: 'mestre_construtor', predios: config.mestreConstrutorPredios, nivel: config.mestreConstrutorNivel };
     case 'tesouro':
@@ -130,6 +150,8 @@ export function sortearObjetivo(entrada: {
     case 'metade_do_mapa':
       return objetivoMetadeDoMapa();
   }
+  })();
+  return regrasNovas ? { ...base, exige: exigenciasDoTipo(tipo) } : base;
 }
 
 export type SituacaoJogador = {
@@ -149,6 +171,9 @@ export type SituacaoJogador = {
   niveisPredios: readonly number[];
   /** Nível da Muralha da cidade ("fronteiras de ferro"). */
   nivelMuralha: number;
+  /** Níveis do Centro da Cidade e do Quartel (exigidos pelas cartas desde a temporada 6). */
+  nivelCentro: number;
+  nivelQuartel: number;
   /** Nível de cada vila do jogador (as dos territórios dele). */
   niveisVilas: readonly number[];
   ouro: number;
@@ -188,9 +213,23 @@ export type AvaliacaoObjetivo = {
    * níveis); em "monopólio comercial", cidades livres do jogador (a barra conta as horas).
    */
   partes?: { atual: number; alvo: number }[];
+  /** Prédios exigidos junto com a meta (Centro e, no senhor da guerra, Quartel), com o nível atual de cada um. */
+  exigencias?: { predio: 'centro' | 'quartel'; atual: number; alvo: number }[];
 };
 
+/** Avalia a meta e as exigências de prédios da carta: só está cumprido com as duas. */
 export function avaliarObjetivo(objetivo: Objetivo, s: SituacaoJogador): AvaliacaoObjetivo {
+  const base = avaliarMeta(objetivo, s);
+  const exige = objetivo.exige ?? {};
+  const exigencias = [
+    ...(exige.centro ? [{ predio: 'centro' as const, atual: Math.min(s.nivelCentro, exige.centro), alvo: exige.centro }] : []),
+    ...(exige.quartel ? [{ predio: 'quartel' as const, atual: Math.min(s.nivelQuartel, exige.quartel), alvo: exige.quartel }] : []),
+  ];
+  if (exigencias.length === 0) return base;
+  return { ...base, cumprido: base.cumprido && exigencias.every((e) => e.atual >= e.alvo), exigencias };
+}
+
+function avaliarMeta(objetivo: Objetivo, s: SituacaoJogador): AvaliacaoObjetivo {
   switch (objetivo.tipo) {
     case 'duas_regioes': {
       const alvo = objetivo.regioes.reduce(
@@ -273,7 +312,9 @@ export function avaliarObjetivo(objetivo: Objetivo, s: SituacaoJogador): Avaliac
       const rixa = s.rixa ?? { territoriosConquistados: 0, jogadoresDaRaca: 1, todosSoNaCidade: false };
       const atual = Math.min(rixa.territoriosConquistados, objetivo.territorios);
       // Raça que sumiu do mapa (contas apagadas): vira "metade do mapa", como o antigo "derrubar rival".
-      if (rixa.jogadoresDaRaca === 0) return { cumprido: false, atual, alvo: objetivo.territorios, viraObjetivo: objetivoMetadeDoMapa() };
+      if (rixa.jogadoresDaRaca === 0) {
+        return { cumprido: false, atual, alvo: objetivo.territorios, viraObjetivo: objetivoMetadeDoMapa(objetivo.exige) };
+      }
       const derrubados = rixa.todosSoNaCidade && rixa.territoriosConquistados > 0;
       return { cumprido: atual >= objetivo.territorios || derrubados, atual, alvo: objetivo.territorios };
     }
@@ -284,7 +325,7 @@ export function avaliarObjetivo(objetivo: Objetivo, s: SituacaoJogador): Avaliac
       const derrubado = rival.territorios <= 1;
       if (derrubado && rival.conquisteiDele) return { cumprido: true, atual, alvo: 0 };
       if (derrubado && rival.outrosConquistaramDele) {
-        return { cumprido: false, atual, alvo: 0, viraObjetivo: objetivoMetadeDoMapa() };
+        return { cumprido: false, atual, alvo: 0, viraObjetivo: objetivoMetadeDoMapa(objetivo.exige) };
       }
       return { cumprido: false, atual, alvo: 0 };
     }
