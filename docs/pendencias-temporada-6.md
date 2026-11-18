@@ -222,6 +222,40 @@ velocidade e carga; intendente +2% de produção). Recrutar custa 300 de ouro; t
   temporadas antigas); `bonusHeroi` passa a ler os pontos; o `resolver-marchas` soma o XP e sobe o nível; a arte
   `heroi-<especialidade>` vira um retrato pelo atributo mais alto.
 
+## 10. Ideias do brainstorm (18/11/2026), dentro do escopo
+
+Filtradas contra os pilares e a arquitetura. As visuais (10a e 10b) não mexem no equilíbrio e podem entrar a
+qualquer momento, até no meio de uma temporada; as outras, na virada de temporada.
+
+### 10a. Cidades ilustradas no mapa (pequena; visual, pode entrar já)
+
+Trocar o ícone do castelo no mapa (`CenaMapa.desenharIcone(..., '🏰')`) pela arte do Centro da Cidade que já existe
+(`centro-1/2/3` em `lib/arte.ts`, `imagemDoPredio('centro', nivel)`), crescendo com o nível do Centro do dono. O
+nível do Centro dos outros é secreto? Hoje o mapa não mostra; decidir se a fase da cidade (1, 2 ou 3) pode ser pública
+ou se todos veem a fase 1 menos o próprio jogador. Carregar a imagem como textura do Phaser, como as bandeiras.
+
+### 10b. Mapa mais detalhado e territórios mais bonitos (média; visual, pode entrar já)
+
+Texturas pintadas por terreno (planície, floresta, montanha) no lugar da cor lisa, com árvores e picos espalhados
+pelo território, e bordas com cara de pergaminho; a cor do dono continua por cima (transparente) para ler quem é dono
+de quê. Gerar as texturas no mesmo estilo de arte (prompts novos no guia de arte, quadradas e "repetíveis", sem
+emendas). Cuidar do desempenho no celular (uma textura por terreno, recortada pelo polígono).
+
+### 10c. Eventos globais (pequena a média)
+
+Um evento por semana, **anunciado com antecedência** (ex.: 24 h) e **igual para todos**, com semente da temporada
+(regra pura, sem `Math.random`): inverno (marchas mais lentas), colheita farta (+comida), peste (−crescimento),
+festival (pactos e cartas mais baratos), febre do ouro (+ouro), e assim por diante. Não fere o pilar da sorte porque
+atinge todos igualmente e todos sabem antes. Aviso no alto do mapa e no celular; números em
+`BALANCEAMENTO.eventos`. Dá assunto ao grupo e muda a cara de cada semana.
+
+### 10d. Cavaleiros (pequena, depois do item 9)
+
+Com o herói por pontos (item 9), permitir **até 2 ou 3 heróis ("cavaleiros") por jogador**, cada um com nível, pontos e
+experiência próprios, para comandar frentes diferentes. Ocupam população como o herói de hoje.
+
+(Economia mais profunda, também do brainstorm, já está no item 5.)
+
 ### Reserva
 
 Se o teste da 6 mostrar o ouro apertado mesmo com câmbio e acordos, subir a produção de ouro de 4 para 5 por
