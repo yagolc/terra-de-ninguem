@@ -1,5 +1,5 @@
 // Cancelar uma obra ou um lote de treino: devolve tudo o que foi pago e adianta o resto da fila.
-import { niveisProjetados, custoEvolucao } from './predios.ts';
+import { niveisProjetados, nivelMaximoPeloCentro, custoEvolucao } from './predios.ts';
 import { custoTreino } from './treino.ts';
 import type { LoteTreino, NiveisPredios, Obra, Recursos, Verificacao } from './tipos.ts';
 import { recursos, somarRecursos } from './util.ts';
@@ -49,13 +49,13 @@ export function cancelarObra<T extends Obra>(entrada: {
     const o = obras[i]!;
     if (o.tipo === obras[indice]!.tipo) fica[i] = false;
   }
-  // Prédios acima do Centro que sobrou (o Centro só limita os outros).
+  // Prédios acima do que o Centro que sobrou permite (o Centro só limita os outros; o Armazém pode ir um pouco acima).
   for (let i = 0; i < obras.length; i++) {
     if (!fica[i]) continue;
     const antes = obras.slice(0, i + 1).filter((_, j) => fica[j]);
     const centro = niveisProjetados(predios, antes).centro;
     const o = obras[i]!;
-    if (o.tipo !== 'centro' && niveis[i]! > centro) fica[i] = false;
+    if (niveis[i]! > nivelMaximoPeloCentro(o.tipo, centro)) fica[i] = false;
   }
 
   const canceladas = obras.flatMap((o, i) => (fica[i] ? [] : [{ tipo: o.tipo, nivelAlvo: niveis[i]! }]));

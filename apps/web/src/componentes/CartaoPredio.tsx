@@ -36,7 +36,7 @@ function efeito(tipo: TipoPredio, cidade: EstadoCidade, bonus: Recursos): string
   if (nivel === 0) return null;
   switch (tipo) {
     case 'centro':
-      return `Outros prédios até o nível ${nivel}`;
+      return `Outros prédios até o nível ${nivel} (Armazém até o ${Math.min(BALANCEAMENTO.predios.armazem.nivelMaximo, nivel + BALANCEAMENTO.armazem.niveisAcimaDoCentro)})`;
     case 'casa':
       return `Limite de população: ${limitePopulacao(nivel)}`;
     case 'fazenda':

@@ -73,7 +73,7 @@ export default function Regras() {
         </p>
         <p>
           Até <b>{B.maxObrasNaFila} obras</b> esperam na fila e são feitas uma depois da outra. Nenhum prédio passa do nível do Centro da
-          Cidade.
+          Cidade, menos o Armazém, que pode ficar {B.armazem.niveisAcimaDoCentro} nível acima (para caber o custo do próximo Centro).
         </p>
         <ul className="space-y-1">
           {(Object.keys(PREDIOS) as (keyof typeof PREDIOS)[]).map((p) => (

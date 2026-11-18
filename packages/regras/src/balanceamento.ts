@@ -80,6 +80,12 @@ export const BALANCEAMENTO = {
      */
     capacidadeBase: 1000,
     crescimentoCapacidade: 1.23,
+    /**
+     * Níveis que o Armazém pode ficar acima do Centro da Cidade (os outros prédios param no nível do Centro). Sem
+     * isso, o Centro 10 (7.689 de madeira) não cabia no Armazém 9 (6.440), e o Armazém 10 pedia o Centro 10 antes:
+     * ninguém chegava ao Centro 10 (relato de 18/11/2026).
+     */
+    niveisAcimaDoCentro: 1,
     /** Quanto de cada recurso fica fora do alcance do saque. */
     protecaoBase: 100,
     protecaoPorNivel: 100,

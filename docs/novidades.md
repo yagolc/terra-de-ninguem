@@ -4,6 +4,10 @@ Lista das mudanças para mandar aos jogadores. Cada temporada nova ganha uma se�
 
 ## Temporada 6
 
+### Correção (já vale na temporada 5)
+
+- **Armazém um nível acima do Centro:** não dava para chegar ao Centro da Cidade 10 (o custo dele só cabe no Armazém 10, e o Armazém 10 pedia o Centro 10). Agora o Armazém pode ficar um nível acima do Centro.
+
 ### Jogador ausente (já vale na temporada 5)
 
 - **💤 Ausente:** quem fica **3 dias** sem abrir o jogo aparece com 💤 no mapa, na legenda e no placar. Abrir o jogo já conta, sem precisar fazer nada.

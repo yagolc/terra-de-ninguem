@@ -29,6 +29,12 @@ export function niveisProjetados(predios: NiveisPredios, obras: readonly Obra[])
  * O nível alvo e o limite do Centro da Cidade (GDD) contam as obras que já estão na fila: dá para
  * enfileirar o Centro e, logo depois, um prédio que só cabe com o Centro novo.
  */
+/** Nível máximo de um prédio com o Centro da Cidade no nível dado: o do Centro, e o Armazém um pouco acima. */
+export function nivelMaximoPeloCentro(tipo: TipoPredio, nivelCentro: number): number {
+  if (tipo === 'centro') return BALANCEAMENTO.predios.centro.nivelMaximo;
+  return tipo === 'armazem' ? nivelCentro + BALANCEAMENTO.armazem.niveisAcimaDoCentro : nivelCentro;
+}
+
 export function verificarEvolucao(entrada: {
   predios: NiveisPredios;
   tipo: TipoPredio;
@@ -42,7 +48,7 @@ export function verificarEvolucao(entrada: {
 
   if (nivelAlvo > BALANCEAMENTO.predios[tipo].nivelMaximo) return { ok: false, motivo: 'nivel_maximo' };
   if (obras.length >= BALANCEAMENTO.maxObrasNaFila) return { ok: false, motivo: 'fila_cheia' };
-  if (tipo !== 'centro' && nivelAlvo > projetados.centro) return { ok: false, motivo: 'acima_do_centro' };
+  if (nivelAlvo > nivelMaximoPeloCentro(tipo, projetados.centro)) return { ok: false, motivo: 'acima_do_centro' };
 
   const custo = custoEvolucao(tipo, nivelAlvo);
   if (!temRecursos(recursos, custo)) return { ok: false, motivo: 'recursos_insuficientes' };

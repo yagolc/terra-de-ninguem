@@ -5,6 +5,7 @@ import {
   custoEvolucao,
   limitePopulacao,
   nivelArmazemNecessario,
+  nivelMaximoPeloCentro,
   niveisProjetados,
   prediosIniciais,
   protecaoArmazem,
@@ -134,5 +135,40 @@ describe('armazém e casas', () => {
   it('as casas aumentam o limite de população', () => {
     expect(limitePopulacao(0)).toBe(BALANCEAMENTO.populacao.limiteBase);
     expect(limitePopulacao(4)).toBeGreaterThan(limitePopulacao(3));
+  });
+});
+
+describe('nenhum prédio fica travado pelo armazém (relato de 18/11/2026)', () => {
+  it('o Armazém pode ficar um nível acima do Centro; os outros param no nível dele', () => {
+    const acima = BALANCEAMENTO.armazem.niveisAcimaDoCentro;
+    expect(nivelMaximoPeloCentro('armazem', 9)).toBe(9 + acima);
+    expect(nivelMaximoPeloCentro('casa', 9)).toBe(9);
+    expect(nivelMaximoPeloCentro('centro', 1)).toBe(BALANCEAMENTO.predios.centro.nivelMaximo);
+    const predios = { ...prediosIniciais(), centro: 9, armazem: 9 };
+    const tudo = { comida: 1e6, madeira: 1e6, ouro: 1e6 };
+    expect(verificarEvolucao({ predios, tipo: 'armazem', recursos: tudo, obras: [], agora: 0 }).ok).toBe(acima >= 1);
+    // Com o Centro 8, o Armazém já no 8 + acima não sobe mais.
+    const centro8 = { ...prediosIniciais(), centro: 8, armazem: 8 + acima };
+    expect(verificarEvolucao({ predios: centro8, tipo: 'armazem', recursos: tudo, obras: [], agora: 0 })).toEqual({
+      ok: false,
+      motivo: 'acima_do_centro',
+    });
+  });
+
+  it('todo nível de todo prédio cabe no maior Armazém que dá para ter quando ele é construído', () => {
+    const maximoArmazem = BALANCEAMENTO.predios.armazem.nivelMaximo;
+    for (const tipo of TIPOS_PREDIO) {
+      for (let n = 1; n <= BALANCEAMENTO.predios[tipo].nivelMaximo; n++) {
+        const custo = custoEvolucao(tipo, n);
+        const maior = Math.max(...RECURSOS.map((r) => custo[r]));
+        // Construindo o nível n: o Centro está no máximo permitido (o próprio Centro, ainda em n − 1), e o Armazém no
+        // maior nível que esse Centro deixa (o próprio Armazém, ainda em n − 1).
+        const centro = tipo === 'centro' ? n - 1 : BALANCEAMENTO.predios.centro.nivelMaximo;
+        const armazem = tipo === 'armazem' ? n - 1 : Math.min(maximoArmazem, nivelMaximoPeloCentro('armazem', centro));
+        expect(maior, `${tipo} ${n} custa ${maior} e o Armazém possível (${armazem}) guarda ${capacidadeArmazem(armazem)}`).toBeLessThanOrEqual(
+          capacidadeArmazem(armazem),
+        );
+      }
+    }
   });
 });

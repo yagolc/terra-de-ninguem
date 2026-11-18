@@ -43,7 +43,7 @@ São quatro recursos. A população é o recurso central, porque todo habitante 
 
 ## Cidade e prédios
 
-A cidade começa com Centro da Cidade nível 1, e ele limita o nível máximo de todos os outros prédios. Construir e evoluir leva tempo real e custa recursos. As obras ficam numa fila de até 3, feitas uma de cada vez; o treino de tropas tem fila própria, de até 5 lotes. Qualquer item das duas filas pode ser cancelado, com confirmação, e devolve 100% do custo (desde a temporada 4); a obra cancelada leva junto as que dependiam dela.
+A cidade começa com Centro da Cidade nível 1, e ele limita o nível máximo de todos os outros prédios, menos o Armazém, que pode ficar um nível acima (desde 18/11/2026: sem isso o Centro 10, 7.689 de madeira, não cabia no Armazém 9). Construir e evoluir leva tempo real e custa recursos. As obras ficam numa fila de até 3, feitas uma de cada vez; o treino de tropas tem fila própria, de até 5 lotes. Qualquer item das duas filas pode ser cancelado, com confirmação, e devolve 100% do custo (desde a temporada 4); a obra cancelada leva junto as que dependiam dela.
 
 | Prédio | Função | No MVP? |
 | --- | --- | --- |
