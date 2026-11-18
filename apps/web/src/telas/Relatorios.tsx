@@ -3,6 +3,8 @@ import { BALANCEAMENTO } from '@terra/regras';
 import { useState } from 'react';
 import DetalheRelatorio from '../componentes/DetalheRelatorio';
 import InfoReconhecimento from '../componentes/InfoReconhecimento';
+import Ilustracao from '../componentes/Ilustracao';
+import { imagemDaHorda } from '../lib/arte';
 import { resultadoDaHorda } from '../lib/hordas';
 import { useRelatorios, type Relatorio } from '../lib/useRelatorios';
 import Icone from '../componentes/Icone';
@@ -96,9 +98,13 @@ export default function Relatorios({ sessao }: { sessao: Session }) {
               return (
                 <li key={`horda-${h.id}`} className="rounded-xl border border-[#9b1b30]/70 bg-carvao/90 p-4">
                   <div className="flex items-start gap-3">
-                    <span className="text-2xl leading-none" aria-hidden>
-                      <Icone de="☠️" />
-                    </span>
+                    {imagemDaHorda() ? (
+                      <Ilustracao src={imagemDaHorda()!} className="size-16 shrink-0" />
+                    ) : (
+                      <span className="text-2xl leading-none" aria-hidden>
+                        <Icone de="☠️" />
+                      </span>
+                    )}
                     <span className="min-w-0 flex-1">
                       <span className="block font-semibold">Horda bárbara em {nomeTerritorio(h.territorioId)}</span>
                       <span className={`block text-sm ${venci ? 'text-[#9fd39a]' : 'text-red-300'}`}>
