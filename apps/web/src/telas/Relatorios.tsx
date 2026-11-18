@@ -1,11 +1,12 @@
 import type { Session } from '@supabase/supabase-js';
 import { BALANCEAMENTO } from '@terra/regras';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import DetalheRelatorio from '../componentes/DetalheRelatorio';
 import InfoReconhecimento from '../componentes/InfoReconhecimento';
 import Ilustracao from '../componentes/Ilustracao';
 import { imagemDaHorda } from '../lib/arte';
 import { resultadoDaHorda } from '../lib/hordas';
+import { musica } from '../lib/musica';
 import { useRelatorios, type Relatorio } from '../lib/useRelatorios';
 import Icone from '../componentes/Icone';
 
@@ -15,6 +16,8 @@ const quando = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digi
 export default function Relatorios({ sessao }: { sessao: Session }) {
   const { estado, erro } = useRelatorios();
   const [aberto, setAberto] = useState<string | null>(null);
+  // Relatórios novos que já tocaram o tema de vitória ou derrota (uma vez cada).
+  const tocados = useRef(new Set<string>());
   const meuId = sessao.user.id;
 
   if (erro) return <p className="p-6 text-center text-pergaminho-escuro">{erro}</p>;
@@ -179,7 +182,16 @@ export default function Relatorios({ sessao }: { sessao: Session }) {
                   : 'Defesa derrotada. Você ganhou um escudo.';
             return (
               <li key={r.id} className={`rounded-xl border bg-carvao/90 ${naoLido ? 'border-ouro/60' : 'border-couro'}`}>
-                <button onClick={() => setAberto(aberto === r.id ? null : r.id)} className="flex w-full items-start gap-3 p-4 text-left">
+                <button
+                  onClick={() => {
+                    setAberto(aberto === r.id ? null : r.id);
+                    if (naoLido && !tocados.current.has(r.id)) {
+                      tocados.current.add(r.id);
+                      musica.tocarTema(venci ? 'vitoria' : 'derrota');
+                    }
+                  }}
+                  className="flex w-full items-start gap-3 p-4 text-left"
+                >
                   <span className="text-2xl leading-none" aria-hidden>
                     {souAtacante ? <Icone de="⚔️" /> : <Icone de="🛡️" />}
                   </span>

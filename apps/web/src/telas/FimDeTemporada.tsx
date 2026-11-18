@@ -1,13 +1,23 @@
 import type { Session } from '@supabase/supabase-js';
+import { useEffect } from 'react';
 import CartaObjetivo from '../componentes/CartaObjetivo';
 import HistoricoTemporadas from '../componentes/HistoricoTemporadas';
 import TabelaPlacar from '../componentes/TabelaPlacar';
+import { musica } from '../lib/musica';
 import { useTemporada } from '../lib/useTemporada';
 import Icone from '../componentes/Icone';
 
 /** Mostrada quando nenhuma temporada está ativa: vencedor, objetivos revelados e placar final. */
 export default function FimDeTemporada({ sessao }: { sessao: Session }) {
   const { dados, erro } = useTemporada(sessao.user.id);
+  const venceuTemporada = dados ? dados.temporada.vencedorId === sessao.user.id : null;
+
+  // Música: o vencedor ouve o festejo; os outros, o lamento, enquanto esta tela estiver aberta.
+  useEffect(() => {
+    if (venceuTemporada === null) return;
+    musica.definirFim(venceuTemporada ? 'vitoria' : 'derrota');
+    return () => musica.definirFim(null);
+  }, [venceuTemporada]);
 
   if (erro) return <p className="p-6 text-center text-pergaminho-escuro">{erro}</p>;
   if (dados === undefined) return <p className="p-6 text-center text-pergaminho-escuro">Carregando…</p>;

@@ -1,6 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import AvisoInstalar from '../componentes/AvisoInstalar';
+import ControleMusica from '../componentes/ControleMusica';
 import Icone from '../componentes/Icone';
 import IndicadorEscudo from '../componentes/IndicadorEscudo';
 import NavegacaoInferior, { ABAS, type Aba } from '../componentes/NavegacaoInferior';
@@ -9,6 +10,7 @@ import { supabase } from '../lib/supabase';
 import { buscarMarchasVistas } from '../lib/useMapa';
 import { contarCartasNaoLidas } from '../lib/useCartas';
 import { contarNaoLidos } from '../lib/useRelatorios';
+import { musica } from '../lib/musica';
 import { usePresenca } from '../lib/presenca';
 import Cartas from './Cartas';
 import Cidade from './Cidade';
@@ -135,6 +137,11 @@ export default function Jogo({ sessao }: { sessao: Session }) {
     return () => clearInterval(t);
   }, [aba, sessao.user.id, temporadaId]);
 
+  // Música de fundo: a aba muda o peso das faixas e inimigos à vista das torres tocam a de batalha.
+  useEffect(() => {
+    musica.definirMomento(aba, ameacas > 0);
+  }, [aba, ameacas]);
+
   useEffect(() => {
     const aoMudarEndereco = () => {
       setAba(abaDoEndereco());
@@ -201,9 +208,10 @@ export default function Jogo({ sessao }: { sessao: Session }) {
     <div className="flex h-dvh flex-col">
       <header className="z-10 border-b border-couro bg-noite/95">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2.5">
-          <div className="flex items-center gap-2">
-            <img src="/escudo.svg" alt="" className="size-8" />
-            <div>
+          {/* No celular o escudo some para caber o nome ao lado dos botões. */}
+          <div className="flex min-w-0 items-center gap-2">
+            <img src="/escudo.svg" alt="" className="hidden size-8 sm:block" />
+            <div className="min-w-0 break-words">
               <h1 className="font-titulo text-lg leading-tight text-ouro">
                 {nome === null ? (
                   'Terra de Ninguém'
@@ -244,7 +252,8 @@ export default function Jogo({ sessao }: { sessao: Session }) {
               </button>
             ))}
           </nav>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <ControleMusica />
             {((salas?.length ?? 0) > 1 || organizador) && (
               <button
                 onClick={() => irPara('salas')}
@@ -284,9 +293,13 @@ export default function Jogo({ sessao }: { sessao: Session }) {
             </button>
             <button
               onClick={() => supabase?.auth.signOut()}
+              title="Sair"
               className="rounded-lg border border-couro px-3 py-1.5 text-sm text-pergaminho-escuro hover:text-pergaminho"
             >
-              Sair
+              <span className="sm:hidden">
+                <Icone de="🚪" titulo="Sair" />
+              </span>
+              <span className="hidden sm:inline">Sair</span>
             </button>
           </div>
         </div>

@@ -4,6 +4,13 @@ Lista das mudanças para mandar aos jogadores. Cada temporada nova ganha uma se�
 
 ## Temporada 6
 
+### Música (já vale na temporada 5)
+
+- **Música de fundo medieval**, com 13 faixas que trocam com uma transição suave. Começa no primeiro toque na tela, num volume baixo, e pausa quando você sai do jogo.
+- **Botão 🔊 no alto da tela:** um toque liga ou desliga. No computador, a setinha ao lado abre o volume e o botão **Próxima**. No celular, o volume é o dos botões do aparelho. A escolha fica guardada em cada aparelho, e com a música desligada nada é baixado.
+- **Cada música tem a sua hora:** tarde da noite toca mais a Lua Nascente; de manhã, a Colheita e a Feira; à noite, a Taverna e o Banquete. Qualquer uma pode tocar a qualquer hora, só que com menos chance. No mapa toca mais a Exploração.
+- **Momentos do jogo:** com tropas inimigas à vista das suas torres toca a música de batalha; abrir um relatório novo toca o tema de vitória ou de derrota; no fim da temporada o vencedor ouve o festejo, e os outros, o lamento.
+
 ### Correção (já vale na temporada 5)
 
 - **Armazém um nível acima do Centro:** não dava para chegar ao Centro da Cidade 10 (o custo dele só cabe no Armazém 10, e o Armazém 10 pedia o Centro 10). Agora o Armazém pode ficar um nível acima do Centro.

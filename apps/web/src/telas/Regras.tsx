@@ -15,6 +15,7 @@ import { useState, type ReactNode } from 'react';
 import Icone from '../componentes/Icone';
 import Cronica from '../componentes/Cronica';
 import { CRONICAS } from '../lib/cronicas';
+import { FAIXAS } from '../lib/musica';
 import { ESPECIALIDADES_INFO, ESTRUTURAS_INFO, PREDIOS, RACAS_INFO, RECURSOS_INFO, TERRENOS_INFO, TITULO_HERDEIRO, UNIDADES_INFO } from '../lib/textos';
 
 const B = BALANCEAMENTO;
@@ -366,6 +367,21 @@ export default function Regras() {
           CC BY 3.0
         </a>
         .
+      </p>
+      <p className="px-1 text-xs text-pergaminho-escuro/80">
+        Música de RandomMind (
+        <a href="https://opengameart.org/content/cc0-audio-uploader-randommind" target="_blank" rel="noreferrer" className="underline hover:text-pergaminho">
+          opengameart.org
+        </a>
+        ), em domínio público (CC0):{' '}
+        {Object.values(FAIXAS).map((f, i, todas) => (
+          <span key={f.pagina}>
+            <a href={`https://opengameart.org/content/${f.pagina}`} target="_blank" rel="noreferrer" className="underline hover:text-pergaminho">
+              {f.original}
+            </a>
+            {i < todas.length - 1 ? ', ' : '.'}
+          </span>
+        ))}
       </p>
     </div>
   );
